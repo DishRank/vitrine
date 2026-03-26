@@ -201,3 +201,5 @@ Netlify supporte Next.js SSR nativement. Meme process, ajouter les env vars dans
 | `npm run build` | Build production |
 | `npm run start` | Serveur production |
 | `npm run lint` | Lint ESLint |
+
+Made my me
