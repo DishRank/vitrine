@@ -1,6 +1,9 @@
 import { MetadataRoute } from 'next';
 import { fetchCategories } from '@/lib/supabase';
 
+// Force dynamic rendering (not at build time)
+export const dynamic = 'force-dynamic';
+
 const BASE = 'https://dishrank.fr';
 const CITIES = [
   'Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux', 'Lille', 'Nice', 'Nantes',

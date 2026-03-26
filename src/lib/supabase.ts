@@ -1,9 +1,17 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Server-only: lazy init to avoid build-time errors
+let _supabase: SupabaseClient | null = null;
 
-export const supabase = createClient(url, key);
+function getSupabase() {
+  if (!_supabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
 
 // ── Types ──
 
@@ -73,7 +81,7 @@ const THIRTY_MIN = 30 * 60 * 1000;
 export function fetchDishes(categorySlug?: string, limit = 10): Promise<DishRow[]> {
   const cacheKey = `dishes:${categorySlug || 'all'}:${limit}`;
   return cached(cacheKey, FIVE_MIN, async () => {
-    const { data, error } = await supabase.rpc('get_feed_dishes', {
+    const { data, error } = await getSupabase().rpc('get_feed_dishes', {
       user_lat: null,
       user_lng: null,
       radius_km: 50,
@@ -88,7 +96,7 @@ export function fetchDishes(categorySlug?: string, limit = 10): Promise<DishRow[
 
 export function fetchCategories(): Promise<CategoryRow[]> {
   return cached('categories', THIRTY_MIN, async () => {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('dish_categories')
       .select('id, slug, icon')
       .order('created_at', { ascending: true });
@@ -100,7 +108,7 @@ export function fetchCategories(): Promise<CategoryRow[]> {
 export function fetchReviews(restaurantId: string, dishName: string): Promise<ReviewRow[]> {
   const cacheKey = `reviews:${restaurantId}:${dishName}`;
   return cached(cacheKey, FIVE_MIN, async () => {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('reviews')
       .select('id, dish_name, rating, comment, price, currency, photo_url, created_at, profiles:user_id(username, avatar_url, display_name)')
       .eq('restaurant_id', restaurantId)
