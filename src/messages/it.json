@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "title": "DishRank — Valuta i piatti, non i ristoranti",
+    "description": "Trova il miglior burger, sushi, pizza della tua città. DishRank valuta i piatti, non i ristoranti.",
+    "titleWithCategory": "Miglior {category} — DishRank",
+    "titleWithCityCategory": "Miglior {category} a {city} — DishRank",
+    "titleWithCity": "Migliori piatti a {city} — DishRank",
+    "descWithCityCategory": "Scopri la classifica dei migliori {category} a {city}. Voti, foto e recensioni della community DishRank."
+  },
+  "hero": {
+    "label": "Valuta i piatti, non i ristoranti.",
+    "title": "Il <em>miglior piatto</em> vicino a te.",
+    "subtitle": "Cerca, confronta e trova dove mangiare il miglior burger, sushi, pizza della tua città.",
+    "categories": "200+ categorie",
+    "free": "100% gratuito",
+    "community": "Community"
+  },
+  "search": {
+    "label": "Cosa vuoi mangiare?",
+    "placeholder": "Burger, sushi, ramen...",
+    "allCities": "Tutte le città",
+    "all": "Tutto",
+    "more": "Altro",
+    "less": "Meno",
+    "seeAll": "Vedi tutto"
+  },
+  "feed": {
+    "topRated": "I 10 migliori piatti",
+    "topRatedCity": "I 10 migliori piatti a {city}",
+    "topRatedCategory": "I 10 migliori {category}",
+    "topRatedCityCategory": "I 10 migliori {category} a {city}",
+    "noResults": "Nessun piatto trovato",
+    "beFirst": "Sii il primo a valutare un piatto!",
+    "reviews": "{count} recensioni",
+    "download": "Scarica DishRank"
+  },
+  "showcase": {
+    "label": "DishRank in azione",
+    "slides": [
+      { "title": "Esplora i migliori piatti", "desc": "Sfoglia il feed, filtra per categoria, scopri i piatti piu votati vicino a te." },
+      { "title": "Ogni piatto nel dettaglio", "desc": "Foto, voto medio, prezzo, recensioni della community. Tutto cio che serve per scegliere." },
+      { "title": "200+ categorie", "desc": "Burger, sushi, ramen, dolci, bubble tea... Cerca per tipo di piatto o cucina del mondo." },
+      { "title": "Valuta i tuoi piatti preferiti", "desc": "Scatta una foto, valuta da 1 a 5 stelle, aggiungi il prezzo e il tuo verdetto." },
+      { "title": "Il tuo profilo, le tue regole", "desc": "Lingua, tema, notifiche, privacy. Tutto configurabile." },
+      { "title": "Mappa interattiva", "desc": "Visualizza i piatti intorno a te sulla mappa. Filtra per categoria e distanza." },
+      { "title": "Scheda ristorante", "desc": "Voto Google, indirizzo, piatti valutati dalla community. Tutto a colpo d'occhio." },
+      { "title": "Il tuo profilo foodie", "desc": "Le tue recensioni, i tuoi like, i tuoi badge. Costruisci la tua reputazione foodie." }
+    ]
+  },
+  "explore": {
+    "title": "Tutto cio che ami mangiare.",
+    "subtitle": "200+ categorie. Dallo street food alla gastronomia."
+  },
+  "why": {
+    "title": "Perche DishRank?",
+    "items": [
+      { "title": "Valutiamo i piatti", "desc": "Non il ristorante, non il cameriere, non il parcheggio. Il piatto. Punto." },
+      { "title": "Classifica per piatto", "desc": "Cerchi \"miglior burger a Lione\"? Trovi la classifica, non un ristorante." },
+      { "title": "200+ categorie", "desc": "Burger, sushi, ramen, crepes, kebab, dolci, bubble tea, pho... abbiamo tutto." },
+      { "title": "100% gratuito", "desc": "Niente pubblicita, niente abbonamento. Solo i migliori piatti della tua città." },
+      { "title": "Community", "desc": "I voti vengono da persone vere, non da algoritmi oscuri." },
+      { "title": "Mappa interattiva", "desc": "Visualizza i piatti intorno a te sulla mappa. Filtra per categoria e distanza." }
+    ]
+  },
+  "cta": {
+    "title": "Valuta i piatti, non i ristoranti.",
+    "subtitle": "Gratuito. Niente pubblicita. Scarica l'app e inizia a valutare i tuoi piatti preferiti.",
+    "button": "Google Play"
+  },
+  "modal": {
+    "downloadCta": "Scarica DishRank per valutare questo piatto",
+    "loading": "Caricamento..."
+  },
+  "legal": {
+    "privacy": "Privacy",
+    "terms": "Condizioni",
+    "delete": "Elimina account"
+  },
+  "footer": {
+    "contact": "Contatto",
+    "download": "Scarica"
+  },
+  "cookies": {
+    "title": "Cookie",
+    "description": "Utilizziamo cookie analitici per capire come utilizzi il sito e migliorare la tua esperienza. Nessun dato personale viene venduto.",
+    "accept": "Accetta",
+    "deny": "Rifiuta"
+  }
+}

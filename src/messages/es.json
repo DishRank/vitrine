@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "title": "DishRank — Califica los platos, no los restaurantes",
+    "description": "Encuentra la mejor hamburguesa, sushi, pizza de tu ciudad. DishRank califica platos, no restaurantes.",
+    "titleWithCategory": "Mejor {category} — DishRank",
+    "titleWithCityCategory": "Mejor {category} en {city} — DishRank",
+    "titleWithCity": "Mejores platos en {city} — DishRank",
+    "descWithCityCategory": "Descubre el ranking de los mejores {category} en {city}. Notas, fotos y opiniones de la comunidad DishRank."
+  },
+  "hero": {
+    "label": "Califica los platos, no los restaurantes.",
+    "title": "El <em>mejor plato</em> cerca de ti.",
+    "subtitle": "Busca, compara y encuentra donde comer la mejor hamburguesa, sushi, pizza de tu ciudad.",
+    "categories": "200+ categorias",
+    "free": "100% gratis",
+    "community": "Comunitario"
+  },
+  "search": {
+    "label": "¿Qué quieres comer?",
+    "placeholder": "Hamburguesa, sushi, ramen...",
+    "allCities": "Todas las ciudades",
+    "all": "Todo",
+    "more": "Más",
+    "less": "Menos",
+    "seeAll": "Ver todo"
+  },
+  "feed": {
+    "topRated": "Los 10 mejores platos",
+    "topRatedCity": "Los 10 mejores platos de {city}",
+    "topRatedCategory": "Los 10 mejores {category}",
+    "topRatedCityCategory": "Los 10 mejores {category} de {city}",
+    "noResults": "No se encontraron platos",
+    "beFirst": "Se el primero en calificar un plato!",
+    "reviews": "{count} opiniones",
+    "download": "Descargar DishRank"
+  },
+  "showcase": {
+    "label": "DishRank en accion",
+    "slides": [
+      { "title": "Explora los mejores platos", "desc": "Navega el feed, filtra por categoria, descubre los platos mejor valorados cerca de ti." },
+      { "title": "Cada plato en detalle", "desc": "Foto, nota media, precio, opiniones de la comunidad. Todo lo que necesitas para elegir." },
+      { "title": "200+ categorias", "desc": "Hamburguesa, sushi, ramen, postre, bubble tea... Busca por tipo de plato o cocina del mundo." },
+      { "title": "Califica tus platos favoritos", "desc": "Toma una foto, califica de 1 a 5 estrellas, agrega el precio y tu veredicto." },
+      { "title": "Tu perfil, tus reglas", "desc": "Idioma, tema, notificaciones, privacidad. Todo es configurable." },
+      { "title": "Mapa interactivo", "desc": "Ve los platos a tu alrededor en el mapa. Filtra por categoria y distancia." },
+      { "title": "Ficha del restaurante", "desc": "Nota de Google, direccion, platos valorados por la comunidad. Todo de un vistazo." },
+      { "title": "Tu perfil foodie", "desc": "Tus opiniones, tus likes, tus insignias. Construye tu reputacion de foodie." }
+    ]
+  },
+  "explore": {
+    "title": "Todo lo que te gusta comer.",
+    "subtitle": "200+ categorias. De la comida callejera a la gastronomia."
+  },
+  "why": {
+    "title": "Por que DishRank?",
+    "items": [
+      { "title": "Calificamos los platos", "desc": "No el restaurante, no el camarero, no el parking. El plato. Punto." },
+      { "title": "Ranking por plato", "desc": "Buscas \"mejor hamburguesa de Lyon\"? Encuentras el ranking, no un restaurante." },
+      { "title": "200+ categorias", "desc": "Hamburguesa, sushi, ramen, crepes, kebab, postre, bubble tea, pho... lo tenemos todo." },
+      { "title": "100% gratis", "desc": "Sin publicidad, sin suscripcion. Solo los mejores platos de tu ciudad." },
+      { "title": "Comunitario", "desc": "Las notas vienen de personas reales, no de algoritmos oscuros." },
+      { "title": "Mapa interactivo", "desc": "Visualiza los platos a tu alrededor en el mapa. Filtra por categoria y distancia." }
+    ]
+  },
+  "cta": {
+    "title": "Califica los platos, no los restaurantes.",
+    "subtitle": "Gratis. Sin publicidad. Descarga la app y empieza a calificar tus platos favoritos.",
+    "button": "Google Play"
+  },
+  "modal": {
+    "downloadCta": "Descarga DishRank para calificar este plato",
+    "loading": "Cargando..."
+  },
+  "legal": {
+    "privacy": "Privacidad",
+    "terms": "Condiciones",
+    "delete": "Eliminar cuenta"
+  },
+  "footer": {
+    "contact": "Contacto",
+    "download": "Descargar"
+  },
+  "cookies": {
+    "title": "Cookies",
+    "description": "Usamos cookies analiticas para entender como usas el sitio y mejorar tu experiencia. No se venden datos personales.",
+    "accept": "Aceptar",
+    "deny": "Rechazar"
+  }
+}

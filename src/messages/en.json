@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "title": "DishRank — Rate the dishes, not the restaurants",
+    "description": "Find the best burger, sushi, pizza in your city. DishRank rates dishes, not restaurants.",
+    "titleWithCategory": "Best {category} — DishRank",
+    "titleWithCityCategory": "Best {category} in {city} — DishRank",
+    "titleWithCity": "Best dishes in {city} — DishRank",
+    "descWithCityCategory": "Discover the ranking of the best {category} in {city}. Ratings, photos and reviews by the DishRank community."
+  },
+  "hero": {
+    "label": "Rate the dishes, not the restaurants.",
+    "title": "The <em>best dish</em> near you.",
+    "subtitle": "Search, compare and find where to eat the best burger, sushi, pizza in your city.",
+    "categories": "200+ categories",
+    "free": "100% free",
+    "community": "Community-driven"
+  },
+  "search": {
+    "label": "What do you want to eat?",
+    "placeholder": "Burger, sushi, ramen...",
+    "allCities": "All cities",
+    "all": "All",
+    "more": "More",
+    "less": "Less",
+    "seeAll": "See all"
+  },
+  "feed": {
+    "topRated": "Top 10 dishes",
+    "topRatedCity": "Top 10 dishes in {city}",
+    "topRatedCategory": "Top 10 {category}",
+    "topRatedCityCategory": "Top 10 {category} in {city}",
+    "noResults": "No dishes found",
+    "beFirst": "Be the first to rate a dish!",
+    "reviews": "{count} reviews",
+    "download": "Download DishRank"
+  },
+  "showcase": {
+    "label": "DishRank in action",
+    "slides": [
+      { "title": "Explore the best dishes", "desc": "Browse the feed, filter by category, discover the top-rated dishes near you." },
+      { "title": "Every dish in detail", "desc": "Photo, average rating, price, community reviews. Everything you need to choose." },
+      { "title": "200+ categories", "desc": "Burger, sushi, ramen, dessert, bubble tea... Search by dish type or world cuisine." },
+      { "title": "Rate your favorite dishes", "desc": "Take a photo, rate from 1 to 5 stars, add the price and your verdict." },
+      { "title": "Your profile, your rules", "desc": "Language, theme, notifications, privacy. Everything is configurable." },
+      { "title": "Interactive map", "desc": "See dishes around you on the map. Filter by category and distance." },
+      { "title": "Restaurant card", "desc": "Google rating, address, dishes rated by the community. All at a glance." },
+      { "title": "Your foodie profile", "desc": "Your reviews, your likes, your badges. Build your foodie reputation." }
+    ]
+  },
+  "explore": {
+    "title": "Everything you love to eat.",
+    "subtitle": "200+ categories. From street food to fine dining."
+  },
+  "why": {
+    "title": "Why DishRank?",
+    "items": [
+      { "title": "We rate the dishes", "desc": "Not the restaurant, not the waiter, not the parking. The dish. Period." },
+      { "title": "Ranked by dish", "desc": "Looking for \"best burger in Lyon\"? You find the ranking, not a restaurant." },
+      { "title": "200+ categories", "desc": "Burger, sushi, ramen, crepes, kebab, dessert, bubble tea, pho... we have it all." },
+      { "title": "100% free", "desc": "No ads, no subscription. Just the best dishes in your city." },
+      { "title": "Community-driven", "desc": "Ratings come from real people, not obscure algorithms." },
+      { "title": "Interactive map", "desc": "See dishes around you on the map. Filter by category and distance." }
+    ]
+  },
+  "cta": {
+    "title": "Rate the dishes, not the restaurants.",
+    "subtitle": "Free. No ads. Download the app and start rating your favorite dishes.",
+    "button": "Google Play"
+  },
+  "modal": {
+    "downloadCta": "Download DishRank to rate this dish",
+    "loading": "Loading..."
+  },
+  "legal": {
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "delete": "Delete account"
+  },
+  "footer": {
+    "contact": "Contact",
+    "download": "Download"
+  },
+  "cookies": {
+    "title": "Cookies",
+    "description": "We use analytics cookies to understand how you use the site and improve your experience. No personal data is sold.",
+    "accept": "Accept",
+    "deny": "Decline"
+  }
+}

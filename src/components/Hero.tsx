@@ -1,0 +1,28 @@
+import { useTranslations } from 'next-intl';
+
+export default function Hero() {
+  const t = useTranslations('hero');
+  return (
+    <section className="relative pt-28 pb-10 text-center overflow-hidden">
+      <div className="absolute top-[-30%] left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-[radial-gradient(circle,var(--primary-glow)_0%,transparent_65%)] pointer-events-none" />
+      <div className="relative z-10 max-w-[1200px] mx-auto px-4 flex flex-col items-center">
+        <p className="text-xs font-semibold uppercase tracking-[2.5px] text-[var(--primary)] mb-5">
+          {t('label')}
+        </p>
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight mb-4">
+          {t.rich('title', { em: (chunks) => <em className="not-italic text-[var(--primary)]">{chunks}</em> })}
+        </h1>
+        <p className="text-base text-[var(--text2)] max-w-[480px] leading-relaxed mb-8">
+          {t('subtitle')}
+        </p>
+        <div className="flex items-center gap-4 text-xs font-medium text-[var(--text3)]">
+          <span>{t('categories')}</span>
+          <span className="w-1 h-1 rounded-full bg-[var(--border2)]" />
+          <span>{t('free')}</span>
+          <span className="w-1 h-1 rounded-full bg-[var(--border2)]" />
+          <span>{t('community')}</span>
+        </div>
+      </div>
+    </section>
+  );
+}

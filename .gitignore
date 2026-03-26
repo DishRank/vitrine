@@ -1,0 +1,22 @@
+# Env (contains Supabase keys)
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+dist/
+
+# Build
+*.tsbuildinfo
+next-env.d.ts
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+npm-debug.log*

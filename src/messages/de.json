@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "title": "DishRank — Bewerte die Gerichte, nicht die Restaurants",
+    "description": "Finde den besten Burger, Sushi, Pizza in deiner Stadt. DishRank bewertet Gerichte, nicht Restaurants.",
+    "titleWithCategory": "Bester {category} — DishRank",
+    "titleWithCityCategory": "Bester {category} in {city} — DishRank",
+    "titleWithCity": "Beste Gerichte in {city} — DishRank",
+    "descWithCityCategory": "Entdecke das Ranking der besten {category} in {city}. Bewertungen, Fotos und Reviews der DishRank Community."
+  },
+  "hero": {
+    "label": "Bewerte die Gerichte, nicht die Restaurants.",
+    "title": "Das <em>beste Gericht</em> in deiner Nähe.",
+    "subtitle": "Suche, vergleiche und finde wo du den besten Burger, Sushi, Pizza in deiner Stadt essen kannst.",
+    "categories": "200+ Kategorien",
+    "free": "100% kostenlos",
+    "community": "Community-basiert"
+  },
+  "search": {
+    "label": "Was möchtest du essen?",
+    "placeholder": "Burger, Sushi, Ramen...",
+    "allCities": "Alle Städte",
+    "all": "Alle",
+    "more": "Mehr",
+    "less": "Weniger",
+    "seeAll": "Alle anzeigen"
+  },
+  "feed": {
+    "topRated": "Top 10 Gerichte",
+    "topRatedCity": "Top 10 Gerichte in {city}",
+    "topRatedCategory": "Top 10 {category}",
+    "topRatedCityCategory": "Top 10 {category} in {city}",
+    "noResults": "Keine Gerichte gefunden",
+    "beFirst": "Sei der Erste, der ein Gericht bewertet!",
+    "reviews": "{count} Bewertungen",
+    "download": "DishRank herunterladen"
+  },
+  "showcase": {
+    "label": "DishRank in Aktion",
+    "slides": [
+      { "title": "Entdecke die besten Gerichte", "desc": "Durchsuche den Feed, filtere nach Kategorie, entdecke die am besten bewerteten Gerichte in deiner Nähe." },
+      { "title": "Jedes Gericht im Detail", "desc": "Foto, Durchschnittsbewertung, Preis, Community-Reviews. Alles was du brauchst." },
+      { "title": "200+ Kategorien", "desc": "Burger, Sushi, Ramen, Dessert, Bubble Tea... Suche nach Gerichtart oder Weltküche." },
+      { "title": "Bewerte deine Lieblingsgerichte", "desc": "Mach ein Foto, bewerte von 1 bis 5 Sterne, füge den Preis und dein Urteil hinzu." },
+      { "title": "Dein Profil, deine Regeln", "desc": "Sprache, Theme, Benachrichtigungen, Datenschutz. Alles konfigurierbar." },
+      { "title": "Interaktive Karte", "desc": "Sieh Gerichte um dich herum auf der Karte. Filtere nach Kategorie und Entfernung." },
+      { "title": "Restaurant-Karte", "desc": "Google-Bewertung, Adresse, von der Community bewertete Gerichte. Alles auf einen Blick." },
+      { "title": "Dein Foodie-Profil", "desc": "Deine Bewertungen, deine Likes, deine Abzeichen. Baue deinen Ruf als Foodie auf." }
+    ]
+  },
+  "explore": {
+    "title": "Alles was du gerne isst.",
+    "subtitle": "200+ Kategorien. Von Street Food bis Gourmet."
+  },
+  "why": {
+    "title": "Warum DishRank?",
+    "items": [
+      { "title": "Wir bewerten Gerichte", "desc": "Nicht das Restaurant, nicht den Kellner, nicht den Parkplatz. Das Gericht. Punkt." },
+      { "title": "Ranking nach Gericht", "desc": "Du suchst \"bester Burger in Lyon\"? Du findest das Ranking, nicht ein Restaurant." },
+      { "title": "200+ Kategorien", "desc": "Burger, Sushi, Ramen, Crepes, Kebab, Dessert, Bubble Tea, Pho... wir haben alles." },
+      { "title": "100% kostenlos", "desc": "Keine Werbung, kein Abo. Nur die besten Gerichte deiner Stadt." },
+      { "title": "Community-basiert", "desc": "Die Bewertungen kommen von echten Menschen, nicht von undurchsichtigen Algorithmen." },
+      { "title": "Interaktive Karte", "desc": "Sieh Gerichte um dich herum auf der Karte. Filtere nach Kategorie und Entfernung." }
+    ]
+  },
+  "cta": {
+    "title": "Bewerte die Gerichte, nicht die Restaurants.",
+    "subtitle": "Kostenlos. Keine Werbung. Lade die App herunter und bewerte deine Lieblingsgerichte.",
+    "button": "Google Play"
+  },
+  "modal": {
+    "downloadCta": "Lade DishRank herunter um dieses Gericht zu bewerten",
+    "loading": "Laden..."
+  },
+  "legal": {
+    "privacy": "Datenschutz",
+    "terms": "AGB",
+    "delete": "Konto löschen"
+  },
+  "footer": {
+    "contact": "Kontakt",
+    "download": "Herunterladen"
+  },
+  "cookies": {
+    "title": "Cookies",
+    "description": "Wir verwenden Analyse-Cookies, um zu verstehen, wie du die Seite nutzt. Keine personlichen Daten werden verkauft.",
+    "accept": "Akzeptieren",
+    "deny": "Ablehnen"
+  }
+}
