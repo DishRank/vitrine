@@ -80,6 +80,13 @@
     "contact": "Kontakt",
     "download": "Herunterladen"
   },
+  "notFound": {
+    "title": "Seite nicht gefunden — DishRank",
+    "heading": "Dieses Gericht steht nicht <em>auf der Karte</em>.",
+    "description": "Die Seite, die du suchst, existiert nicht oder wurde verschoben. Keine Sorge, es gibt viele tolle Gerichte anderswo.",
+    "backHome": "Zurück zur Startseite",
+    "downloadApp": "App herunterladen"
+  },
   "cookies": {
     "title": "Cookies",
     "description": "Wir verwenden Analyse-Cookies, um zu verstehen, wie du die Seite nutzt. Keine personlichen Daten werden verkauft.",

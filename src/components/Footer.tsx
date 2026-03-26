@@ -1,17 +1,19 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
+import { useCallback } from 'react';
 
 export default function Footer() {
   const t = useTranslations('footer');
   const tl = useTranslations('legal');
 
-  const openLegal = (page: string) => {
+  const openLegal = useCallback((e: React.MouseEvent<HTMLAnchorElement>, page: string) => {
+    e.preventDefault();
     const params = new URLSearchParams(window.location.search);
     params.set('page', page);
     window.history.pushState(null, '', '?' + params.toString());
     window.dispatchEvent(new CustomEvent('open-legal', { detail: page }));
-  };
+  }, []);
 
   return (
     <footer className="border-t border-[var(--border)] py-6">
@@ -21,9 +23,10 @@ export default function Footer() {
           <span>DishRank</span>
         </a>
         <div className="flex flex-wrap justify-center gap-4 sm:gap-5 text-xs text-[var(--text3)]">
+          <a href="https://play.google.com/store/apps/details?id=com.dishrank.app" target="_blank" rel="noopener" className="hover:text-[var(--text)] transition-colors">Google Play</a>
           <a href="mailto:contact@dishrank.fr" className="hover:text-[var(--text)] transition-colors">{t('contact')}</a>
-          <button onClick={() => openLegal('privacy')} className="hover:text-[var(--text)] transition-colors">{tl('privacy')}</button>
-          <button onClick={() => openLegal('terms')} className="hover:text-[var(--text)] transition-colors">{tl('terms')}</button>
+          <a href="/?page=privacy" onClick={(e) => openLegal(e, 'privacy')} className="hover:text-[var(--text)] transition-colors">{tl('privacy')}</a>
+          <a href="/?page=terms" onClick={(e) => openLegal(e, 'terms')} className="hover:text-[var(--text)] transition-colors">{tl('terms')}</a>
         </div>
       </div>
     </footer>

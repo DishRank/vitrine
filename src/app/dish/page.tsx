@@ -3,10 +3,11 @@ import Image from 'next/image';
 
 export const metadata: Metadata = {
   title: 'DishRank — Voir ce plat',
-  description: 'Decouvrez les meilleurs plats notes par la communaute DishRank.',
+  description: 'Découvrez les meilleurs plats notés par la communauté DishRank.',
+  robots: { index: false, follow: false },
   openGraph: {
-    title: 'DishRank — Decouvrez ce plat',
-    description: 'Notez les plats, pas les restos. Decouvrez les avis de la communaute DishRank.',
+    title: 'DishRank — Découvrez ce plat',
+    description: 'Notez les plats, pas les restos. Découvrez les avis de la communauté DishRank.',
     images: [{ url: 'https://dishrank.fr/img/play_store_feature_graphic.png' }],
   },
 };
@@ -14,6 +15,15 @@ export const metadata: Metadata = {
 export default function DishPage() {
   return (
     <html lang="fr">
+      <head>
+        <title>DishRank — Voir ce plat</title>
+        <meta name="description" content="Découvrez les meilleurs plats notés par la communauté DishRank." />
+        <meta name="robots" content="noindex, nofollow" />
+        <meta property="og:title" content="DishRank — Découvrez ce plat" />
+        <meta property="og:description" content="Notez les plats, pas les restos. Découvrez les avis de la communauté DishRank." />
+        <meta property="og:image" content="https://dishrank.fr/img/play_store_feature_graphic.png" />
+        <link rel="icon" type="image/png" href="/img/icon.png" />
+      </head>
       <body style={{ fontFamily: "'Outfit', -apple-system, sans-serif", background: '#0F0D1A', color: '#FFFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: 24, margin: 0 }}>
         <div style={{ maxWidth: 400 }}>
           <Image src="/img/icon.png" alt="DishRank" width={64} height={64} style={{ borderRadius: 16, marginBottom: 16 }} />

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+
 :root {
   --primary: #6C5CE7;
   --primary-light: #A29BFE;
@@ -52,7 +53,7 @@
 }
 
 html, body {
-  font-family: 'Outfit', -apple-system, sans-serif;
+  font-family: var(--font-outfit), 'Outfit', -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;

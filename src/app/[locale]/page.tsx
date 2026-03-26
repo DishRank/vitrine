@@ -15,6 +15,9 @@ import LegalSheet from '@/components/LegalSheet';
 import CookieConsent from '@/components/CookieConsent';
 import BetaModal from '@/components/BetaModal';
 
+// ISR: cache pages for 1 hour, serve stale while revalidating
+export const revalidate = 3600;
+
 type Props = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ categorie?: string; ville?: string; q?: string; page?: string }>;

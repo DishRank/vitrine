@@ -5,6 +5,7 @@ import { fetchCategories } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 const BASE = 'https://dishrank.fr';
+const LOCALES = ['fr', 'en', 'es', 'de', 'it'];
 const CITIES = [
   'Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux', 'Lille', 'Nice', 'Nantes',
   'Strasbourg', 'Montpellier', 'Rennes', 'Grenoble', 'Rouen', 'Toulon', 'Dijon',
@@ -14,6 +15,22 @@ const CITIES = [
 ];
 const TOP_SLUGS = ['burger', 'pizza', 'sushi', 'tacos', 'ramen', 'kebab', 'pasta', 'dessert', 'curry', 'steak', 'pho', 'coffee', 'couscous', 'crepes'];
 
+function localeUrl(locale: string, qs = '') {
+  const prefix = locale === 'fr' ? '' : `/${locale}`;
+  return `${BASE}${prefix}${qs ? `/?${qs}` : ''}`;
+}
+
+function withAlternates(path: string, extra: Omit<MetadataRoute.Sitemap[number], 'url' | 'alternates'>): MetadataRoute.Sitemap {
+  return LOCALES.map((locale) => ({
+    url: localeUrl(locale, path),
+    lastModified: new Date(),
+    alternates: {
+      languages: Object.fromEntries(LOCALES.map((l) => [l, localeUrl(l, path)])),
+    },
+    ...extra,
+  }));
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let categories: { slug: string }[] = [];
   try {
@@ -21,38 +38,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } catch {}
 
   const urls: MetadataRoute.Sitemap = [
-    { url: BASE, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: `${BASE}/?page=privacy`, priority: 0.3 },
-    { url: `${BASE}/?page=terms`, priority: 0.3 },
+    ...withAlternates('', { changeFrequency: 'daily', priority: 1 }),
+    ...withAlternates('page=privacy', { changeFrequency: 'monthly', priority: 0.3 }),
+    ...withAlternates('page=terms', { changeFrequency: 'monthly', priority: 0.3 }),
   ];
 
   // All categories
   for (const cat of categories.slice(0, 50)) {
-    urls.push({
-      url: `${BASE}/?categorie=${cat.slug}`,
+    urls.push(...withAlternates(`categorie=${cat.slug}`, {
       changeFrequency: 'daily',
       priority: TOP_SLUGS.includes(cat.slug) ? 0.8 : 0.6,
-    });
+    }));
   }
 
   // Top categories x cities
   for (const slug of TOP_SLUGS) {
     for (const city of CITIES) {
-      urls.push({
-        url: `${BASE}/?categorie=${slug}&ville=${city}`,
+      urls.push(...withAlternates(`categorie=${slug}&ville=${city}`, {
         changeFrequency: 'daily',
         priority: city === 'Lyon' || city === 'Paris' ? 0.9 : 0.7,
-      });
+      }));
     }
   }
 
   // Cities alone
   for (const city of CITIES) {
-    urls.push({
-      url: `${BASE}/?ville=${city}`,
+    urls.push(...withAlternates(`ville=${city}`, {
       changeFrequency: 'daily',
       priority: 0.6,
-    });
+    }));
   }
 
   return urls;

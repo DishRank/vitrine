@@ -80,6 +80,13 @@
     "contact": "Contact",
     "download": "Télécharger"
   },
+  "notFound": {
+    "title": "Page introuvable — DishRank",
+    "heading": "Ce plat n'est pas <em>au menu</em>.",
+    "description": "La page que tu cherches n'existe pas ou a été déplacée. Pas de panique, il y a plein de bons plats ailleurs.",
+    "backHome": "Retour à l'accueil",
+    "downloadApp": "Télécharger l'app"
+  },
   "cookies": {
     "title": "Cookies",
     "description": "Nous utilisons des cookies analytiques pour comprendre comment vous utilisez le site et améliorer votre expérience. Aucune donnée personnelle n'est vendue.",
