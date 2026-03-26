@@ -60,6 +60,7 @@ export default function DishGrid({
               key={`${d.restaurant_id}::${d.dish_name}`}
               className="bg-[var(--surface)] rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-[fadeUp_0.4s_ease_both]"
               style={{ animationDelay: `${i * 40}ms` }}
+              onClick={() => window.dispatchEvent(new CustomEvent('open-dish', { detail: d }))}
             >
               <div className="relative h-36 overflow-hidden">
                 <Image
