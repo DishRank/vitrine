@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useMemo } from 'react';
 import type { DishRow } from '@/lib/supabase';
+import { openBetaModal } from './BetaModal';
 
 export default function DishGrid({
   initialDishes,
@@ -47,7 +48,8 @@ export default function DishGrid({
           <p className="text-lg font-bold mb-1">{t('noResults')}</p>
           <p className="text-[var(--text2)] text-sm mb-5">{t('beFirst')}</p>
           <a
-            href="https://play.google.com/store/apps/details?id=com.dishrank.app"
+            href="#"
+            onClick={openBetaModal}
             className="inline-flex items-center gap-2 px-7 py-3 bg-[var(--primary)] text-white font-semibold rounded-full"
           >
             {t('download')}

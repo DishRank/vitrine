@@ -13,6 +13,7 @@ import Footer from '@/components/Footer';
 import DishModal from '@/components/DishModal';
 import LegalSheet from '@/components/LegalSheet';
 import CookieConsent from '@/components/CookieConsent';
+import BetaModal from '@/components/BetaModal';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -157,6 +158,7 @@ export default async function HomePage({ params, searchParams }: Props) {
       <DishModal />
       <LegalSheet initialPage={sp.page || ''} />
       <CookieConsent />
+      <BetaModal />
     </>
   );
 }

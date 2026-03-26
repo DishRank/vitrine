@@ -2,6 +2,7 @@
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { openBetaModal } from './BetaModal';
 
 export default function Nav() {
   const t = useTranslations('footer');
@@ -28,7 +29,8 @@ export default function Nav() {
           <span>DishRank</span>
         </a>
         <a
-          href="https://play.google.com/store/apps/details?id=com.dishrank.app"
+          href="#"
+          onClick={openBetaModal}
           className="inline-flex items-center gap-2 px-5 py-2 bg-[var(--primary)] text-white text-sm font-semibold rounded-full hover:bg-[var(--primary-light)] hover:text-[var(--bg)] transition-all"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 0 1 0 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>
