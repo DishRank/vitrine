@@ -20,12 +20,17 @@ function localeUrl(locale: string, qs = '') {
   return `${BASE}${prefix}${qs ? `/?${qs}` : ''}`;
 }
 
+/** Encode & for XML (Next.js does not auto-escape sitemap URLs) */
+function xmlSafeUrl(locale: string, qs = '') {
+  return localeUrl(locale, qs).replace(/&/g, '&amp;');
+}
+
 function withAlternates(path: string, extra: Omit<MetadataRoute.Sitemap[number], 'url' | 'alternates'>): MetadataRoute.Sitemap {
   return LOCALES.map((locale) => ({
-    url: localeUrl(locale, path),
+    url: xmlSafeUrl(locale, path),
     lastModified: new Date(),
     alternates: {
-      languages: Object.fromEntries(LOCALES.map((l) => [l, localeUrl(l, path)])),
+      languages: Object.fromEntries(LOCALES.map((l) => [l, xmlSafeUrl(l, path)])),
     },
     ...extra,
   }));
