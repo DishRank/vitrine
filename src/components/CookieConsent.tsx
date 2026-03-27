@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 
 const CONSENT_KEY = 'dishrank_cookie_consent';
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 type Consent = 'granted' | 'denied' | null;
 
@@ -13,12 +14,17 @@ function getStoredConsent(): Consent {
   return null;
 }
 
-function updateGtagConsent(consent: 'granted' | 'denied') {
-  if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
-    (window as any).gtag('consent', 'update', {
-      analytics_storage: consent,
-    });
-  }
+function loadGA() {
+  if (!GA_ID || document.getElementById('ga-script')) return;
+  const s = document.createElement('script');
+  s.id = 'ga-script';
+  s.async = true;
+  s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+  document.head.appendChild(s);
+  s.onload = () => {
+    (window as any).gtag('consent', 'update', { analytics_storage: 'granted' });
+    (window as any).gtag('config', GA_ID);
+  };
 }
 
 export default function CookieConsent() {
@@ -27,7 +33,12 @@ export default function CookieConsent() {
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
-    setConsent(getStoredConsent());
+    const stored = getStoredConsent();
+    setConsent(stored);
+    // If user already accepted before, load GA immediately
+    if (stored === 'granted') {
+      loadGA();
+    }
   }, []);
 
   const accept = () => {
@@ -35,8 +46,6 @@ export default function CookieConsent() {
     setTimeout(() => {
       localStorage.setItem(CONSENT_KEY, 'granted');
       setConsent('granted');
-      updateGtagConsent('granted');
-      // Load GA script dynamically
       loadGA();
     }, 300);
   };
@@ -46,7 +55,7 @@ export default function CookieConsent() {
     setTimeout(() => {
       localStorage.setItem(CONSENT_KEY, 'denied');
       setConsent('denied');
-      updateGtagConsent('denied');
+      (window as any).gtag?.('consent', 'update', { analytics_storage: 'denied' });
     }, 300);
   };
 
@@ -75,23 +84,4 @@ export default function CookieConsent() {
       </div>
     </div>
   );
-}
-
-// Load GA4 script only after consent
-function loadGA() {
-  const id = process.env.NEXT_PUBLIC_GA_ID;
-  if (!id || document.getElementById('ga-script')) return;
-  const s = document.createElement('script');
-  s.id = 'ga-script';
-  s.async = true;
-  s.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
-  document.head.appendChild(s);
-  s.onload = () => {
-    (window as any).dataLayer = (window as any).dataLayer || [];
-    function gtag(...args: any[]) { (window as any).dataLayer.push(args); }
-    (window as any).gtag = gtag;
-    gtag('js', new Date());
-    gtag('consent', 'update', { analytics_storage: 'granted' });
-    gtag('config', id);
-  };
 }
