@@ -117,7 +117,7 @@ export default async function HomePage({ params, searchParams }: Props) {
           reviewCount: d.review_count,
           bestRating: 5,
         },
-        ...(d.latest_price ? { offers: { '@type': 'Offer', price: d.latest_price, priceCurrency: d.currency || 'EUR' } } : {}),
+        ...(d.latest_price ? { offers: { '@type': 'Offer', price: d.latest_price, priceCurrency: d.currency || 'EUR', availability: 'https://schema.org/InStock' } } : {}),
         brand: { '@type': 'Restaurant', name: d.restaurant_name, address: d.restaurant_address },
       },
     })),
