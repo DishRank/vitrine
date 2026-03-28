@@ -28,7 +28,7 @@ export default function BetaModal() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dGJoZHZydmdvemh5YXVqdGp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMDczNzcsImV4cCI6MjA1Nzg4MzM3N30.4PzVhZJ52fk0IVS3mBSvpWG_vg_5RGqh3IqjPSB5hgY',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dGJoZHZydmdvemh5YXVqdGp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MTA1NzcsImV4cCI6MjA4OTQ4NjU3N30.4PzVhZu7jLvtJ_VAizSv-encm8t22Mz11mJ228FPGPE',
           'Prefer': 'return=minimal',
         },
         body: JSON.stringify({ email: email.trim() }),
