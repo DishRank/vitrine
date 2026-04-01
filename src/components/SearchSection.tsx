@@ -5,27 +5,29 @@ import { useState, useCallback, useEffect } from 'react';
 import type { CategoryRow } from '@/lib/supabase';
 
 const CHIP_STEPS = [10, 30, 60, 100];
-const CITIES = ['Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux', 'Lille', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier'];
 
 export default function SearchSection({
   categories,
   initialCategory,
   initialCity,
   initialQuery,
+  cities,
 }: {
   categories: CategoryRow[];
   initialCategory: string;
   initialCity: string;
   initialQuery: string;
+  cities: string[];
 }) {
   const t = useTranslations('search');
   const router = useRouter();
   const [category, setCategory] = useState(initialCategory);
-  const [city, setCity] = useState(initialCity);
+  const [city, setCity] = useState(initialCity || (cities.length === 1 ? cities[0] : ''));
   const [query, setQuery] = useState(initialQuery);
   const [chipLevel, setChipLevel] = useState(0);
   const [prevLimit, setPrevLimit] = useState(CHIP_STEPS[0]);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -36,11 +38,12 @@ export default function SearchSection({
   }, []);
 
   const navigate = useCallback(
-    (cat: string, c: string, q: string) => {
+    (cat: string, c: string, q: string, isFilter = false) => {
       const params = new URLSearchParams();
       if (cat) params.set('categorie', cat);
       if (c) params.set('ville', c);
       if (q) params.set('q', q);
+      if (isFilter) window.dispatchEvent(new CustomEvent('dish-loading'));
       router.push(`?${params.toString()}`, { scroll: false });
     },
     [router]
@@ -58,7 +61,7 @@ export default function SearchSection({
 
   const selectCategory = (slug: string) => {
     setCategory(slug);
-    navigate(slug, city, query);
+    navigate(slug, city, query, true);
     setSheetOpen(false);
   };
 
@@ -69,24 +72,22 @@ export default function SearchSection({
       </p>
 
       {/* Search bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-[var(--surface)] border border-[var(--border2)] rounded-2xl sm:rounded-full px-3 py-2 sm:px-2 sm:py-1.5 gap-2 sm:gap-0 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary-container)] transition-all">
-        {/* City */}
-        <div className="flex items-center gap-1.5 sm:pl-3 sm:pr-3 shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--primary)" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-          <input
-            type="text"
-            list="cities"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            onBlur={(e) => navigate(category, e.target.value.trim(), query)}
-            onFocus={(e) => e.target.select()}
-            placeholder={t('allCities')}
-            className="bg-transparent border-none outline-none text-[var(--text)] text-sm font-semibold w-full sm:w-28 min-w-0 placeholder:text-[var(--text3)]"
-          />
-          <datalist id="cities">
-            {CITIES.map((c) => <option key={c} value={c} />)}
-          </datalist>
-        </div>
+      <div className="relative">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-[var(--surface)] border border-[var(--border2)] rounded-2xl sm:rounded-full px-3 py-2 sm:px-2 sm:py-1.5 gap-2 sm:gap-0 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary-container)] transition-all">
+          {/* City */}
+          <div className="flex items-center gap-1.5 sm:pl-3 sm:pr-3 shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--primary)" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            <button
+              type="button"
+              aria-label={t('allCities')}
+              onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
+              className="bg-transparent border-none outline-none text-sm font-semibold cursor-pointer flex items-center gap-1 min-w-0 sm:w-28"
+              style={{ color: city ? 'var(--text)' : 'var(--text3)' }}
+            >
+              <span className="truncate">{city || t('allCities')}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 opacity-50"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+            </button>
+          </div>
         <div className="hidden sm:block w-px h-6 bg-[var(--border2)] shrink-0" />
         <div className="block sm:hidden h-px w-full bg-[var(--border2)]" />
         {/* Query */}
@@ -94,6 +95,7 @@ export default function SearchSection({
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             type="text"
+            aria-label={t('placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') navigate(category, city, query); }}
@@ -106,6 +108,32 @@ export default function SearchSection({
             </button>
           )}
         </div>
+        </div>
+        {/* City dropdown — outside search bar to avoid clipping */}
+        {cityDropdownOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setCityDropdownOpen(false)} />
+            <div className="absolute left-3 sm:left-4 top-full mt-1 z-50 bg-[var(--surface)] border border-[var(--border2)] rounded-xl shadow-xl max-h-60 overflow-y-auto min-w-[200px] py-1 animate-[fadeUp_0.15s_ease]">
+              <button
+                type="button"
+                onClick={() => { setCity(''); setCityDropdownOpen(false); navigate(category, '', query, true); }}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[var(--primary-container)] rounded-lg mx-0 ${!city ? 'text-[var(--primary)] font-bold' : 'text-[var(--text)]'}`}
+              >
+                {t('allCities')}
+              </button>
+              {cities.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => { setCity(c); setCityDropdownOpen(false); navigate(category, c, query, true); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[var(--primary-container)] ${city === c ? 'text-[var(--primary)] font-bold' : 'text-[var(--text)]'}`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Category chips - desktop: inline with animation, mobile: limited + bottom sheet */}

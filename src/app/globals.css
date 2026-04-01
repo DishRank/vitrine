@@ -88,6 +88,24 @@ html, body {
   from { opacity: 0; transform: scale(0.7); }
   to { opacity: 1; transform: scale(1); }
 }
+@keyframes steam {
+  0%, 100% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 0.5; transform: translateY(-8px); }
+}
+
+/* Reduced motion: disable decorative animations for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Disable hover effects on touch devices */
+@media (hover: none) {
+  .hover\:scale-105:hover { transform: none !important; }
+}
 
 /* Legal sheet scroll */
 .legal-scroll {

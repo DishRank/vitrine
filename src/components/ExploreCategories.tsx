@@ -109,7 +109,7 @@ export default function ExploreCategories({ categories }: { categories: Category
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black leading-tight mb-2">{t('title')}</h2>
         <p className="text-sm text-[var(--text2)]">{t('subtitle')}</p>
       </div>
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0" aria-hidden="true">
         {emojis.map((emoji, i) => (
           <span
             key={`${emojiCount}-${i}`}

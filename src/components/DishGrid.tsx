@@ -2,9 +2,10 @@
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DishRow } from '@/lib/supabase';
 import { openBetaModal } from './BetaModal';
+import M3Spinner from './M3Spinner';
 
 export default function DishGrid({
   initialDishes,
@@ -17,9 +18,20 @@ export default function DishGrid({
 }) {
   const t = useTranslations('feed');
   const sp = useSearchParams();
-  const category = sp.get('categorie') || initialCategory;
-  const city = sp.get('ville') || initialCity;
   const q = sp.get('q') || '';
+  const [loading, setLoading] = useState(false);
+
+  // Listen for navigation events from SearchSection
+  useEffect(() => {
+    const onLoading = () => setLoading(true);
+    window.addEventListener('dish-loading', onLoading);
+    return () => window.removeEventListener('dish-loading', onLoading);
+  }, []);
+
+  // Clear loading when server data arrives (props change)
+  useEffect(() => {
+    setLoading(false);
+  }, [initialDishes, initialCategory, initialCity]);
 
   const dishes = useMemo(() => {
     let filtered = initialDishes;
@@ -34,15 +46,22 @@ export default function DishGrid({
 
   // Title
   let title = t('topRated');
-  if (category && city) title = t('topRatedCityCategory', { category, city });
-  else if (category) title = t('topRatedCategory', { category });
-  else if (city) title = t('topRatedCity', { city });
+  if (initialCategory && initialCity) title = t('topRatedCityCategory', { category: initialCategory, city: initialCity });
+  else if (initialCategory) title = t('topRatedCategory', { category: initialCategory });
+  else if (initialCity) title = t('topRatedCity', { city: initialCity });
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-8 pb-8 min-h-[300px]">
       <h2 className="text-lg font-bold py-3">{title}</h2>
 
-      {dishes.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-3">
+            <M3Spinner size={48} />
+            <p className="text-sm text-[var(--text3)]">{t('topRated')}...</p>
+          </div>
+        </div>
+      ) : dishes.length === 0 ? (
         <div className="text-center py-16">
           <span className="text-5xl block mb-3">&#128269;</span>
           <p className="text-lg font-bold mb-1">{t('noResults')}</p>
@@ -60,14 +79,18 @@ export default function DishGrid({
           {dishes.map((d, i) => (
             <article
               key={`${d.restaurant_id}::${d.dish_name}`}
-              className="bg-[var(--surface)] rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-[fadeUp_0.4s_ease_both]"
+              role="button"
+              tabIndex={0}
+              aria-label={`${d.dish_name} — ${d.restaurant_name}${d.restaurant_city ? `, ${d.restaurant_city}` : ''} — ${d.avg_rating}/5`}
+              className="bg-[var(--surface)] rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-[fadeUp_0.4s_ease_both] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
               style={{ animationDelay: `${i * 40}ms` }}
               onClick={() => window.dispatchEvent(new CustomEvent('open-dish', { detail: d }))}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('open-dish', { detail: d })); } }}
             >
               <div className="relative h-36 overflow-hidden">
                 <Image
                   src={d.cover_photo_url}
-                  alt={d.dish_name}
+                  alt={`${d.dish_name} chez ${d.restaurant_name}${d.restaurant_city ? ` à ${d.restaurant_city}` : ''}`}
                   fill
                   className="object-cover hover:scale-105 transition-transform duration-500"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"

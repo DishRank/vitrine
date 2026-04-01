@@ -2,6 +2,7 @@
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { useCallback } from 'react';
+import { openBetaModal } from './BetaModal';
 
 export default function Footer() {
   const t = useTranslations('footer');
@@ -22,12 +23,12 @@ export default function Footer() {
           <Image src="/img/icon.png" alt="DishRank logo" width={24} height={24} className="rounded-md" />
           <span>DishRank</span>
         </a>
-        <div className="flex flex-wrap justify-center gap-4 sm:gap-5 text-xs text-[var(--text3)]">
-          <a href="https://play.google.com/store/apps/details?id=com.dishrank.app" target="_blank" rel="noopener" className="hover:text-[var(--text)] transition-colors">Google Play</a>
+        <nav aria-label="Footer links" className="flex flex-wrap justify-center gap-4 sm:gap-5 text-xs text-[var(--text3)]">
+          <a href="#" onClick={openBetaModal} className="hover:text-[var(--text)] transition-colors">Google Play</a>
           <a href="mailto:contact@dishrank.fr" className="hover:text-[var(--text)] transition-colors">{t('contact')}</a>
           <a href="/?page=privacy" onClick={(e) => openLegal(e, 'privacy')} className="hover:text-[var(--text)] transition-colors">{tl('privacy')}</a>
           <a href="/?page=terms" onClick={(e) => openLegal(e, 'terms')} className="hover:text-[var(--text)] transition-colors">{tl('terms')}</a>
-        </div>
+        </nav>
       </div>
     </footer>
   );

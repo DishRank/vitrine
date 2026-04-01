@@ -82,12 +82,16 @@ export default async function HomePage({ params, searchParams }: Props) {
   let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
   try {
     [dishes, categories] = await Promise.all([
-      fetchDishes(sp.categorie),
+      fetchDishes(sp.categorie, 50),
       fetchCategories(),
     ]);
   } catch (e) {
     console.error('SSR fetch error:', e);
   }
+
+  // Extract unique cities from all dishes (before city filter)
+  const cities = [...new Set(dishes.map((d) => d.restaurant_city).filter(Boolean))] as string[];
+  cities.sort((a, b) => a.localeCompare(b));
 
   // Filter by city server-side
   if (sp.ville) {
@@ -146,6 +150,7 @@ export default async function HomePage({ params, searchParams }: Props) {
           initialCategory={sp.categorie || ''}
           initialCity={sp.ville || ''}
           initialQuery={sp.q || ''}
+          cities={cities}
         />
         <DishGrid
           initialDishes={dishes}

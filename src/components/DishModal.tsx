@@ -1,7 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import type { DishRow } from '@/lib/supabase';
 import { openBetaModal } from './BetaModal';
 
@@ -10,9 +9,13 @@ export default function DishModal() {
   const tf = useTranslations('feed');
   const [dish, setDish] = useState<DishRow | null>(null);
   const [closing, setClosing] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   useEffect(() => {
-    const handler = (e: Event) => setDish((e as CustomEvent).detail);
+    const handler = (e: Event) => {
+      setImgLoaded(false);
+      setDish((e as CustomEvent).detail);
+    };
     window.addEventListener('open-dish', handler);
     return () => window.removeEventListener('open-dish', handler);
   }, []);
@@ -41,12 +44,12 @@ export default function DishModal() {
           <button onClick={close} className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={dish.cover_photo_url}
-            alt={dish.dish_name}
-            fill
-            sizes="480px"
-            className="object-cover"
+            alt={`${dish.dish_name} chez ${dish.restaurant_name}`}
+            onLoad={() => setImgLoaded(true)}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
         </div>
 

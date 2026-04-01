@@ -26,9 +26,15 @@ export default function Showcase() {
     setTimeout(() => { setIdx(next); setAnimating(false); }, 300);
   }, [slides.length]);
 
+  // Auto-rotate, pause when tab is hidden
   useEffect(() => {
-    const timer = setInterval(() => goTo(idx + 1), 5000);
-    return () => clearInterval(timer);
+    let timer: ReturnType<typeof setInterval>;
+    const start = () => { timer = setInterval(() => goTo(idx + 1), 5000); };
+    const stop = () => clearInterval(timer);
+    const onVisibility = () => { document.hidden ? stop() : start(); };
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
   }, [idx, goTo]);
 
   // Touch swipe
