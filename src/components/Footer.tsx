@@ -25,6 +25,7 @@ export default function Footer() {
         </a>
         <nav aria-label="Footer links" className="flex flex-wrap justify-center gap-4 sm:gap-5 text-xs text-[var(--text3)]">
           <a href="#" onClick={openBetaModal} className="hover:text-[var(--text)] transition-colors">Google Play</a>
+          <a href="https://www.instagram.com/dishrank.app" target="_blank" rel="noopener" className="hover:text-[var(--text)] transition-colors">Instagram</a>
           <a href="mailto:contact@dishrank.fr" className="hover:text-[var(--text)] transition-colors">{t('contact')}</a>
           <a href="/?page=privacy" onClick={(e) => openLegal(e, 'privacy')} className="hover:text-[var(--text)] transition-colors">{tl('privacy')}</a>
           <a href="/?page=terms" onClick={(e) => openLegal(e, 'terms')} className="hover:text-[var(--text)] transition-colors">{tl('terms')}</a>
