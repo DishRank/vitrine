@@ -24,7 +24,7 @@ const securityHeaders = [
       "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://yztbhdvrvgozhyaujtjz.supabase.co",
       "frame-ancestors 'none'",
       "base-uri 'self'",
-      "form-action 'self'",
+      "form-action 'self' https://appleid.apple.com https://accounts.google.com https://yztbhdvrvgozhyaujtjz.supabase.co",
     ].join('; '),
   },
 ];
