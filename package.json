@@ -12,12 +12,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-    "dependencies": {
+  "dependencies": {
     "@supabase/supabase-js": "^2.100.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "next": "^16.2.1",
     "next-intl": "^4.8.3",
+    "nodemailer": "^8.0.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "typescript": "^5.9.3"
