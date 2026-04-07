@@ -21,6 +21,7 @@ npm run dev
 
 ### Variables d'environnement
 
+
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase |
