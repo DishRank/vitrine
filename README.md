@@ -189,9 +189,9 @@ Ajouter les env vars dans le dashboard Vercel :
 
 Pointer le domaine `dishrank.fr` vers Vercel (CNAME).
 
-### Netlify
+### Vercel
 
-Netlify supporte Next.js SSR nativement. Meme process, ajouter les env vars dans le dashboard.
+Vercel supporte Next.js SSR nativement. Meme process, ajouter les env vars dans le dashboard.
 
 ## Scripts
 
