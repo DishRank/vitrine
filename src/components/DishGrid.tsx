@@ -94,6 +94,8 @@ export default function DishGrid({
                   fill
                   className="object-cover hover:scale-105 transition-transform duration-500"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  loading={i < 4 ? 'eager' : 'lazy'}
+                  priority={i < 4}
                 />
                 <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-bold text-white">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="#F9CA24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>

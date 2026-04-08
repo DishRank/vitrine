@@ -29,7 +29,7 @@ export default function Showcase() {
   // Auto-rotate, pause when tab is hidden
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
-    const start = () => { timer = setInterval(() => goTo(idx + 1), 5000); };
+    const start = () => { timer = setInterval(() => goTo(idx + 1), 8000); };
     const stop = () => clearInterval(timer);
     const onVisibility = () => { document.hidden ? stop() : start(); };
     start();
@@ -88,35 +88,21 @@ export default function Showcase() {
             style={{ transformStyle: 'preserve-3d', transform: 'rotateY(-6deg) rotateX(2deg)' }}
           >
             {/* Subtle glow behind phone */}
-            <div className="absolute -inset-4 rounded-[50px] opacity-15 blur-2xl bg-[var(--primary)]" style={{ transform: 'translateZ(-40px)' }} />
+            <div className="absolute -inset-4 rounded-[40px] opacity-15 blur-2xl bg-[var(--primary)]" style={{ transform: 'translateZ(-40px)' }} />
 
-            {/* Phone frame */}
-            <div className="relative w-[270px] rounded-[40px] p-[10px] bg-gradient-to-b from-[#2a2a2e] to-[#1a1a1e]"
+            {/* Phone frame — minimal bezel */}
+            <div className="relative w-[270px] rounded-[32px] p-[6px] bg-gradient-to-b from-[#2a2a2e] to-[#1a1a1e]"
               style={{
                 boxShadow: [
                   'inset 0 1px 0 rgba(255,255,255,0.1)',
-                  'inset 0 -1px 0 rgba(0,0,0,0.3)',
                   '0 0 0 1px rgba(255,255,255,0.08)',
-                  '0 4px 8px rgba(0,0,0,0.3)',
-                  '0 12px 24px rgba(0,0,0,0.3)',
-                  '0 24px 48px rgba(0,0,0,0.25)',
+                  '0 12px 40px rgba(0,0,0,0.4)',
                   '0 0 60px var(--primary-glow)',
                 ].join(', '),
               }}
             >
-              {/* Side button (power) */}
-              <div className="absolute -right-[3px] top-24 w-[3px] h-10 rounded-r-sm bg-[#3a3a3e]" />
-              {/* Side buttons (volume) */}
-              <div className="absolute -left-[3px] top-20 w-[3px] h-6 rounded-l-sm bg-[#3a3a3e]" />
-              <div className="absolute -left-[3px] top-28 w-[3px] h-6 rounded-l-sm bg-[#3a3a3e]" />
-
-              {/* Dynamic Island */}
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[100px] h-[28px] bg-black rounded-full z-20 flex items-center justify-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#1a1a2e] ring-1 ring-[#2a2a3e]" />
-              </div>
-
-              {/* Screen bezel */}
-              <div className="rounded-[30px] overflow-hidden bg-black aspect-[250/540] relative">
+              {/* Screen */}
+              <div className="rounded-[26px] overflow-hidden bg-black aspect-[9/19.5] relative">
                 <Image
                   src={IMAGES[idx]}
                   alt={slides[idx].title}
@@ -124,12 +110,12 @@ export default function Showcase() {
                   sizes="270px"
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   priority={idx === 0}
-                  className={`object-cover transition-all duration-300 ${animating ? 'opacity-0 -translate-x-5' : 'opacity-100 translate-x-0'}`}
+                  className={`object-cover object-top transition-all duration-300 ${animating ? 'opacity-0 -translate-x-5' : 'opacity-100 translate-x-0'}`}
                 />
               </div>
 
               {/* Home indicator */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[100px] h-[4px] rounded-full bg-white/20 z-20" />
+              <div className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[90px] h-[4px] rounded-full bg-white/20 z-20" />
             </div>
           </div>
         </div>
