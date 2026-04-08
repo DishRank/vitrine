@@ -15,6 +15,12 @@ export default function Hero() {
         <p className="text-base text-[var(--text2)] max-w-[480px] leading-relaxed mb-8">
           {t('subtitle')}
         </p>
+        <div className="flex items-center gap-3 mb-6">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-400 text-xs font-semibold rounded-full border border-green-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            {t('betaOpen')}
+          </span>
+        </div>
         <div className="flex items-center gap-4 text-xs font-medium text-[var(--text3)]">
           <span>{t('categories')}</span>
           <span className="w-1 h-1 rounded-full bg-[var(--border2)]" />

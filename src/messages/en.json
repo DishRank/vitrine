@@ -13,7 +13,8 @@
     "subtitle": "Search, compare and find where to eat the best burger, sushi, pizza in your city.",
     "categories": "200+ categories",
     "free": "100% free",
-    "community": "Community-driven"
+    "community": "Community-driven",
+    "betaOpen": "Closed beta — Android & iOS"
   },
   "search": {
     "label": "What do you want to eat?",

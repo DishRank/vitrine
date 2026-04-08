@@ -13,7 +13,8 @@
     "subtitle": "Cherche, compare et trouve où manger le meilleur burger, sushi, pizza de ta ville.",
     "categories": "200+ catégories",
     "free": "100% gratuit",
-    "community": "Communautaire"
+    "community": "Communautaire",
+    "betaOpen": "Bêta fermée — Android & iOS"
   },
   "search": {
     "label": "Qu'est-ce que tu veux manger ?",
