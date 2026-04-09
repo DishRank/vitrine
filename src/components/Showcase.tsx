@@ -4,14 +4,14 @@ import Image from 'next/image';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 const IMAGES = [
-  '/img/01_feed.jpg',
-  '/img/02_dish_detail.jpg',
-  '/img/03_categories.jpg',
-  '/img/04_add_review.jpg',
-  '/img/05_settings.jpg',
-  '/img/06_map.jpg',
-  '/img/07_restaurant.jpg',
-  '/img/08_profile.jpg',
+  '/img/01_feed.webp',
+  '/img/02_dish_detail.webp',
+  '/img/03_categories.webp',
+  '/img/04_add_review.webp',
+  '/img/05_settings.webp',
+  '/img/06_map.webp',
+  '/img/07_restaurant.webp',
+  '/img/08_profile.webp',
 ];
 
 export default function Showcase() {
@@ -67,16 +67,17 @@ export default function Showcase() {
               <button
                 key={i}
                 onClick={() => goTo(i)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${i === idx ? 'w-7 bg-[var(--primary)]' : 'w-2.5 bg-[var(--border2)] hover:bg-[var(--text3)]'}`}
+                aria-label={`Slide ${i + 1}`}
+                className={`cursor-pointer h-2.5 rounded-full transition-all duration-300 ${i === idx ? 'w-7 bg-[var(--primary)]' : 'w-2.5 bg-[var(--border2)] hover:bg-[var(--text3)] hover:scale-125'}`}
               />
             ))}
           </div>
           {/* Arrows */}
           <div className="flex gap-2 mt-1">
-            <button onClick={() => goTo(idx - 1)} className="w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all">
+            <button onClick={() => goTo(idx - 1)} aria-label="Previous slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:-translate-x-0.5 hover:scale-110 transition-all duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
-            <button onClick={() => goTo(idx + 1)} className="w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all">
+            <button onClick={() => goTo(idx + 1)} aria-label="Next slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:translate-x-0.5 hover:scale-110 transition-all duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
             </button>
           </div>

@@ -19,7 +19,7 @@ const securityHeaders = [
       "default-src 'self'",
       `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://*.google-analytics.com${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
+      "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
       "img-src 'self' https: data:",
       "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://yztbhdvrvgozhyaujtjz.supabase.co",
       "frame-ancestors 'none'",

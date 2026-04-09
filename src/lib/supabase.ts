@@ -96,12 +96,40 @@ export function fetchDishes(categorySlug?: string, limit = 10): Promise<DishRow[
 
 export function fetchCategories(): Promise<CategoryRow[]> {
   return cached('categories', THIRTY_MIN, async () => {
+    const supabase = getSupabase();
+    const [catsResult, reviewsResult] = await Promise.all([
+      supabase
+        .from('dish_categories')
+        .select('id, slug, icon')
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('reviews')
+        .select('category_id')
+        .not('category_id', 'is', null)
+        .not('pending_moderation', 'is', true),
+    ]);
+    if (catsResult.error) throw catsResult.error;
+    if (reviewsResult.error) throw reviewsResult.error;
+
+    const usedIds = new Set(
+      (reviewsResult.data || []).map((r) => r.category_id as string)
+    );
+    return ((catsResult.data || []) as CategoryRow[]).filter((c) => usedIds.has(c.id));
+  });
+}
+
+export function fetchCities(): Promise<string[]> {
+  return cached('cities:all', THIRTY_MIN, async () => {
     const { data, error } = await getSupabase()
-      .from('dish_categories')
-      .select('id, slug, icon')
-      .order('created_at', { ascending: true });
+      .from('restaurants')
+      .select('city')
+      .not('city', 'is', null);
     if (error) throw error;
-    return (data || []) as CategoryRow[];
+    const set = new Set<string>();
+    for (const row of (data || []) as Array<{ city: string | null }>) {
+      if (row.city) set.add(row.city);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
   });
 }
 

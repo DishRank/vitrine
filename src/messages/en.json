@@ -1,20 +1,32 @@
 {
   "meta": {
-    "title": "DishRank — Rate the dishes, not the restaurants",
-    "description": "Find the best burger, sushi, pizza in your city. DishRank rates dishes, not restaurants.",
-    "titleWithCategory": "Best {category} — DishRank",
-    "titleWithCityCategory": "Best {category} in {city} — DishRank",
-    "titleWithCity": "Best dishes in {city} — DishRank",
-    "descWithCityCategory": "Discover the ranking of the best {category} in {city}. Ratings, photos and reviews by the DishRank community."
+    "title": "DishRank — Best dishes by city · Rankings & reviews 2026",
+    "description": "Find where to eat the best burger, sushi, pizza in your city. Ranking by dish (not by restaurant) with verified ratings, prices, photos and community reviews.",
+    "titleWithCategory": "Best {category} 2026 — Top ranking & reviews | DishRank",
+    "titleWithCityCategory": "Best {category} in {city} 2026 — Top 10 & reviews | DishRank",
+    "titleWithCity": "Where to eat in {city} 2026 — Top rated dishes | DishRank",
+    "descWithCategory": "Top {category} 2026: ranked by community reviews. Addresses, prices, photos and ratings to find the best {category} near you.",
+    "descWithCity": "Discover the best dishes in {city} in 2026: burger, sushi, pizza and more. Ranking by dish with ratings, photos and verified community reviews.",
+    "descWithCityCategory": "The best {category} in {city} 2026: Top 10 ranking by community reviews. Addresses, prices, photos and verified ratings on DishRank."
   },
   "hero": {
     "label": "Rate the dishes, not the restaurants.",
     "title": "The <em>best dish</em> near you.",
+    "titleWithCategory": "The best <em>{category}</em>",
+    "titleWithCity": "The best dishes in <em>{city}</em>",
+    "titleWithCityCategory": "The best <em>{category}</em> in <em>{city}</em>",
     "subtitle": "Search, compare and find where to eat the best burger, sushi, pizza in your city.",
+    "subtitleWithCategory": "Top {category} ranked by the DishRank community.",
+    "subtitleWithCity": "Where to eat in {city}? The top rated dishes by the DishRank community.",
+    "subtitleWithCityCategory": "Top {category} in {city}, ranked by the DishRank community.",
+    "intro": "DishRank is the first social network that rates dishes, not restaurants. Find the best places near you with verified reviews from our community of foodies.",
+    "introWithCategory": "Discover the top {category} of 2026, ranked by verified reviews from the DishRank community. 200+ dish categories, reliable community ratings and real addresses near you — no ads, no algorithmic bias.",
+    "introWithCity": "Looking for where to eat in {city}? DishRank shows you the top rated dishes by local foodies: burger, sushi, pizza, ramen and more. Ranked by dish (not by restaurant) based on real reviews.",
+    "introWithCityCategory": "The best {category} in {city}? Here's the Top 10 ranking based on real ratings from the DishRank community. Photos, prices and detailed reviews for every address — find where to eat your next {category} in {city} in one click.",
     "categories": "200+ categories",
     "free": "100% free",
     "community": "Community-driven",
-    "betaOpen": "Closed beta — Android & iOS"
+    "betaOpen": "Android beta · Live on iOS"
   },
   "search": {
     "label": "What do you want to eat?",
@@ -65,8 +77,7 @@
   },
   "cta": {
     "title": "Rate the dishes, not the restaurants.",
-    "subtitle": "Free. No ads. Download the app and start rating your favorite dishes.",
-    "button": "Google Play"
+    "subtitle": "Free. No ads. Download the app and start rating your favorite dishes."
   },
   "modal": {
     "downloadCta": "Download DishRank to rate this dish",
@@ -75,11 +86,27 @@
   "legal": {
     "privacy": "Privacy",
     "terms": "Terms",
-    "delete": "Delete account"
+    "delete": "Delete account",
+    "privacyContent": "<h3>Privacy Policy</h3><p class=\"text-xs text-[var(--text3)] italic mb-4\">Last updated: March 19, 2026</p><h4>1. Data Controller</h4><p>DishRank SAS is responsible for processing your personal data.</p><p>DPO contact: <a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a></p><h4>2. Data Collected</h4><ul><li><strong>Sign-up:</strong> email, username, password (encrypted), profile picture.</li><li><strong>Content:</strong> reviews, ratings, dish photos, comments.</li><li><strong>Location:</strong> geolocation (with consent).</li><li><strong>Technical:</strong> device type, OS, push notification token.</li></ul><h4>3. Purposes</h4><ul><li>Account management</li><li>Publishing and displaying your reviews</li><li>Recommending nearby dishes</li><li>Notifications (likes, comments)</li><li>Service improvement</li></ul><h4>4. Retention period</h4><ul><li>Account data: deleted within 30 days of account removal</li><li>Location: not stored, used in real time</li><li>Technical logs: 12 months maximum</li></ul><h4>5. Data sharing</h4><ul><li><strong>Supabase</strong> (hosting) — servers in Europe</li><li><strong>Google</strong> (push notifications, Places API)</li></ul><p><strong>We never sell your data.</strong></p><h4>6. Your rights (GDPR)</h4><ul><li>Access, rectification, erasure, portability (JSON export)</li><li>Objection, restriction, withdrawal of consent</li></ul><p>Exercisable from Settings > Personal data or by email.</p><h4>7. Contact</h4><p><a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a> — DishRank SAS, Paris</p>",
+    "termsContent": "<h3>Terms of Service</h3><p class=\"text-xs text-[var(--text3)] italic mb-4\">Last updated: March 19, 2026</p><h4>1. Acceptance</h4><p>By using DishRank, you accept these Terms of Service.</p><h4>2. Service description</h4><p>DishRank lets you rate and share reviews on specific dishes in restaurants.</p><h4>3. Sign-up</h4><p>You must be at least 16 years old. You are responsible for your credentials.</p><h4>4. User content</h4><ul><li>You are the original author of the content</li><li>Non-exclusive display license granted to DishRank</li><li>Removable at any time</li></ul><h4>5. Conduct</h4><ul><li>Honest and respectful use</li><li>No fake reviews</li><li>No harassment</li></ul><h4>6. Applicable law</h4><p>French law. Paris courts.</p><h4>7. Contact</h4><p><a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a></p>",
+    "deleteContent": "<h3>Account deletion</h3><h4>1. From the app</h4><p>Profile > Settings > Personal data > Delete my account</p><h4>2. By email</h4><p>Send to <a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a> with subject \"Account deletion\".</p><h4>Data removed</h4><ul><li>Profile, reviews, photos, comments, likes, bookmarks, settings, notifications</li></ul><p><strong>30 days</strong> grace period before permanent deletion.</p>"
   },
   "footer": {
-    "contact": "Contact",
-    "download": "Download"
+    "contact": "Contact"
+  },
+  "nav": {
+    "betaClosed": "Closed beta",
+    "downloadOn": "Download on"
+  },
+  "related": {
+    "moreInCity": "More dishes in {city}",
+    "sameInOtherCities": "{category} in other cities",
+    "topInCity": "Top categories in {city}",
+    "otherCities": "Other cities",
+    "categoryByCity": "{category} by city",
+    "otherCategories": "Other categories",
+    "exploreByCategory": "Explore by category",
+    "exploreByCity": "Explore by city"
   },
   "notFound": {
     "title": "Page not found — DishRank",

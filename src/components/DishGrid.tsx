@@ -82,7 +82,7 @@ export default function DishGrid({
               role="button"
               tabIndex={0}
               aria-label={`${d.dish_name} — ${d.restaurant_name}${d.restaurant_city ? `, ${d.restaurant_city}` : ''} — ${d.avg_rating}/5`}
-              className="bg-[var(--surface)] rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 animate-[fadeUp_0.4s_ease_both] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
+              className="group bg-[var(--surface)] rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-[var(--card-shadow)] transition-all duration-300 animate-[fadeUp_0.4s_ease_both] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
               style={{ animationDelay: `${i * 40}ms` }}
               onClick={() => window.dispatchEvent(new CustomEvent('open-dish', { detail: d }))}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('open-dish', { detail: d })); } }}
@@ -92,24 +92,26 @@ export default function DishGrid({
                   src={d.cover_photo_url}
                   alt={`${d.dish_name} chez ${d.restaurant_name}${d.restaurant_city ? ` à ${d.restaurant_city}` : ''}`}
                   fill
-                  className="object-cover hover:scale-105 transition-transform duration-500"
+                  className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                   loading={i < 4 ? 'eager' : 'lazy'}
                   priority={i < 4}
                 />
-                <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-bold text-white">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="#F9CA24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                {/* Subtle dark overlay on hover for depth */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-bold text-white group-hover:bg-black/80 group-hover:scale-105 transition-all duration-300">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="#F9CA24" className="group-hover:rotate-[20deg] transition-transform duration-300"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                   {d.avg_rating}
                 </div>
-                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-semibold text-white">
+                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-semibold text-white group-hover:bg-black/80 transition-colors duration-300">
                   {t('reviews', { count: d.review_count })}
                 </div>
               </div>
               <div className="p-3">
-                <h3 className="text-sm font-bold truncate">{d.dish_name}</h3>
-                <p className="text-xs text-[var(--text2)] truncate mt-0.5">{d.restaurant_name}</p>
+                <h3 className="text-sm font-bold truncate group-hover:text-[var(--primary)] transition-colors duration-300">{d.dish_name}</h3>
+                <p className="text-xs text-[var(--text2)] truncate mt-0.5 group-hover:text-[var(--text)] transition-colors duration-300">{d.restaurant_name}</p>
                 {d.latest_price && (
-                  <span className="inline-block mt-1 text-xs font-bold text-[var(--primary)] bg-[var(--primary-container)] px-2 py-0.5 rounded-md">
+                  <span className="inline-block mt-1 text-xs font-bold text-[var(--primary)] bg-[var(--primary-container)] px-2 py-0.5 rounded-md group-hover:bg-[var(--primary)] group-hover:text-white transition-colors duration-300">
                     {Number(d.latest_price).toFixed(2)} {d.currency || 'EUR'}
                   </span>
                 )}

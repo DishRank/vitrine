@@ -1,20 +1,32 @@
 {
   "meta": {
-    "title": "DishRank — Valuta i piatti, non i ristoranti",
-    "description": "Trova il miglior burger, sushi, pizza della tua città. DishRank valuta i piatti, non i ristoranti.",
-    "titleWithCategory": "Miglior {category} — DishRank",
-    "titleWithCityCategory": "Miglior {category} a {city} — DishRank",
-    "titleWithCity": "Migliori piatti a {city} — DishRank",
-    "descWithCityCategory": "Scopri la classifica dei migliori {category} a {city}. Voti, foto e recensioni della community DishRank."
+    "title": "DishRank — Migliori piatti per città · Classifica & recensioni 2026",
+    "description": "Trova dove mangiare il miglior burger, sushi, pizza della tua città. Classifica per piatto (non per ristorante) con voti, prezzi, foto e recensioni verificate della community.",
+    "titleWithCategory": "Miglior {category} 2026 — Top classifica & recensioni | DishRank",
+    "titleWithCityCategory": "Miglior {category} a {city} 2026 — Top 10 & recensioni | DishRank",
+    "titleWithCity": "Dove mangiare a {city} 2026 — Migliori piatti votati | DishRank",
+    "descWithCategory": "Top {category} 2026: classificati per recensioni della community. Indirizzi, prezzi, foto e voti per trovare il miglior {category} vicino a te.",
+    "descWithCity": "Scopri i migliori piatti di {city} nel 2026: burger, sushi, pizza e altro. Classifica per piatto con voti, foto e recensioni verificate della community.",
+    "descWithCityCategory": "Il miglior {category} di {city} nel 2026: classifica Top 10 per recensioni della community. Indirizzi, prezzi, foto e voti verificati su DishRank."
   },
   "hero": {
     "label": "Valuta i piatti, non i ristoranti.",
     "title": "Il <em>miglior piatto</em> vicino a te.",
+    "titleWithCategory": "Il miglior <em>{category}</em>",
+    "titleWithCity": "I migliori piatti a <em>{city}</em>",
+    "titleWithCityCategory": "Il miglior <em>{category}</em> a <em>{city}</em>",
     "subtitle": "Cerca, confronta e trova dove mangiare il miglior burger, sushi, pizza della tua città.",
+    "subtitleWithCategory": "Top {category} classificati dalle recensioni della community DishRank.",
+    "subtitleWithCity": "Dove mangiare a {city}? I piatti più votati dalla community DishRank.",
+    "subtitleWithCityCategory": "Top {category} a {city}, classificati dalle recensioni della community DishRank.",
+    "intro": "DishRank è il primo social network che valuta i piatti, non i ristoranti. Trova i migliori posti vicino a te con recensioni verificate dalla nostra community di gourmet.",
+    "introWithCategory": "Scopri il top {category} del 2026 classificato per recensioni verificate della community DishRank. Oltre 200 categorie di piatti, voti affidabili e indirizzi reali vicino a te — senza pubblicità né raccomandazioni algoritmiche.",
+    "introWithCity": "Cerchi dove mangiare a {city}? DishRank ti mostra i piatti più votati dai gourmet locali: burger, sushi, pizza, ramen e altro. Classifica per piatto (non per ristorante) basata su recensioni reali.",
+    "introWithCityCategory": "Il miglior {category} a {city}? Ecco la classifica Top 10 basata sui voti reali della community DishRank. Foto, prezzi e recensioni dettagliate per ogni indirizzo — trova dove mangiare il tuo prossimo {category} a {city} con un clic.",
     "categories": "200+ categorie",
     "free": "100% gratuito",
     "community": "Community",
-    "betaOpen": "Beta chiusa — Android & iOS"
+    "betaOpen": "Beta Android · Live su iOS"
   },
   "search": {
     "label": "Cosa vuoi mangiare?",
@@ -65,8 +77,7 @@
   },
   "cta": {
     "title": "Valuta i piatti, non i ristoranti.",
-    "subtitle": "Gratuito. Niente pubblicita. Scarica l'app e inizia a valutare i tuoi piatti preferiti.",
-    "button": "Google Play"
+    "subtitle": "Gratuito. Niente pubblicita. Scarica l'app e inizia a valutare i tuoi piatti preferiti."
   },
   "modal": {
     "downloadCta": "Scarica DishRank per valutare questo piatto",
@@ -75,11 +86,27 @@
   "legal": {
     "privacy": "Privacy",
     "terms": "Condizioni",
-    "delete": "Elimina account"
+    "delete": "Elimina account",
+    "privacyContent": "<h3>Informativa sulla privacy</h3><p class=\"text-xs text-[var(--text3)] italic mb-4\">Ultimo aggiornamento: 19 marzo 2026</p><h4>1. Titolare del trattamento</h4><p>DishRank SAS è responsabile del trattamento dei tuoi dati personali.</p><p>Contatto DPO: <a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a></p><h4>2. Dati raccolti</h4><ul><li><strong>Registrazione:</strong> email, nome utente, password (cifrata), foto profilo.</li><li><strong>Contenuti:</strong> recensioni, voti, foto dei piatti, commenti.</li><li><strong>Posizione:</strong> posizione geografica (con consenso).</li><li><strong>Tecnici:</strong> tipo di dispositivo, OS, token di notifica.</li></ul><h4>3. Finalità</h4><ul><li>Gestione del tuo account</li><li>Pubblicazione e visualizzazione delle tue recensioni</li><li>Raccomandazione di piatti nelle vicinanze</li><li>Notifiche (mi piace, commenti)</li><li>Miglioramento del servizio</li></ul><h4>4. Periodo di conservazione</h4><ul><li>Dati account: eliminati entro 30 giorni dalla cancellazione</li><li>Posizione: non memorizzata, usata in tempo reale</li><li>Log tecnici: 12 mesi massimo</li></ul><h4>5. Condivisione dei dati</h4><ul><li><strong>Supabase</strong> (hosting) — server in Europa</li><li><strong>Google</strong> (notifiche push, Places API)</li></ul><p><strong>Non vendiamo mai i tuoi dati.</strong></p><h4>6. I tuoi diritti (GDPR)</h4><ul><li>Accesso, rettifica, cancellazione, portabilità (esportazione JSON)</li><li>Opposizione, limitazione, revoca del consenso</li></ul><p>Esercitabili da Impostazioni > Dati personali o via email.</p><h4>7. Contatto</h4><p><a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a> — DishRank SAS, Parigi</p>",
+    "termsContent": "<h3>Condizioni generali di utilizzo</h3><p class=\"text-xs text-[var(--text3)] italic mb-4\">Ultimo aggiornamento: 19 marzo 2026</p><h4>1. Accettazione</h4><p>Utilizzando DishRank, accetti queste condizioni.</p><h4>2. Descrizione del servizio</h4><p>DishRank ti permette di valutare e condividere recensioni su piatti specifici nei ristoranti.</p><h4>3. Registrazione</h4><p>Devi avere almeno 16 anni. Sei responsabile delle tue credenziali.</p><h4>4. Contenuti utente</h4><ul><li>Sei l'autore originale dei contenuti</li><li>Licenza di visualizzazione non esclusiva concessa a DishRank</li><li>Eliminabile in qualsiasi momento</li></ul><h4>5. Comportamento</h4><ul><li>Uso onesto e rispettoso</li><li>Niente recensioni false</li><li>Niente molestie</li></ul><h4>6. Legge applicabile</h4><p>Legge francese. Tribunali di Parigi.</p><h4>7. Contatto</h4><p><a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a></p>",
+    "deleteContent": "<h3>Eliminazione account</h3><h4>1. Dall'app</h4><p>Profilo > Impostazioni > Dati personali > Elimina il mio account</p><h4>2. Via email</h4><p>Invia a <a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a> con oggetto \"Eliminazione account\".</p><h4>Dati eliminati</h4><ul><li>Profilo, recensioni, foto, commenti, mi piace, preferiti, impostazioni, notifiche</li></ul><p>Termine di <strong>30 giorni</strong> prima dell'eliminazione definitiva.</p>"
   },
   "footer": {
-    "contact": "Contatto",
-    "download": "Scarica"
+    "contact": "Contatto"
+  },
+  "nav": {
+    "betaClosed": "Beta chiusa",
+    "downloadOn": "Scarica su"
+  },
+  "related": {
+    "moreInCity": "Altri piatti a {city}",
+    "sameInOtherCities": "{category} in altre città",
+    "topInCity": "Top categorie a {city}",
+    "otherCities": "Altre città",
+    "categoryByCity": "{category} per città",
+    "otherCategories": "Altre categorie",
+    "exploreByCategory": "Esplora per categoria",
+    "exploreByCity": "Esplora per città"
   },
   "notFound": {
     "title": "Pagina non trovata — DishRank",

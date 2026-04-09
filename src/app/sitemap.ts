@@ -1,77 +1,119 @@
 import { MetadataRoute } from 'next';
-import { fetchCategories } from '@/lib/supabase';
+import { fetchCategories, fetchCities } from '@/lib/supabase';
+import { citySlug } from '@/lib/slug';
 
-// Force dynamic rendering (not at build time)
+// Force dynamic rendering (rebuilt on each request — cheap because data is cached)
 export const dynamic = 'force-dynamic';
 
 const BASE = 'https://dishrank.fr';
 const LOCALES = ['fr', 'en', 'es', 'de', 'it'];
-const CITIES = [
+
+/**
+ * Top categories (~30) — these are the only ones included in the sitemap
+ * to avoid diluting the crawl budget. The 200+ niche categories are still
+ * accessible (and indexable) via internal linking from category pages.
+ */
+const TOP_CATEGORY_SLUGS = [
+  // Most searched globally
+  'burger', 'pizza', 'sushi', 'pasta', 'ramen', 'kebab', 'tacos', 'salad',
+  // Popular dish types
+  'steak', 'seafood', 'curry', 'bowl', 'sandwich', 'wrap',
+  // Desserts & breakfast
+  'dessert', 'pastry', 'crepes', 'breakfast', 'brunch', 'ice-cream',
+  // Drinks
+  'coffee', 'tea', 'cocktail', 'wine', 'beer',
+  // Cuisines (high traffic)
+  'french', 'italian', 'japanese', 'chinese', 'indian', 'mexican',
+];
+
+/**
+ * Top cities (~30) — same logic. The other cities in the DB are still indexable
+ * via the dynamic routes — they're just not surfaced in the sitemap.
+ */
+const TOP_CITY_NAMES = [
   'Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux', 'Lille', 'Nice', 'Nantes',
   'Strasbourg', 'Montpellier', 'Rennes', 'Grenoble', 'Rouen', 'Toulon', 'Dijon',
-  'Angers', 'Saint-Etienne', 'Le Havre', 'Reims', 'Clermont-Ferrand', 'Tours',
-  'Limoges', 'Metz', 'Besancon', 'Perpignan', 'Orleans', 'Caen', 'Brest',
+  'Angers', 'Saint-Étienne', 'Le Havre', 'Reims', 'Clermont-Ferrand', 'Tours',
+  'Limoges', 'Metz', 'Besançon', 'Perpignan', 'Orléans', 'Caen', 'Brest',
   'Mulhouse', 'Nancy',
 ];
-const TOP_SLUGS = ['burger', 'pizza', 'sushi', 'tacos', 'ramen', 'kebab', 'pasta', 'dessert', 'curry', 'steak', 'pho', 'coffee', 'couscous', 'crepes'];
+const PRIORITY_CITIES = new Set(['Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux']);
 
-function localeUrl(locale: string, qs = '') {
+function pathFor(locale: string, path: string) {
   const prefix = locale === 'fr' ? '' : `/${locale}`;
-  return `${BASE}${prefix}${qs ? `/?${qs}` : ''}`;
+  return `${BASE}${prefix}${path}`;
 }
 
-/** Encode & for XML (Next.js does not auto-escape sitemap URLs) */
-function xmlSafeUrl(locale: string, qs = '') {
-  return localeUrl(locale, qs).replace(/&/g, '&amp;');
-}
-
-function withAlternates(path: string, extra: Omit<MetadataRoute.Sitemap[number], 'url' | 'alternates'>): MetadataRoute.Sitemap {
+function withAlternates(
+  path: string,
+  extra: Omit<MetadataRoute.Sitemap[number], 'url' | 'alternates'>
+): MetadataRoute.Sitemap {
   return LOCALES.map((locale) => ({
-    url: xmlSafeUrl(locale, path),
+    url: pathFor(locale, path),
     lastModified: new Date(),
     alternates: {
-      languages: Object.fromEntries(LOCALES.map((l) => [l, xmlSafeUrl(l, path)])),
+      languages: Object.fromEntries(LOCALES.map((l) => [l, pathFor(l, path)])),
     },
     ...extra,
   }));
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  let categories: { slug: string }[] = [];
+  // Fetch live data to filter our static lists against what actually exists
+  let dbCategorySlugs = new Set<string>();
+  let dbCityNames = new Set<string>();
   try {
-    categories = await fetchCategories();
-  } catch {}
+    const [categories, cities] = await Promise.all([
+      fetchCategories(),
+      fetchCities(),
+    ]);
+    dbCategorySlugs = new Set(categories.map((c) => c.slug));
+    dbCityNames = new Set(cities);
+  } catch (e) {
+    console.error('sitemap: failed to fetch data', e);
+  }
+
+  // Only include URLs whose category/city actually exists in the DB.
+  // This prevents 404s from being indexed.
+  const validCategories = TOP_CATEGORY_SLUGS.filter((slug) => dbCategorySlugs.has(slug));
+  const validCities = TOP_CITY_NAMES.filter((name) => dbCityNames.has(name));
 
   const urls: MetadataRoute.Sitemap = [
+    // Homepage (priority 1)
     ...withAlternates('', { changeFrequency: 'daily', priority: 1 }),
-    ...withAlternates('page=privacy', { changeFrequency: 'monthly', priority: 0.3 }),
-    ...withAlternates('page=terms', { changeFrequency: 'monthly', priority: 0.3 }),
   ];
 
-  // All categories
-  for (const cat of categories.slice(0, 50)) {
-    urls.push(...withAlternates(`categorie=${cat.slug}`, {
-      changeFrequency: 'daily',
-      priority: TOP_SLUGS.includes(cat.slug) ? 0.8 : 0.6,
-    }));
-  }
-
-  // Top categories x cities
-  for (const slug of TOP_SLUGS) {
-    for (const city of CITIES) {
-      urls.push(...withAlternates(`categorie=${slug}&ville=${city}`, {
+  // 1. Top category-only pages : /c/<slug>
+  for (const slug of validCategories) {
+    urls.push(
+      ...withAlternates(`/c/${slug}`, {
         changeFrequency: 'daily',
-        priority: city === 'Lyon' || city === 'Paris' ? 0.9 : 0.7,
-      }));
-    }
+        priority: 0.8,
+      })
+    );
   }
 
-  // Cities alone
-  for (const city of CITIES) {
-    urls.push(...withAlternates(`ville=${city}`, {
-      changeFrequency: 'daily',
-      priority: 0.6,
-    }));
+  // 2. Top city-only pages : /<city-slug>
+  for (const city of validCities) {
+    urls.push(
+      ...withAlternates(`/${citySlug(city)}`, {
+        changeFrequency: 'daily',
+        priority: PRIORITY_CITIES.has(city) ? 0.9 : 0.7,
+      })
+    );
+  }
+
+  // 3. City × category combinations : /<city-slug>/<cat>
+  // Only top categories × top cities (≈ 30 × 30 = 900 URLs).
+  for (const slug of validCategories) {
+    for (const city of validCities) {
+      urls.push(
+        ...withAlternates(`/${citySlug(city)}/${slug}`, {
+          changeFrequency: 'daily',
+          priority: PRIORITY_CITIES.has(city) ? 0.85 : 0.65,
+        })
+      );
+    }
   }
 
   return urls;

@@ -1,8 +1,10 @@
 'use client';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
 import type { CategoryRow } from '@/lib/supabase';
+import { citySlug } from '@/lib/slug';
+import { localizedCategory } from '@/lib/categoryLabels';
 
 const CHIP_STEPS = [10, 30, 60, 100];
 
@@ -20,6 +22,7 @@ export default function SearchSection({
   cities: string[];
 }) {
   const t = useTranslations('search');
+  const locale = useLocale();
   const router = useRouter();
   const [category, setCategory] = useState(initialCategory);
   const [city, setCity] = useState(initialCity || (cities.length === 1 ? cities[0] : ''));
@@ -37,23 +40,41 @@ export default function SearchSection({
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  /**
+   * Navigate to the path-based URL matching the current filter combo.
+   * - city + category : /[locale]/[city-slug]/[category]
+   * - city alone      : /[locale]/[city-slug]
+   * - category alone  : /[locale]/c/[category]
+   * - none            : /[locale]
+   * The optional ?q= text search is preserved as a query string.
+   */
   const navigate = useCallback(
     (cat: string, c: string, q: string, isFilter = false) => {
-      const params = new URLSearchParams();
-      if (cat) params.set('categorie', cat);
-      if (c) params.set('ville', c);
-      if (q) params.set('q', q);
+      const localePrefix = locale === 'fr' ? '' : `/${locale}`;
+      let path = localePrefix || '/';
+      if (c && cat) path = `${localePrefix}/${citySlug(c)}/${cat}`;
+      else if (c) path = `${localePrefix}/${citySlug(c)}`;
+      else if (cat) path = `${localePrefix}/c/${cat}`;
+      const qs = q ? `?q=${encodeURIComponent(q)}` : '';
       if (isFilter) window.dispatchEvent(new CustomEvent('dish-loading'));
-      router.push(`?${params.toString()}`, { scroll: false });
+      router.push(`${path}${qs}`, { scroll: false });
     },
-    [router]
+    [router, locale]
   );
 
-  const allChips = [{ slug: '', icon: '', label: t('all') }, ...categories.map((c) => ({
-    slug: c.slug,
-    icon: c.icon,
-    label: `${c.icon} ${c.slug.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ')}`,
-  }))];
+  const allChips = [
+    { slug: '', icon: '', label: t('all') },
+    ...categories.map((c) => {
+      const localized = localizedCategory(c.slug, locale);
+      // Capitalize first letter for display
+      const displayLabel = localized.charAt(0).toUpperCase() + localized.slice(1);
+      return {
+        slug: c.slug,
+        icon: c.icon,
+        label: `${c.icon} ${displayLabel}`,
+      };
+    }),
+  ];
 
   const limit = CHIP_STEPS[chipLevel] ?? allChips.length;
   const visibleChips = allChips.slice(0, limit);
@@ -144,7 +165,7 @@ export default function SearchSection({
             <button
               key={c.slug}
               onClick={() => selectCategory(c.slug)}
-              className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all shrink-0 ${
+              className={`cursor-pointer px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all duration-200 shrink-0 hover:-translate-y-0.5 hover:scale-[1.03] ${
                 c.slug === category
                   ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-semibold'
                   : 'bg-[var(--surface)] border-[var(--border2)] text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)]'
@@ -160,7 +181,7 @@ export default function SearchSection({
         {isMobile && (
           <button
             onClick={() => setSheetOpen(true)}
-            className="px-3 py-1 rounded-full text-xs font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)]"
+            className="cursor-pointer px-3 py-1 rounded-full text-xs font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] hover:-translate-y-0.5 transition-all duration-200"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
             {t('more')}
@@ -170,7 +191,7 @@ export default function SearchSection({
         {!isMobile && chipLevel > 0 && (
           <button
             onClick={() => { setPrevLimit(0); setChipLevel(0); }}
-            className="px-4 py-1.5 rounded-full text-sm font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)]"
+            className="cursor-pointer px-4 py-1.5 rounded-full text-sm font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] hover:-translate-y-0.5 transition-all duration-200"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
             {t('less')}
@@ -179,7 +200,7 @@ export default function SearchSection({
         {!isMobile && hasMore && (
           <button
             onClick={() => { setPrevLimit(limit); setChipLevel((l) => Math.min(l + 1, CHIP_STEPS.length)); }}
-            className="px-4 py-1.5 rounded-full text-sm font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)]"
+            className="cursor-pointer px-4 py-1.5 rounded-full text-sm font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] hover:-translate-y-0.5 transition-all duration-200"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
             {t('more')}
@@ -206,7 +227,7 @@ export default function SearchSection({
                 <button
                   key={c.slug}
                   onClick={() => selectCategory(c.slug)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  className={`cursor-pointer px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     c.slug === category
                       ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-semibold'
                       : 'bg-[var(--surface)] border-[var(--border2)] text-[var(--text2)]'

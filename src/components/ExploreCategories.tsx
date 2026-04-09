@@ -1,15 +1,26 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import type { CategoryRow } from '@/lib/supabase';
+
+// Decorative food emojis — hardcoded, no DB dependency
+const FOOD_EMOJIS = [
+  '🍔','🍕','🍣','🍝','🥗','🥩','🦐','🍜','🥪','🌮',
+  '🌯','🥙','🍢','🍤','🍦','🍧','🍨','🍩','🍪','🎂',
+  '🍰','🧁','🥧','🍫','🍬','🍭','🍯','🍿','🥯','🥐',
+  '🥖','🫓','🧀','🍳','🥚','🧇','🥞','🥓','🥨','🧈',
+  '🥒','🥬','🥦','🧄','🧅','🍄','🥜','🌰','🍞','🥕',
+  '🫑','🌶️','🥔','🍠','🍇','🍉','🍊','🍋','🍌','🍍',
+  '🥭','🍎','🍐','🍑','🍒','🍓','🫐','🥥','🥝','🍅',
+  '🫒','🍵','🍶','🍷','🍹','🍺','🥂','🥃','🧋','🥟',
+];
 
 // Elliptical rings — wider than tall, well balanced around center
 function computePositions(count: number, isMobile: boolean) {
   const positions: { x: string; y: string; ring: number }[] = [];
   // Ring config: [emojis per ring, horizontal radius %, vertical radius %]
   const rings = isMobile
-    ? [[8, 30, 20], [10, 42, 32], [8, 48, 44]]
-    : [[10, 28, 18], [12, 40, 28], [12, 48, 38]];
+    ? [[10, 28, 18], [14, 40, 30], [18, 50, 42]]
+    : [[10, 22, 14], [14, 34, 24], [18, 44, 34], [16, 54, 44]];
 
   let idx = 0;
   for (let r = 0; r < rings.length && idx < count; r++) {
@@ -29,13 +40,13 @@ function computePositions(count: number, isMobile: boolean) {
 }
 
 function getCountForWidth(w: number): number {
-  if (w < 480) return 24;   // 3 rings: 8+10+6
-  if (w < 768) return 28;
-  if (w < 1024) return 32;
-  return 34;                 // 3 rings: 10+12+12
+  if (w < 480) return 32;
+  if (w < 768) return 42;
+  if (w < 1024) return 52;
+  return 58;
 }
 
-export default function ExploreCategories({ categories }: { categories: CategoryRow[] }) {
+export default function ExploreCategories() {
   const t = useTranslations('explore');
   const sectionRef = useRef<HTMLDivElement>(null);
   const emojiRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -55,8 +66,8 @@ export default function ExploreCategories({ categories }: { categories: Category
   }, []);
 
   const emojis = useMemo(
-    () => categories.slice(0, emojiCount).map((c) => c.icon),
-    [categories, emojiCount]
+    () => FOOD_EMOJIS.slice(0, emojiCount),
+    [emojiCount]
   );
   const positions = useMemo(
     () => computePositions(emojis.length, isMobile),

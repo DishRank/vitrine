@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'DishRank — Découvrez ce plat',
     description: 'Notez les plats, pas les restos. Découvrez les avis de la communauté DishRank.',
-    images: [{ url: 'https://dishrank.fr/img/play_store_feature_graphic.png' }],
+    images: [{ url: 'https://dishrank.fr/img/play_store_feature_graphic.webp' }],
   },
 };
 
@@ -21,12 +21,12 @@ export default function DishPage() {
         <meta name="robots" content="noindex, nofollow" />
         <meta property="og:title" content="DishRank — Découvrez ce plat" />
         <meta property="og:description" content="Notez les plats, pas les restos. Découvrez les avis de la communauté DishRank." />
-        <meta property="og:image" content="https://dishrank.fr/img/play_store_feature_graphic.png" />
-        <link rel="icon" type="image/png" href="/img/icon.png" />
+        <meta property="og:image" content="https://dishrank.fr/img/play_store_feature_graphic.webp" />
+        <link rel="icon" type="image/webp" href="/img/icon.webp" />
       </head>
       <body style={{ fontFamily: "'Outfit', -apple-system, sans-serif", background: '#0F0D1A', color: '#FFFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: 24, margin: 0 }}>
         <div style={{ maxWidth: 400 }}>
-          <Image src="/img/icon.png" alt="DishRank" width={64} height={64} style={{ borderRadius: 16, marginBottom: 16 }} />
+          <Image src="/img/icon.webp" alt="DishRank" width={64} height={64} style={{ borderRadius: 16, marginBottom: 16 }} />
           <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Voir ce plat sur DishRank</h1>
           <p style={{ color: '#9B97B0', fontSize: 15, marginBottom: 24, lineHeight: 1.5 }}>
             Installez DishRank pour decouvrir les avis de la communaute sur ce plat et des milliers d&apos;autres.
