@@ -45,6 +45,7 @@
     "noResults": "No se encontraron platos",
     "beFirst": "Se el primero en calificar un plato!",
     "reviews": "{count} opiniones",
+    "reviewsLabel": "{count, plural, one {opinión} other {opiniones}}",
     "download": "Descargar DishRank"
   },
   "showcase": {

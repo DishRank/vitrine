@@ -45,6 +45,7 @@
     "noResults": "Aucun plat trouvé",
     "beFirst": "Sois le premier à noter un plat !",
     "reviews": "{count} avis",
+    "reviewsLabel": "avis",
     "download": "Télécharger DishRank"
   },
   "showcase": {

@@ -104,8 +104,9 @@ export default function DishGrid({
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="#F9CA24" className="group-hover:rotate-[20deg] transition-transform duration-300"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                   {d.avg_rating}
                 </div>
-                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-semibold text-white group-hover:bg-black/80 transition-colors duration-300">
-                  {t('reviews', { count: d.review_count })}
+                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-semibold text-white group-hover:bg-black/80 transition-colors duration-300 inline-flex items-center gap-1">
+                  <span>{d.review_count}</span>
+                  <span>{t('reviewsLabel', { count: d.review_count })}</span>
                 </div>
               </div>
               <div className="p-3">

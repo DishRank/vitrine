@@ -45,6 +45,7 @@
     "noResults": "No dishes found",
     "beFirst": "Be the first to rate a dish!",
     "reviews": "{count} reviews",
+    "reviewsLabel": "{count, plural, one {review} other {reviews}}",
     "download": "Download DishRank"
   },
   "showcase": {

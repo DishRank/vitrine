@@ -45,6 +45,7 @@
     "noResults": "Nessun piatto trovato",
     "beFirst": "Sii il primo a valutare un piatto!",
     "reviews": "{count} recensioni",
+    "reviewsLabel": "{count, plural, one {recensione} other {recensioni}}",
     "download": "Scarica DishRank"
   },
   "showcase": {

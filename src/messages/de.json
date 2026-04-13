@@ -45,6 +45,7 @@
     "noResults": "Keine Gerichte gefunden",
     "beFirst": "Sei der Erste, der ein Gericht bewertet!",
     "reviews": "{count} Bewertungen",
+    "reviewsLabel": "{count, plural, one {Bewertung} other {Bewertungen}}",
     "download": "DishRank herunterladen"
   },
   "showcase": {
