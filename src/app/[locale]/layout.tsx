@@ -1,14 +1,13 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import { Outfit, Inter } from 'next/font/google';
+import { Outfit } from 'next/font/google';
 import Script from 'next/script';
 import { routing } from '@/i18n/routing';
 import FlagPolyfill from '@/components/FlagPolyfill';
 import '../globals.css';
 
 const outfit = Outfit({ subsets: ['latin'], display: 'swap', variable: '--font-outfit' });
-const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -27,7 +26,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={`${outfit.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={outfit.variable} suppressHydrationWarning>
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />

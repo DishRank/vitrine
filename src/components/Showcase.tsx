@@ -19,30 +19,68 @@ export default function Showcase() {
   const slides = t.raw('slides') as { title: string; desc: string }[];
   const [idx, setIdx] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const goNext = useCallback(() => {
+    setAnimating(true);
+    setTimeout(() => {
+      setIdx((prev) => (prev + 1) % slides.length);
+      setAnimating(false);
+    }, 300);
+  }, [slides.length]);
+
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (!document.hidden) timerRef.current = setInterval(goNext, 8000);
+  }, [goNext]);
 
   const goTo = useCallback((i: number) => {
-    const next = ((i % slides.length) + slides.length) % slides.length;
     setAnimating(true);
-    setTimeout(() => { setIdx(next); setAnimating(false); }, 300);
-  }, [slides.length]);
+    setTimeout(() => {
+      setIdx(((i % slides.length) + slides.length) % slides.length);
+      setAnimating(false);
+    }, 300);
+    resetTimer();
+  }, [slides.length, resetTimer]);
+
+  const goPrev = useCallback(() => {
+    setAnimating(true);
+    setTimeout(() => {
+      setIdx((prev) => (prev - 1 + slides.length) % slides.length);
+      setAnimating(false);
+    }, 300);
+    resetTimer();
+  }, [slides.length, resetTimer]);
+
+  const goNextManual = useCallback(() => {
+    goNext();
+    resetTimer();
+  }, [goNext, resetTimer]);
 
   // Auto-rotate, pause when tab is hidden
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval>;
-    const start = () => { timer = setInterval(() => goTo(idx + 1), 8000); };
-    const stop = () => clearInterval(timer);
-    const onVisibility = () => { document.hidden ? stop() : start(); };
-    start();
+    timerRef.current = setInterval(goNext, 8000);
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      } else if (!timerRef.current) {
+        timerRef.current = setInterval(goNext, 8000);
+      }
+    };
     document.addEventListener('visibilitychange', onVisibility);
-    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
-  }, [idx, goTo]);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [goNext]);
 
   // Touch swipe
   const touchStart = useRef(0);
   const onTouchStart = (e: React.TouchEvent) => { touchStart.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
     const diff = touchStart.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) goTo(diff > 0 ? idx + 1 : idx - 1);
+    if (Math.abs(diff) > 50) (diff > 0 ? goNextManual : goPrev)();
   };
 
   return (
@@ -74,10 +112,10 @@ export default function Showcase() {
           </div>
           {/* Arrows */}
           <div className="flex gap-2 mt-1">
-            <button onClick={() => goTo(idx - 1)} aria-label="Previous slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:-translate-x-0.5 hover:scale-110 transition-all duration-200">
+            <button onClick={goPrev} aria-label="Previous slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:-translate-x-0.5 hover:scale-110 transition-all duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
-            <button onClick={() => goTo(idx + 1)} aria-label="Next slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:translate-x-0.5 hover:scale-110 transition-all duration-200">
+            <button onClick={goNextManual} aria-label="Next slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:translate-x-0.5 hover:scale-110 transition-all duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
             </button>
           </div>

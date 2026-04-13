@@ -94,8 +94,9 @@ export default function DishGrid({
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  priority={i === 0}
                   loading={i < 4 ? 'eager' : 'lazy'}
-                  priority={i < 4}
+                  fetchPriority={i === 0 ? 'high' : undefined}
                 />
                 {/* Subtle dark overlay on hover for depth */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />

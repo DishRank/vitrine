@@ -208,12 +208,14 @@ export default async function HomePageContent({
           initialCity={cityLabel || ''}
         />
         <CtaBanner />
-        <RelatedFilters
-          locale={locale}
-          city={city}
-          category={category}
-          allCities={allCities}
-        />
+        {(city || category) && (
+          <RelatedFilters
+            locale={locale}
+            city={city}
+            category={category}
+            allCities={allCities}
+          />
+        )}
         <WhySection />
         <ExploreCategories />
         <Showcase />
