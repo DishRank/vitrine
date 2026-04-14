@@ -4,17 +4,16 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import type { DishRow } from '@/lib/supabase';
-import { openBetaModal } from './BetaModal';
+import DownloadButtons from './DownloadButtons';
 import M3Spinner from './M3Spinner';
 
 export default function DishGrid({
   initialDishes,
-  initialCategory,
-  initialCity,
+  title,
 }: {
   initialDishes: DishRow[];
-  initialCategory: string;
-  initialCity: string;
+  /** Titre pre-calcule cote serveur (grammaire FR correcte + prefixe "plats" pour les nationalites). */
+  title: string;
 }) {
   const t = useTranslations('feed');
   const sp = useSearchParams();
@@ -31,7 +30,7 @@ export default function DishGrid({
   // Clear loading when server data arrives (props change)
   useEffect(() => {
     setLoading(false);
-  }, [initialDishes, initialCategory, initialCity]);
+  }, [initialDishes]);
 
   const dishes = useMemo(() => {
     let filtered = initialDishes;
@@ -41,18 +40,13 @@ export default function DishGrid({
         (d) => d.dish_name.toLowerCase().includes(lower) || d.restaurant_name.toLowerCase().includes(lower)
       );
     }
-    return filtered;
+    // Limiter a 10 plats max pour respecter le "Top 10" du titre.
+    return filtered.slice(0, 10);
   }, [initialDishes, q]);
 
-  // Title
-  let title = t('topRated');
-  if (initialCategory && initialCity) title = t('topRatedCityCategory', { category: initialCategory, city: initialCity });
-  else if (initialCategory) title = t('topRatedCategory', { category: initialCategory });
-  else if (initialCity) title = t('topRatedCity', { city: initialCity });
-
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 pb-8 min-h-[300px]">
-      <h2 className="text-lg font-bold py-3">{title}</h2>
+    <div className="max-w-[1200px] mx-auto px-5 sm:px-8 pb-8 min-h-[300px]">
+      <h2 className="text-base sm:text-lg font-bold py-3 px-1 leading-snug text-center sm:text-left">{title}</h2>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -66,13 +60,7 @@ export default function DishGrid({
           <span className="text-5xl block mb-3">&#128269;</span>
           <p className="text-lg font-bold mb-1">{t('noResults')}</p>
           <p className="text-[var(--text2)] text-sm mb-5">{t('beFirst')}</p>
-          <a
-            href="#"
-            onClick={openBetaModal}
-            className="inline-flex items-center gap-2 px-7 py-3 bg-[var(--primary)] text-white font-semibold rounded-full"
-          >
-            {t('download')}
-          </a>
+          <DownloadButtons size="lg" />
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">

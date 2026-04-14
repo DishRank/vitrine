@@ -110,8 +110,8 @@ export default function Showcase() {
               />
             ))}
           </div>
-          {/* Arrows */}
-          <div className="flex gap-2 mt-1">
+          {/* Arrows — hidden on mobile (dots are enough for touch) */}
+          <div className="hidden md:flex gap-2 mt-1">
             <button onClick={goPrev} aria-label="Previous slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:-translate-x-0.5 hover:scale-110 transition-all duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>

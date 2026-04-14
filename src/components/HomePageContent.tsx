@@ -1,7 +1,7 @@
 import { fetchDishes, fetchCategories } from '@/lib/supabase';
 import { localizedCategory } from '@/lib/categoryLabels';
 import { citySlug, cityFromSlug } from '@/lib/slug';
-import { buildFilterPath } from '@/lib/seoMetadata';
+import { buildFilterPath, buildFilterUrl, buildBestCategoryFragment, buildTopDishesTitle } from '@/lib/seoMetadata';
 import Nav from './Nav';
 import Hero from './Hero';
 import SearchSection from './SearchSection';
@@ -16,6 +16,7 @@ import LegalSheet from './LegalSheet';
 import CookieConsent from './CookieConsent';
 import BetaModal from './BetaModal';
 import RelatedFilters from './RelatedFilters';
+import CityGuide from './CityGuide';
 
 type Props = {
   locale: string;
@@ -60,6 +61,19 @@ export default async function HomePageContent({
 
   const categoryLabel = category ? localizedCategory(category, locale) : '';
   const cityLabel = city || '';
+  // Pre-built "best category" fragment with correct FR grammar — passed to
+  // <Hero /> and re-used in meta tags so wording stays consistent.
+  const bestCategory = category ? buildBestCategoryFragment(locale, category, categoryLabel) : '';
+
+  // Pre-built "Les 10 meilleurs X" title passed to <DishGrid />. Handles FR
+  // grammar (gender agreement) and the nationality prefix ("plats français").
+  const topDishesTitle = buildTopDishesTitle({
+    locale,
+    categorySlug: category || undefined,
+    categoryLabel: categoryLabel || undefined,
+    cityLabel: cityLabel || undefined,
+    limit: 10,
+  });
 
   // === JSON-LD ===
 
@@ -94,6 +108,30 @@ export default async function HomePageContent({
       },
       'query-input': 'required name=search_term_string',
     },
+  };
+
+  // SoftwareApplication : declare the mobile app so Google can show "app install"
+  // rich results on queries like "dishrank app" or "app noter plats".
+  const softwareAppJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    '@id': 'https://dishrank.fr/#app',
+    name: 'DishRank',
+    operatingSystem: 'iOS, Android',
+    applicationCategory: 'LifestyleApplication',
+    description: 'Note les plats, pas les restos. Trouve le meilleur burger, sushi, pizza de ta ville grâce aux avis vérifiés de la communauté DishRank.',
+    url: 'https://dishrank.fr',
+    downloadUrl: [
+      'https://apps.apple.com/fr/app/dishrank/id6761752556',
+      'https://play.google.com/store/apps/details?id=com.dishrank.app',
+    ],
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'EUR',
+    },
+    publisher: { '@id': 'https://dishrank.fr/#organization' },
+    inLanguage: ['fr', 'en', 'es', 'de', 'it'],
   };
 
   const dishListJsonLd = dishes.length > 0
@@ -167,6 +205,46 @@ export default async function HomePageContent({
     itemListElement: breadcrumbItems,
   };
 
+  // LocalBusiness / FoodEstablishment : activates local SEO signals (Knowledge
+  // Panel, Maps pack) on city-level pages. Only generated when a city is
+  // present. The aggregateRating is computed from the fetched dishes so Google
+  // sees real numbers, not made-up ones.
+  const localBusinessJsonLd = city && dishes.length > 0
+    ? (() => {
+        const avgRating =
+          dishes.reduce((sum, d) => sum + Number(d.avg_rating), 0) / dishes.length;
+        const totalReviews = dishes.reduce((sum, d) => sum + Number(d.review_count), 0);
+        const name = categoryLabel
+          ? `DishRank — ${categoryLabel} ${cityLabel}`
+          : `DishRank ${cityLabel}`;
+        return {
+          '@context': 'https://schema.org',
+          '@type': 'FoodEstablishment',
+          '@id': `${buildFilterUrl(locale, city, category)}#place`,
+          name,
+          url: buildFilterUrl(locale, city, category),
+          image: 'https://dishrank.fr/img/play_store_feature_graphic.webp',
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: cityLabel,
+            addressCountry: 'FR',
+          },
+          areaServed: {
+            '@type': 'City',
+            name: cityLabel,
+          },
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: Math.round(avgRating * 10) / 10,
+            reviewCount: Math.max(totalReviews, dishes.length),
+            bestRating: 5,
+            worstRating: 1,
+          },
+          priceRange: '€€',
+        };
+      })()
+    : null;
+
   // NOTE: FAQPage JSON-LD is intentionally NOT generated here. It lives in
   // <WhySection /> (the only place where the questions are visible to users),
   // which is the requirement of Google's FAQ structured data policy and
@@ -184,6 +262,10 @@ export default async function HomePageContent({
       />
       <script
         type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
       {dishListJsonLd && (
@@ -192,9 +274,19 @@ export default async function HomePageContent({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(dishListJsonLd) }}
         />
       )}
+      {localBusinessJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+        />
+      )}
       <Nav />
       <main id="main-content">
-        <Hero category={categoryLabel || undefined} city={cityLabel || undefined} />
+        <Hero
+          category={categoryLabel || undefined}
+          city={cityLabel || undefined}
+          bestCategory={bestCategory || undefined}
+        />
         <SearchSection
           categories={categories}
           initialCategory={category || ''}
@@ -204,18 +296,25 @@ export default async function HomePageContent({
         />
         <DishGrid
           initialDishes={dishes}
-          initialCategory={category || ''}
-          initialCity={cityLabel || ''}
+          title={topDishesTitle}
         />
         <CtaBanner />
         {(city || category) && (
-          <RelatedFilters
+          <CityGuide
             locale={locale}
             city={city}
             category={category}
-            allCities={allCities}
+            dishes={dishes}
           />
         )}
+        {/* Affiche aussi sur la home (pas de filtre) pour le maillage SEO :
+            top categories + top cities visibles en un coup d'oeil. */}
+        <RelatedFilters
+          locale={locale}
+          city={city}
+          category={category}
+          allCities={allCities}
+        />
         <WhySection />
         <ExploreCategories />
         <Showcase />

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
-import { fetchCities, fetchCategories } from '@/lib/supabase';
+import { fetchCities, fetchAllCategorySlugs } from '@/lib/supabase';
 import { buildSeoMetadata } from '@/lib/seoMetadata';
 import HomePageContent from '@/components/HomePageContent';
 
@@ -15,9 +15,10 @@ type Props = {
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { locale, category } = await params;
   const sp = await searchParams;
-  const categories = await fetchCategories().catch(() => [] as Array<{ slug: string }>);
-  const valid = categories.some((c) => c.slug === category);
-  if (!valid) return { robots: { index: false, follow: false } };
+  // Validate against the raw category list (not filtered by reviews) so that
+  // /c/pizza still renders even if no review is moderated yet for pizza.
+  const all = await fetchAllCategorySlugs().catch(() => new Set<string>());
+  if (!all.has(category)) return { robots: { index: false, follow: false } };
   return buildSeoMetadata({ locale, category, hasSearchQuery: !!sp.q });
 }
 
@@ -26,12 +27,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   const sp = await searchParams;
 
-  const [categories, allCities] = await Promise.all([
-    fetchCategories().catch(() => [] as Array<{ slug: string }>),
+  const [allCategorySlugs, allCities] = await Promise.all([
+    fetchAllCategorySlugs().catch(() => new Set<string>()),
     fetchCities().catch(() => [] as string[]),
   ]);
-  const valid = categories.some((c) => c.slug === category);
-  if (!valid) notFound();
+  if (!allCategorySlugs.has(category)) notFound();
 
   return (
     <HomePageContent

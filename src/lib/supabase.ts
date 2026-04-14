@@ -118,6 +118,25 @@ export function fetchCategories(): Promise<CategoryRow[]> {
   });
 }
 
+/**
+ * All categories from `dish_categories` without the "has-reviews" filter.
+ * Used for URL validation in dynamic routes (e.g. `/lyon/pizza`) so that a
+ * valid category URL still renders (as an empty-state page with a CityGuide)
+ * even before any review has been moderated for it.
+ *
+ * `fetchCategories()` stays filtered so that the SearchSection chips don't
+ * show categories that would lead to empty grids.
+ */
+export function fetchAllCategorySlugs(): Promise<Set<string>> {
+  return cached('categories:all-slugs', THIRTY_MIN, async () => {
+    const { data, error } = await getSupabase()
+      .from('dish_categories')
+      .select('slug');
+    if (error) throw error;
+    return new Set(((data || []) as Array<{ slug: string }>).map((c) => c.slug));
+  });
+}
+
 export function fetchCities(): Promise<string[]> {
   return cached('cities:all', THIRTY_MIN, async () => {
     const { data, error } = await getSupabase()

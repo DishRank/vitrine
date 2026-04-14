@@ -1,11 +1,19 @@
 import { useTranslations } from 'next-intl';
 
 type Props = {
+  /** Localized category label (e.g. "pizza", "pâtes") */
   category?: string;
   city?: string;
+  /**
+   * Pre-built "best {category}" fragment with correct grammar agreement
+   * (e.g. "Le meilleur burger" / "La meilleure pizza" / "Les meilleures pâtes").
+   * Built by HomePageContent via `buildBestCategoryFragment()` so we don't
+   * have to re-compute it in a client component.
+   */
+  bestCategory?: string;
 };
 
-export default function Hero({ category, city }: Props) {
+export default function Hero({ category, city, bestCategory }: Props) {
   const t = useTranslations('hero');
 
   // Pick the right keys based on filter
@@ -34,23 +42,36 @@ export default function Hero({ category, city }: Props) {
       ? 'introWithCity'
       : 'intro';
 
-  const args = { category: category || '', city: city || '' };
+  const args = {
+    category: category || '',
+    city: city || '',
+    bestCategory: bestCategory || '',
+  };
   const isFiltered = !!(category || city);
 
   return (
-    <section className="relative pt-28 pb-10 text-center overflow-hidden">
-      <div className="absolute top-[-30%] left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-[radial-gradient(circle,var(--primary-glow)_0%,transparent_65%)] pointer-events-none" />
-      <div className="relative z-10 max-w-[1200px] mx-auto px-4 flex flex-col items-center">
+    <section className="relative pt-28 pb-10 text-center overflow-hidden" style={{ contain: 'layout paint' }}>
+      {/* Radial glow: reduced from 900x900 to 600x600 and given paint containment
+          to avoid triggering full-layer repaints on low-end mobile. Gain LCP. */}
+      <div
+        className="absolute top-[-25%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[radial-gradient(circle,var(--primary-glow)_0%,transparent_65%)] pointer-events-none"
+        style={{ contain: 'paint' }}
+        aria-hidden="true"
+      />
+      <div className="relative z-10 max-w-[1200px] mx-auto px-6 sm:px-8 flex flex-col items-center">
         <p className="text-xs font-semibold uppercase tracking-[2.5px] text-[var(--primary)] mb-5">
           {t('label')}
         </p>
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight mb-4">
+        <h1
+          className="font-black leading-[1.08] tracking-tight mb-4 text-center w-full"
+          style={{ fontSize: 'clamp(1.75rem, 5.2vw, 3.5rem)' }}
+        >
           {t.rich(titleKey, {
             em: (chunks) => <em className="not-italic text-[var(--primary)]">{chunks}</em>,
             ...args,
           })}
         </h1>
-        <p className="text-base text-[var(--text2)] max-w-[600px] leading-relaxed mb-6">
+        <p className="text-base text-[var(--text2)] max-w-[600px] leading-relaxed mb-6 px-2">
           {t(subtitleKey, args)}
         </p>
         {/* SEO intro paragraph: provides unique long-form text per filtered page */}

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { localizedCategory } from './categoryLabels';
+import { theBestOf, isNationality, grammarFor } from './categoryGrammar';
 import { citySlug } from './slug';
 
 const OG_LOCALE_MAP: Record<string, string> = {
@@ -60,16 +61,23 @@ export async function buildSeoMetadata({
 
   const categoryLabel = category ? localizedCategory(category, locale) : '';
   const cityLabel = city || '';
+  // Pre-built "best {category}" fragment with correct FR gender/number agreement
+  // (e.g. "le meilleur burger" / "la meilleure pizza" / "les meilleures pâtes").
+  // Other locales use a simple per-locale "best" prefix that works
+  // gender-invariant since those languages don't require adjective agreement here.
+  const bestCategory = category
+    ? buildBestCategoryFragment(locale, category, categoryLabel)
+    : '';
 
   let title = t('title');
   let description = t('description');
 
   if (category && city) {
-    title = t('titleWithCityCategory', { category: categoryLabel, city: cityLabel });
-    description = t('descWithCityCategory', { category: categoryLabel, city: cityLabel });
+    title = t('titleWithCityCategory', { category: categoryLabel, city: cityLabel, bestCategory });
+    description = t('descWithCityCategory', { category: categoryLabel, city: cityLabel, bestCategory });
   } else if (category) {
-    title = t('titleWithCategory', { category: categoryLabel });
-    description = t('descWithCategory', { category: categoryLabel });
+    title = t('titleWithCategory', { category: categoryLabel, bestCategory });
+    description = t('descWithCategory', { category: categoryLabel, bestCategory });
   } else if (city) {
     title = t('titleWithCity', { city: cityLabel });
     description = t('descWithCity', { city: cityLabel });
@@ -111,4 +119,130 @@ export async function buildSeoMetadata({
       },
     },
   };
+}
+
+/**
+ * Builds a localized "best {category}" fragment with correct grammar.
+ *  - FR: "le meilleur burger" / "la meilleure pizza" / "les meilleures pâtes"
+ *  - Others: use a simple capitalized prefix per locale (no gender issues).
+ *
+ * Exported so that Hero.tsx and the CityGuide can reuse the same helper
+ * and stay in sync with the meta titles.
+ */
+export function buildBestCategoryFragment(
+  locale: string,
+  categorySlug: string,
+  categoryLabel: string,
+): string {
+  if (locale === 'fr') {
+    // theBestOf returns e.g. "le meilleur burger" — we capitalize the first
+    // letter so it can sit at the start of a sentence or title.
+    const raw = theBestOf(categorySlug, categoryLabel);
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }
+  // Simple per-locale "best" prefixes (gender-agnostic, title-case)
+  const prefix = PREFIX_BY_LOCALE[locale] ?? PREFIX_BY_LOCALE.en;
+  return `${prefix} ${categoryLabel}`;
+}
+
+const PREFIX_BY_LOCALE: Record<string, string> = {
+  en: 'Best',
+  es: 'Mejor',
+  de: 'Bester',
+  it: 'Miglior',
+  fr: 'Meilleur',
+};
+
+/**
+ * Construit le titre "Les 10 meilleurs X" avec la grammaire et la langue
+ * correctes. Gere aussi les cuisines nationales en les prefixant avec
+ * "plats" / "dishes" / "platos" / "Gerichte" / "piatti".
+ *
+ * Exemples FR :
+ *  - burger         -> "Les 10 meilleurs burgers"
+ *  - pizza          -> "Les 10 meilleures pizzas"
+ *  - pasta          -> "Les 10 meilleures pâtes"
+ *  - french         -> "Les 10 meilleurs plats français"
+ *  - italian + Lyon -> "Les 10 meilleurs plats italiens de Lyon"
+ *  - (aucun)        -> "Les 10 meilleurs plats"
+ *  - Lyon seul      -> "Les 10 meilleurs plats de Lyon"
+ */
+export function buildTopDishesTitle({
+  locale,
+  categorySlug,
+  categoryLabel,
+  cityLabel,
+  limit = 10,
+}: {
+  locale: string;
+  categorySlug?: string;
+  categoryLabel?: string;
+  cityLabel?: string;
+  limit?: number;
+}): string {
+  const hasCategory = !!(categorySlug && categoryLabel);
+  const hasCity = !!cityLabel;
+  const nat = hasCategory && isNationality(categorySlug!);
+
+  if (locale === 'fr') {
+    // "Les 10" -> toujours pluriel. Seul le genre vient de la categorie.
+    // Masc -> "meilleurs", Fem -> "meilleures".
+    let base: string;
+    if (!hasCategory) {
+      base = `Les ${limit} meilleurs plats`;
+    } else if (nat) {
+      // "plats" est masculin pluriel.
+      base = `Les ${limit} meilleurs plats ${categoryLabel}`;
+    } else {
+      const { g } = grammarFor(categorySlug!);
+      const adj = g === 'f' ? 'meilleures' : 'meilleurs';
+      base = `Les ${limit} ${adj} ${categoryLabel}`;
+    }
+    if (hasCity) return `${base} de ${cityLabel}`;
+    return base;
+  }
+
+  if (locale === 'en') {
+    let base: string;
+    if (!hasCategory) base = `Top ${limit} dishes`;
+    else if (nat) base = `Top ${limit} ${categoryLabel} dishes`;
+    else base = `Top ${limit} ${categoryLabel}`;
+    if (hasCity) return `${base} in ${cityLabel}`;
+    return base;
+  }
+
+  if (locale === 'es') {
+    let base: string;
+    if (!hasCategory) base = `Los ${limit} mejores platos`;
+    else if (nat) base = `Los ${limit} mejores platos ${categoryLabel}`;
+    else base = `Los ${limit} mejores ${categoryLabel}`;
+    if (hasCity) return `${base} de ${cityLabel}`;
+    return base;
+  }
+
+  if (locale === 'de') {
+    let base: string;
+    if (!hasCategory) base = `Die ${limit} besten Gerichte`;
+    else if (nat) base = `Die ${limit} besten ${categoryLabel}en Gerichte`;
+    else base = `Die ${limit} besten ${categoryLabel}`;
+    if (hasCity) return `${base} in ${cityLabel}`;
+    return base;
+  }
+
+  if (locale === 'it') {
+    let base: string;
+    if (!hasCategory) base = `I ${limit} migliori piatti`;
+    else if (nat) base = `I ${limit} migliori piatti ${categoryLabel}`;
+    else base = `I ${limit} migliori ${categoryLabel}`;
+    if (hasCity) return `${base} di ${cityLabel}`;
+    return base;
+  }
+
+  // Fallback
+  let base: string;
+  if (!hasCategory) base = `Top ${limit} dishes`;
+  else if (nat) base = `Top ${limit} ${categoryLabel} dishes`;
+  else base = `Top ${limit} ${categoryLabel}`;
+  if (hasCity) return `${base} in ${cityLabel}`;
+  return base;
 }

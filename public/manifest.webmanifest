@@ -1,0 +1,75 @@
+{
+  "name": "DishRank — Note les plats, pas les restos",
+  "short_name": "DishRank",
+  "description": "Trouve où manger le meilleur burger, sushi, pizza de ta ville. Classement par plat avec notes, photos et avis vérifiés de la communauté.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F0D1A",
+  "theme_color": "#6C5CE7",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["food", "lifestyle", "social"],
+  "icons": [
+    {
+      "src": "/img/icon-192.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/icon-512.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/img/icon-192.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/img/icon-512.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/img/01_feed.webp",
+      "sizes": "1080x1920",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Feed — Découvre les meilleurs plats près de toi"
+    },
+    {
+      "src": "/img/02_dish_detail.webp",
+      "sizes": "1080x1920",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Détail d'un plat — Notes, prix et avis"
+    },
+    {
+      "src": "/img/06_map.webp",
+      "sizes": "1080x1920",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Carte — Explore les plats autour de toi"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.dishrank.app",
+      "id": "com.dishrank.app"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/fr/app/dishrank/id6761752556"
+    }
+  ],
+  "prefer_related_applications": false
+}

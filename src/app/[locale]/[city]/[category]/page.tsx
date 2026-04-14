@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
-import { fetchCities, fetchCategories } from '@/lib/supabase';
+import { fetchCities, fetchAllCategorySlugs } from '@/lib/supabase';
 import { buildSeoMetadata } from '@/lib/seoMetadata';
 import { cityFromSlug } from '@/lib/slug';
 import HomePageContent from '@/components/HomePageContent';
@@ -14,12 +14,16 @@ type Props = {
 };
 
 async function resolveParams(city: string, category: string) {
-  const [allCities, categories] = await Promise.all([
+  // Validate against the RAW list of categories (not the filtered-by-reviews
+  // fetchCategories()) so that pages like /lyon/pizza still render even if
+  // no review has been moderated yet for that combo — Google would otherwise
+  // see a 404 and drop the URL from the index.
+  const [allCities, allCategorySlugs] = await Promise.all([
     fetchCities().catch(() => [] as string[]),
-    fetchCategories().catch(() => [] as Array<{ slug: string }>),
+    fetchAllCategorySlugs().catch(() => new Set<string>()),
   ]);
   const cityName = cityFromSlug(city, allCities);
-  const validCategory = categories.some((c) => c.slug === category) ? category : null;
+  const validCategory = allCategorySlugs.has(category) ? category : null;
   return { cityName, validCategory, allCities };
 }
 

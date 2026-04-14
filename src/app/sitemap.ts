@@ -93,6 +93,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
   }
 
+  // 1bis. Secondary categories (all other categories in DB) at priority 0.4.
+  // Keeps the crawl budget for top categories but still surfaces niche
+  // categories to Google for discovery.
+  const topSet = new Set(validCategories);
+  for (const slug of dbCategorySlugs) {
+    if (topSet.has(slug)) continue;
+    urls.push(
+      ...withAlternates(`/c/${slug}`, {
+        changeFrequency: 'weekly',
+        priority: 0.4,
+      })
+    );
+  }
+
   // 2. Top city-only pages : /<city-slug>
   for (const city of validCities) {
     urls.push(
