@@ -134,6 +134,21 @@ export default async function HomePageContent({
     inLanguage: ['fr', 'en', 'es', 'de', 'it'],
   };
 
+  // Build the ItemList of top dishes as schema.org Product items.
+  //
+  // Design notes (why this exact shape):
+  //  - `Product` is the recommended type for any rated item (Google has
+  //    dedicated rich results for "Product with AggregateRating").
+  //  - `description` is required to get rid of the "missing description"
+  //    Search Console warning. We build it from restaurant + price.
+  //  - `brand` must be `Brand` or `Organization`, NOT `Restaurant` (that was
+  //    the "invalid type for brand" warning). We use `Organization` with the
+  //    restaurant name, which is the semantically correct mapping.
+  //  - We intentionally do NOT emit an `Offer` object: DishRank is not a
+  //    merchant, there is no actual online sale, and emitting `offers`
+  //    without `shippingDetails` / `hasMerchantReturnPolicy` triggers
+  //    merchant-listing warnings. The price is instead embedded in the
+  //    description text, which Google still picks up for snippets.
   const dishListJsonLd = dishes.length > 0
     ? {
         '@context': 'https://schema.org',
@@ -145,36 +160,42 @@ export default async function HomePageContent({
             ? `Best ${categoryLabel}`
             : 'Top rated dishes',
         numberOfItems: dishes.length,
-        itemListElement: dishes.slice(0, 10).map((d, i) => ({
-          '@type': 'ListItem',
-          position: i + 1,
-          item: {
-            '@type': 'Product',
-            name: d.dish_name,
-            image: d.cover_photo_url,
-            aggregateRating: {
-              '@type': 'AggregateRating',
-              ratingValue: d.avg_rating,
-              reviewCount: d.review_count,
-              bestRating: 5,
+        itemListElement: dishes.slice(0, 10).map((d, i) => {
+          const priceFragment = d.latest_price
+            ? `${Number(d.latest_price).toFixed(2)} ${d.currency || 'EUR'}`
+            : null;
+          const addressFragment = d.restaurant_address ? ` — ${d.restaurant_address}` : '';
+          // Example: "Menu 39€ servi chez Sambahia — Rue du Doyenné, Lyon, 69005. Noté 5/5 sur DishRank (1 avis)."
+          const description = [
+            `${d.dish_name} servi chez ${d.restaurant_name}${addressFragment}.`,
+            priceFragment ? `Prix : ${priceFragment}.` : null,
+            `Noté ${Number(d.avg_rating).toFixed(1)}/5 sur DishRank (${d.review_count} avis).`,
+          ]
+            .filter(Boolean)
+            .join(' ');
+
+          return {
+            '@type': 'ListItem',
+            position: i + 1,
+            item: {
+              '@type': 'Product',
+              name: d.dish_name,
+              description,
+              image: d.cover_photo_url,
+              aggregateRating: {
+                '@type': 'AggregateRating',
+                ratingValue: Number(d.avg_rating),
+                reviewCount: Math.max(Number(d.review_count) || 0, 1),
+                bestRating: 5,
+                worstRating: 1,
+              },
+              brand: {
+                '@type': 'Organization',
+                name: d.restaurant_name,
+              },
             },
-            ...(d.latest_price
-              ? {
-                  offers: {
-                    '@type': 'Offer',
-                    price: d.latest_price,
-                    priceCurrency: d.currency || 'EUR',
-                    availability: 'https://schema.org/InStock',
-                  },
-                }
-              : {}),
-            brand: {
-              '@type': 'Restaurant',
-              name: d.restaurant_name,
-              address: d.restaurant_address,
-            },
-          },
-        })),
+          };
+        }),
       }
     : null;
 
