@@ -55,6 +55,12 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Top-level deep-link landing pages (outside [locale]) — bypass intl rewrite,
+  // otherwise next-intl rewrites /dish to /[locale]/dish which 404s.
+  if (pathname === '/dish' || pathname.startsWith('/dish/') || pathname.startsWith('/auth/')) {
+    return NextResponse.next();
+  }
+
   // === SEO: 301 redirect from old query-string URLs to new path-based URLs ===
   // Old: /?categorie=burger&ville=Lyon  →  /lyon/burger
   // Old: /?categorie=burger             →  /c/burger
