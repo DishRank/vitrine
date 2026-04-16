@@ -58,6 +58,25 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
+      // .well-known files (assetlinks.json, apple-app-site-association, …)
+      // must be served with the correct Content-Type and a short cache so that
+      // Google / Apple re-validate quickly when we change fingerprints.
+      {
+        source: '/.well-known/assetlinks.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/json; charset=utf-8' },
+          { key: 'Cache-Control', value: 'public, max-age=300, must-revalidate' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+        ],
+      },
+      {
+        source: '/.well-known/apple-app-site-association',
+        headers: [
+          { key: 'Content-Type', value: 'application/json; charset=utf-8' },
+          { key: 'Cache-Control', value: 'public, max-age=300, must-revalidate' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+        ],
+      },
     ];
   },
 

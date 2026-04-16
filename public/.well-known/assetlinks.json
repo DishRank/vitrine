@@ -1,10 +1,15 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.dishrank.app",
-      "sha256_cert_fingerprints": ["TODO:REPLACE_WITH_YOUR_SHA256_FINGERPRINT"]
+      "sha256_cert_fingerprints": [
+        "FB:B5:D1:FB:D7:E8:33:FE:1C:F4:FD:9D:E8:08:3F:F8:3A:3E:26:A2:14:B7:12:76:05:5D:83:F6:D5:84:F7:46"
+      ]
     }
   }
 ]
