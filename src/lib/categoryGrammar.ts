@@ -133,6 +133,10 @@ const FR_GRAMMAR: Record<string, Grammar> = {
   tunisian: { g: 'm', n: 's' },
   welsh: { g: 'm', n: 's' },
   asian: { g: 'm', n: 's' },
+  european: { g: 'm', n: 's' },
+  'middle-eastern': { g: 'm', n: 's' },
+  'latin-american': { g: 'm', n: 's' },
+  'north-american': { g: 'm', n: 's' },
   german: { g: 'm', n: 's' },
   british: { g: 'm', n: 's' },
   egyptian: { g: 'm', n: 's' },
@@ -303,6 +307,7 @@ const FR_GRAMMAR: Record<string, Grammar> = {
   lemonade: { g: 'f', n: 's' }, // limonade
   milkshake: { g: 'm', n: 's' },
   kombucha: { g: 'm', n: 's' },
+  drinks: { g: 'f', n: 'p' }, // boissons
 
   // === Street food / misc ===
   fries: { g: 'f', n: 'p' }, // frites
@@ -338,6 +343,7 @@ const NATIONALITY_SLUGS = new Set<string>([
   'senegalese', 'spanish', 'sri-lankan', 'tibetan', 'tunisian', 'welsh',
   'asian', 'german', 'british', 'egyptian', 'cambodian', 'laotian',
   'nepali', 'kurdish', 'afghan', 'congolese', 'ivorian',
+  'european', 'middle-eastern', 'latin-american', 'north-american',
 ]);
 
 export function isNationality(slug: string): boolean {

@@ -124,24 +124,37 @@ export async function buildSeoMetadata({
 /**
  * Builds a localized "best {category}" fragment with correct grammar.
  *  - FR: "le meilleur burger" / "la meilleure pizza" / "les meilleures pâtes"
- *  - Others: use a simple capitalized prefix per locale (no gender issues).
+ *  - For nationality / umbrella slugs (`french`, `asian`, `european`, …), the
+ *    label is an adjective not a dish, so we prefix "plats" / "dishes" etc.
+ *    to stay grammatical: "les meilleurs plats européens" instead of
+ *    "le meilleur européen".
+ *  - Others: simple per-locale "best" prefix.
  *
- * Exported so that Hero.tsx and the CityGuide can reuse the same helper
- * and stay in sync with the meta titles.
+ * Exported so that Hero.tsx, CityGuide and meta titles share one source.
  */
 export function buildBestCategoryFragment(
   locale: string,
   categorySlug: string,
   categoryLabel: string,
 ): string {
+  const nat = isNationality(categorySlug);
+
   if (locale === 'fr') {
-    // theBestOf returns e.g. "le meilleur burger" — we capitalize the first
-    // letter so it can sit at the start of a sentence or title.
+    if (nat) {
+      // "plats" = masc plur → "les meilleurs plats <adj>"
+      return `Les meilleurs plats ${categoryLabel}`;
+    }
     const raw = theBestOf(categorySlug, categoryLabel);
     return raw.charAt(0).toUpperCase() + raw.slice(1);
   }
-  // Simple per-locale "best" prefixes (gender-agnostic, title-case)
+
   const prefix = PREFIX_BY_LOCALE[locale] ?? PREFIX_BY_LOCALE.en;
+  if (nat) {
+    const dishesWord = DISHES_BY_LOCALE[locale] ?? DISHES_BY_LOCALE.en;
+    // Put the pluralizer after the adjective for DE/IT/ES where it reads
+    // naturally, after "best" for EN. We keep it simple and consistent.
+    return `${prefix} ${categoryLabel} ${dishesWord}`;
+  }
   return `${prefix} ${categoryLabel}`;
 }
 
@@ -151,6 +164,14 @@ const PREFIX_BY_LOCALE: Record<string, string> = {
   de: 'Bester',
   it: 'Miglior',
   fr: 'Meilleur',
+};
+
+const DISHES_BY_LOCALE: Record<string, string> = {
+  en: 'dishes',
+  es: 'platos',
+  de: 'Gerichte',
+  it: 'piatti',
+  fr: 'plats',
 };
 
 /**

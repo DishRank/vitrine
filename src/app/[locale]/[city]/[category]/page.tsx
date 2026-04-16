@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
-import { fetchCities, fetchAllCategorySlugs } from '@/lib/supabase';
+import { fetchCities, fetchAllCategorySlugs, fetchDishes } from '@/lib/supabase';
 import { buildSeoMetadata } from '@/lib/seoMetadata';
+import { hasChildren } from '@/lib/categoryHierarchy';
 import { cityFromSlug } from '@/lib/slug';
 import HomePageContent from '@/components/HomePageContent';
 
@@ -13,17 +14,15 @@ type Props = {
   searchParams: Promise<{ q?: string; page?: string }>;
 };
 
+const MIN_DISHES_FOR_INDEX = 3;
+
 async function resolveParams(city: string, category: string) {
-  // Validate against the RAW list of categories (not the filtered-by-reviews
-  // fetchCategories()) so that pages like /lyon/pizza still render even if
-  // no review has been moderated yet for that combo — Google would otherwise
-  // see a 404 and drop the URL from the index.
   const [allCities, allCategorySlugs] = await Promise.all([
     fetchCities().catch(() => [] as string[]),
     fetchAllCategorySlugs().catch(() => new Set<string>()),
   ]);
   const cityName = cityFromSlug(city, allCities);
-  const validCategory = allCategorySlugs.has(category) ? category : null;
+  const validCategory = (allCategorySlugs.has(category) || hasChildren(category)) ? category : null;
   return { cityName, validCategory, allCities };
 }
 
@@ -32,6 +31,19 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const sp = await searchParams;
   const { cityName, validCategory } = await resolveParams(city, category);
   if (!cityName || !validCategory) return { robots: { index: false, follow: false } };
+
+  // Thin-content guard: city + category combo needs enough dishes to warrant
+  // indexing. For /lyon/drinks this would be drinks dishes in Lyon specifically.
+  const dishes = await fetchDishes(validCategory, 50).catch(() => []);
+  const cityDishCount = dishes.filter((d) =>
+    d.restaurant_city?.toLowerCase().includes(cityName.toLowerCase()),
+  ).length;
+  if (cityDishCount < MIN_DISHES_FOR_INDEX) {
+    return {
+      ...(await buildSeoMetadata({ locale, city: cityName, category: validCategory, hasSearchQuery: !!sp.q })),
+      robots: { index: false, follow: true },
+    };
+  }
   return buildSeoMetadata({ locale, city: cityName, category: validCategory, hasSearchQuery: !!sp.q });
 }
 

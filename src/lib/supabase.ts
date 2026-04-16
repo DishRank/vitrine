@@ -80,59 +80,19 @@ const FIVE_MIN = 5 * 60 * 1000;
 const THIRTY_MIN = 30 * 60 * 1000;
 
 /**
- * Fetch top dishes, expanding a parent category to its children when relevant
- * (e.g. /c/salad returns salad + salade-lyonnaise + poke dishes, not just
- * dishes tagged as plain `salad`). See `categoryHierarchy.ts` for the map.
- *
- * When the parent slug has children, we fire one RPC call per slug in parallel
- * (the RPC only accepts a single slug per invocation) then merge + dedupe +
- * re-sort client-side. A single slug without children → one RPC call as before.
+ * Fetch top dishes. When the slug has children in `categoryHierarchy`, it
+ * expands transitively (e.g. /c/asian → japanese, chinese, korean, thai, …,
+ * and all their dishes). One RPC round-trip: the DB does `slug = ANY(...)`.
  */
 export async function fetchDishes(categorySlug?: string, limit = 10): Promise<DishRow[]> {
-  const slugs = categorySlug ? expandCategorySlug(categorySlug) : [undefined];
-  // If no expansion happened, behave like before (one slug = one cached call).
-  if (slugs.length === 1) {
-    return fetchDishesForSlug(slugs[0], limit);
-  }
-  // Parent with children: fetch each slug in parallel, merge, dedupe, re-sort.
-  const cacheKey = `dishes:agg:${categorySlug}:${limit}`;
-  return cached(cacheKey, FIVE_MIN, async () => {
-    // Over-fetch per sub-slug to avoid losing good dishes during merge/dedupe.
-    const perSlugLimit = Math.max(limit, 30);
-    const results = await Promise.all(
-      slugs.map((s) => fetchDishesForSlug(s, perSlugLimit).catch(() => [] as DishRow[])),
-    );
-    // Dedupe by (restaurant_id, dish_name) — same dish can be tagged with
-    // multiple categories and returned multiple times across RPC calls.
-    const seen = new Set<string>();
-    const merged: DishRow[] = [];
-    for (const list of results) {
-      for (const d of list) {
-        const key = `${d.restaurant_id}::${d.dish_name.toLowerCase()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        merged.push(d);
-      }
-    }
-    // Re-sort by avg_rating DESC then review_count DESC (tie-break).
-    merged.sort((a, b) => {
-      const byRating = Number(b.avg_rating) - Number(a.avg_rating);
-      if (byRating !== 0) return byRating;
-      return Number(b.review_count) - Number(a.review_count);
-    });
-    return merged.slice(0, limit);
-  });
-}
-
-/** Low-level RPC call for a single slug (cached 5 min). */
-function fetchDishesForSlug(categorySlug: string | undefined, limit: number): Promise<DishRow[]> {
+  const slugs = categorySlug ? expandCategorySlug(categorySlug) : null;
   const cacheKey = `dishes:${categorySlug || 'all'}:${limit}`;
   return cached(cacheKey, FIVE_MIN, async () => {
     const { data, error } = await getSupabase().rpc('get_feed_dishes', {
       user_lat: null,
       user_lng: null,
       radius_km: 50,
-      p_category_slug: categorySlug || null,
+      p_category_slugs: slugs,
       p_sort: 'rating',
       p_limit: limit,
     });

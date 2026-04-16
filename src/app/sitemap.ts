@@ -27,6 +27,19 @@ const TOP_CATEGORY_SLUGS = [
 ];
 
 /**
+ * Continental / umbrella parents from the hierarchy. These don't exist as
+ * rows in `dish_categories` but the page at `/c/<slug>` aggregates every
+ * descendant dish (via expandCategorySlug + RPC). Very high SEO value
+ * because they capture broad queries like "best european food", "boissons
+ * à Lyon", etc. Separate from TOP_CATEGORY_SLUGS because they bypass the
+ * DB-slug validation (fetchAllCategorySlugs).
+ */
+const HIERARCHY_PARENT_SLUGS = [
+  'asian', 'european', 'middle-eastern', 'latin-american', 'north-american',
+  'african', 'caribbean', 'american', 'drinks',
+];
+
+/**
  * Top cities (~30) — same logic. The other cities in the DB are still indexable
  * via the dynamic routes — they're just not surfaced in the sitemap.
  */
@@ -83,7 +96,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...withAlternates('', { changeFrequency: 'daily', priority: 1 }),
   ];
 
-  // 1. Top category-only pages : /c/<slug>
+  // 1. Hierarchy parents (continental umbrellas + drinks) — broadest landing
+  // pages, aggregate many dishes. Highest category priority.
+  for (const slug of HIERARCHY_PARENT_SLUGS) {
+    urls.push(
+      ...withAlternates(`/c/${slug}`, {
+        changeFrequency: 'daily',
+        priority: 0.9,
+      })
+    );
+  }
+
+  // 2. Top category-only pages : /c/<slug>
   for (const slug of validCategories) {
     urls.push(
       ...withAlternates(`/c/${slug}`, {
@@ -93,12 +117,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
   }
 
-  // 1bis. Secondary categories (all other categories in DB) at priority 0.4.
+  // 2bis. Secondary categories (all other categories in DB) at priority 0.4.
   // Keeps the crawl budget for top categories but still surfaces niche
   // categories to Google for discovery.
   const topSet = new Set(validCategories);
+  const hierarchySet = new Set(HIERARCHY_PARENT_SLUGS);
   for (const slug of dbCategorySlugs) {
-    if (topSet.has(slug)) continue;
+    if (topSet.has(slug) || hierarchySet.has(slug)) continue;
     urls.push(
       ...withAlternates(`/c/${slug}`, {
         changeFrequency: 'weekly',
@@ -118,8 +143,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // 3. City × category combinations : /<city-slug>/<cat>
-  // Only top categories × top cities (≈ 30 × 30 = 900 URLs).
-  for (const slug of validCategories) {
+  // Top DB categories × top cities + hierarchy umbrellas × top cities.
+  const cityCatSlugs = [...HIERARCHY_PARENT_SLUGS, ...validCategories];
+  for (const slug of cityCatSlugs) {
     for (const city of validCities) {
       urls.push(
         ...withAlternates(`/${citySlug(city)}/${slug}`, {
