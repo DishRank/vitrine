@@ -80,19 +80,52 @@ const FIVE_MIN = 5 * 60 * 1000;
 const THIRTY_MIN = 30 * 60 * 1000;
 
 /**
- * Fetch top dishes. When the slug has children in `categoryHierarchy`, it
- * expands transitively (e.g. /c/asian → japanese, chinese, korean, thai, …,
- * and all their dishes). One RPC round-trip: the DB does `slug = ANY(...)`.
+ * Fetch top dishes. When the slug has children in `categoryHierarchy`, fires
+ * one RPC per descendant slug in parallel, then merges + dedupes + re-sorts.
+ *
+ * Why parallel calls (and not a single `slug = ANY(...)` call): the prod RPC
+ * still has the scalar signature `p_category_slug TEXT`. The array signature
+ * exists only on the dev DB so far — when prod migrates we'll collapse this
+ * back into a single call.
  */
 export async function fetchDishes(categorySlug?: string, limit = 10): Promise<DishRow[]> {
-  const slugs = categorySlug ? expandCategorySlug(categorySlug) : null;
+  const slugs = categorySlug ? expandCategorySlug(categorySlug) : [undefined];
+  if (slugs.length === 1) {
+    return fetchDishesForSlug(slugs[0], limit);
+  }
+  const cacheKey = `dishes:agg:${categorySlug}:${limit}`;
+  return cached(cacheKey, FIVE_MIN, async () => {
+    const perSlugLimit = Math.max(limit, 30);
+    const results = await Promise.all(
+      slugs.map((s) => fetchDishesForSlug(s, perSlugLimit).catch(() => [] as DishRow[])),
+    );
+    const seen = new Set<string>();
+    const merged: DishRow[] = [];
+    for (const list of results) {
+      for (const d of list) {
+        const key = `${d.restaurant_id}::${d.dish_name.toLowerCase()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push(d);
+      }
+    }
+    merged.sort((a, b) => {
+      const byRating = Number(b.avg_rating) - Number(a.avg_rating);
+      if (byRating !== 0) return byRating;
+      return Number(b.review_count) - Number(a.review_count);
+    });
+    return merged.slice(0, limit);
+  });
+}
+
+function fetchDishesForSlug(categorySlug: string | undefined, limit: number): Promise<DishRow[]> {
   const cacheKey = `dishes:${categorySlug || 'all'}:${limit}`;
   return cached(cacheKey, FIVE_MIN, async () => {
     const { data, error } = await getSupabase().rpc('get_feed_dishes', {
       user_lat: null,
       user_lng: null,
       radius_km: 50,
-      p_category_slugs: slugs,
+      p_category_slug: categorySlug || null,
       p_sort: 'rating',
       p_limit: limit,
     });
