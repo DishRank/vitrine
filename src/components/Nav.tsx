@@ -1,7 +1,7 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import AnimatedLogo from './AnimatedLogo';
 import { openBetaModal } from './BetaModal';
 import LocaleSwitcher from './LocaleSwitcher';
 import { usePlatform } from '@/lib/usePlatform';
@@ -69,22 +69,13 @@ export default function Nav() {
       } : {}}
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
-        <a href="/" className="flex items-center gap-2.5 font-extrabold text-lg">
-          <Image
-            src="/img/icon.webp"
-            alt="DishRank"
-            width={32}
-            height={32}
-            className="rounded-[10px] block dark:hidden"
-          />
-          <Image
-            src="/img/logo-light.webp"
-            alt="DishRank"
-            width={32}
-            height={32}
-            className="rounded-[10px] hidden dark:block"
-          />
-          <span>DishRank</span>
+        <a
+          href="/"
+          aria-label="DishRank — accueil"
+          className="flex items-center gap-2.5 font-extrabold text-lg text-[#6C5CE7] dark:text-white"
+        >
+          <AnimatedLogo size={32} />
+          <span className="text-[var(--text)]">DishRank</span>
         </a>
         <div className="flex items-center gap-1 sm:gap-2">
           {showPlayStore && playStoreButton}

@@ -1,7 +1,7 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import Image from 'next/image';
 import { useCallback } from 'react';
+import AnimatedLogo from './AnimatedLogo';
 import { openBetaModal } from './BetaModal';
 import { usePlatform } from '@/lib/usePlatform';
 import { APP_STORE_URL } from '@/lib/downloadLinks';
@@ -25,22 +25,13 @@ export default function Footer() {
   return (
     <footer className="border-t border-[var(--border)] py-6">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <a href="/" className="flex items-center gap-2 font-bold">
-          <Image
-            src="/img/icon.webp"
-            alt="DishRank logo"
-            width={24}
-            height={24}
-            className="rounded-md block dark:hidden"
-          />
-          <Image
-            src="/img/logo-light.webp"
-            alt="DishRank logo"
-            width={24}
-            height={24}
-            className="rounded-md hidden dark:block"
-          />
-          <span>DishRank</span>
+        <a
+          href="/"
+          aria-label="DishRank — accueil"
+          className="flex items-center gap-2 font-bold text-[#6C5CE7] dark:text-white"
+        >
+          <AnimatedLogo size={24} />
+          <span className="text-[var(--text)]">DishRank</span>
         </a>
         <nav aria-label="Footer links" className="flex flex-wrap justify-center gap-4 sm:gap-5 text-xs text-[var(--text3)]">
           {showPlayStore && (

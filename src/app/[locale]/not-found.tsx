@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { useTranslations } from 'next-intl';
+import AnimatedLogo from '@/components/AnimatedLogo';
 import DownloadButtons from '@/components/DownloadButtons';
 
 // Metadata for the 404 page (uses the App Router metadata API instead of
@@ -20,12 +21,13 @@ export default function NotFound() {
   return (
     <>
       <nav className="border-b border-[var(--border)] px-4 sm:px-8 flex items-center h-[72px]">
-        <Link href="/" className="flex items-center gap-2.5 font-extrabold text-lg">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/img/icon.webp" alt="DishRank" className="w-8 h-8 rounded-[10px] block dark:hidden" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/img/logo-light.webp" alt="DishRank" className="w-8 h-8 rounded-[10px] hidden dark:block" />
-          <span>DishRank</span>
+        <Link
+          href="/"
+          aria-label="DishRank — accueil"
+          className="flex items-center gap-2.5 font-extrabold text-lg text-[#6C5CE7] dark:text-white"
+        >
+          <AnimatedLogo size={32} />
+          <span className="text-[var(--text)]">DishRank</span>
         </Link>
       </nav>
       <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10 relative overflow-hidden min-h-[70vh]">

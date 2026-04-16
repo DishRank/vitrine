@@ -1,6 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import Image from 'next/image';
+import AnimatedLogo from './AnimatedLogo';
 import { openBetaModal } from './BetaModal';
 import { usePlatform } from '@/lib/usePlatform';
 import { APP_STORE_URL } from '@/lib/downloadLinks';
@@ -17,20 +17,9 @@ export default function CtaBanner() {
       <div className="relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-10 overflow-hidden">
         <div className="absolute top-[-50%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-[radial-gradient(circle,var(--primary-glow)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative z-10 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-center sm:text-left">
-          <Image
-            src="/img/icon.webp"
-            alt="DishRank"
-            width={48}
-            height={48}
-            className="rounded-2xl shrink-0 block dark:hidden"
-          />
-          <Image
-            src="/img/logo-light.webp"
-            alt="DishRank"
-            width={48}
-            height={48}
-            className="rounded-2xl shrink-0 hidden dark:block"
-          />
+          <div className="shrink-0 text-[#6C5CE7] dark:text-white" aria-hidden>
+            <AnimatedLogo size={48} />
+          </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg sm:text-xl font-bold mb-1">{t('title')}</h2>
             <p className="text-xs sm:text-sm text-[var(--text2)]">{t('subtitle')}</p>
