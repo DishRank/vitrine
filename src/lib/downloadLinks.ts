@@ -5,9 +5,8 @@ export const APP_STORE_URL = 'https://apps.apple.com/fr/app/dishrank/id676175255
 export const APP_STORE_URL_UNIVERSAL = 'https://apps.apple.com/app/id6761752556';
 export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.dishrank.app';
 
-// Tant que l'app Android est en beta fermee, le bouton Play Store ouvre le modal beta.
-// Une fois publiee en production, passer a true pour utiliser le lien direct.
-export const ANDROID_LIVE = false;
+// L'app Android est en beta ouverte : le bouton Play Store pointe directement vers la fiche.
+export const ANDROID_LIVE = true;
 
 export type Platform = 'ios' | 'android' | 'desktop';
 

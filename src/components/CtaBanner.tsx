@@ -1,9 +1,8 @@
 'use client';
 import { useTranslations } from 'next-intl';
 import AnimatedLogo from './AnimatedLogo';
-import { openBetaModal } from './BetaModal';
 import { usePlatform } from '@/lib/usePlatform';
-import { APP_STORE_URL } from '@/lib/downloadLinks';
+import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/downloadLinks';
 
 export default function CtaBanner() {
   const t = useTranslations('cta');
@@ -27,8 +26,9 @@ export default function CtaBanner() {
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
             {showPlayStore && (
               <a
-                href="#"
-                onClick={openBetaModal}
+                href={PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition-all text-sm shrink-0 border border-gray-600"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 0 1 0 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>

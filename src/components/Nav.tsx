@@ -2,10 +2,9 @@
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import AnimatedLogo from './AnimatedLogo';
-import { openBetaModal } from './BetaModal';
 import LocaleSwitcher from './LocaleSwitcher';
 import { usePlatform } from '@/lib/usePlatform';
-import { APP_STORE_URL, ANDROID_LIVE, PLAY_STORE_URL } from '@/lib/downloadLinks';
+import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/downloadLinks';
 
 export default function Nav() {
   const t = useTranslations('nav');
@@ -26,17 +25,19 @@ export default function Nav() {
   const showPlayStore = !mounted || platform === 'desktop' || platform === 'android';
 
   const playStoreButton = (
-    <button
-      onClick={openBetaModal}
-      aria-label={`Google Play - ${t('betaClosed')}`}
-      className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3.5 py-1.5 sm:py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-all border border-gray-700 cursor-pointer"
+    <a
+      href={PLAY_STORE_URL}
+      target="_blank"
+      rel="noopener"
+      aria-label={`${t('downloadOn')} Google Play`}
+      className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3.5 py-1.5 sm:py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-all border border-gray-700"
     >
       <svg width="14" height="14" className="sm:w-4 sm:h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 0 1 0 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>
       <div className="hidden sm:block text-left leading-none">
-        <div className="text-[7px] sm:text-[8px] uppercase tracking-wider opacity-70">{ANDROID_LIVE ? t('downloadOn') : t('betaClosed')}</div>
+        <div className="text-[7px] sm:text-[8px] uppercase tracking-wider opacity-70">{t('downloadOn')}</div>
         <div className="text-[10px] sm:text-xs font-bold mt-0.5">Google Play</div>
       </div>
-    </button>
+    </a>
   );
 
   const appStoreButton = (
@@ -54,9 +55,6 @@ export default function Nav() {
       </div>
     </a>
   );
-
-  // Reference ANDROID_LIVE and PLAY_STORE_URL so unused-warning doesn't trip.
-  void PLAY_STORE_URL;
 
   return (
     <nav
