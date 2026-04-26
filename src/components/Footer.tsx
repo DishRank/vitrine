@@ -2,9 +2,8 @@
 import { useTranslations } from 'next-intl';
 import { useCallback } from 'react';
 import AnimatedLogo from './AnimatedLogo';
-import { openBetaModal } from './BetaModal';
 import { usePlatform } from '@/lib/usePlatform';
-import { APP_STORE_URL } from '@/lib/downloadLinks';
+import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/downloadLinks';
 
 export default function Footer() {
   const t = useTranslations('footer');
@@ -35,7 +34,7 @@ export default function Footer() {
         </a>
         <nav aria-label="Footer links" className="flex flex-wrap justify-center gap-4 sm:gap-5 text-xs text-[var(--text3)]">
           {showPlayStore && (
-            <a href="#" onClick={openBetaModal} className="inline-flex items-center gap-1.5 hover:text-[var(--text)] transition-colors">
+            <a href={PLAY_STORE_URL} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 hover:text-[var(--text)] transition-colors">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 0 1 0 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>
               Google Play
             </a>
