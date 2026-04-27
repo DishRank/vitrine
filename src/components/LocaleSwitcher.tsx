@@ -22,24 +22,43 @@ interface Props {
   variant?: 'nav' | 'drawer';
 }
 
+/** Durée des animations open/close du dropdown (doit matcher dropDownIn /
+ *  dropDownOut dans globals.css). */
+const DROPDOWN_ANIM_MS = 180;
+
 export default function LocaleSwitcher({ variant = 'nav' }: Props) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  /** True pendant l'animation de fermeture. Le dropdown reste mounted le
+   *  temps que l'animation `dropDownOut` se joue (sinon on aurait juste
+   *  un unmount instantané sans transition). */
+  const [closing, setClosing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
 
   const current = LOCALES.find((l) => l.code === locale) ?? LOCALES[0];
 
+  /** Ferme le dropdown avec animation de sortie. Pendant DROPDOWN_ANIM_MS
+   *  on garde `open=true` + `closing=true` pour laisser jouer dropDownOut. */
+  const closeDropdown = () => {
+    if (!open || closing) return;
+    setClosing(true);
+    window.setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, DROPDOWN_ANIM_MS);
+  };
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) closeDropdown();
     };
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') closeDropdown();
     };
-    if (open) {
+    if (open && !closing) {
       document.addEventListener('mousedown', handler);
       document.addEventListener('keydown', onEsc);
     }
@@ -47,10 +66,11 @@ export default function LocaleSwitcher({ variant = 'nav' }: Props) {
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('keydown', onEsc);
     };
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, closing]);
 
   const switchTo = (code: LocaleCode) => {
-    setOpen(false);
+    closeDropdown();
     if (code === locale) return;
     startTransition(() => {
       router.replace(pathname, { locale: code });
@@ -110,7 +130,7 @@ export default function LocaleSwitcher({ variant = 'nav' }: Props) {
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? closeDropdown() : setOpen(true))}
         aria-label={`${current.label} — change language`}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -123,7 +143,15 @@ export default function LocaleSwitcher({ variant = 'nav' }: Props) {
         <div
           role="listbox"
           aria-label="Languages"
-          className="absolute right-0 top-full mt-2 z-[100] bg-[var(--surface)] border border-[var(--border2)] rounded-xl shadow-xl py-1 min-w-[170px] animate-[fadeUp_0.15s_ease]"
+          // Animation asymétrique : entre par le haut (dropDownIn) et sort
+          // par le bas (dropDownOut) → ressenti "goutte" cohérent.
+          // `forwards` sur la sortie pour que l'état final (opacity 0,
+          // translateY 10px) reste pendant le timeout avant l'unmount.
+          className={`absolute right-0 top-full mt-2 z-[100] bg-[var(--surface)] border border-[var(--border2)] rounded-xl shadow-xl py-1 min-w-[170px] ${
+            closing
+              ? 'animate-[dropDownOut_0.18s_ease_forwards] pointer-events-none'
+              : 'animate-[dropDownIn_0.18s_ease]'
+          }`}
         >
           {LOCALES.map((l) => {
             const isActive = l.code === locale;

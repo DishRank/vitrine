@@ -83,6 +83,89 @@ export default function Showcase() {
     if (Math.abs(diff) > 50) (diff > 0 ? goNextManual : goPrev)();
   };
 
+  // ─── Mouse-driven 3D tilt sur le mock ──────────────────────────────────
+  // Implémentation : lerp + requestAnimationFrame.
+  //
+  // Naïf (CSS transition relancée à chaque mousemove) = janky : à 60+ fps,
+  // chaque mousemove interrompt la transition précédente avant qu'elle
+  // n'ait fini d'interpoler → résultat saccadé. Au lieu, on stocke la
+  // ROTATION CIBLE en ref et une rAF loop interpole la rotation COURANTE
+  // vers la cible avec un facteur d'amortissement (lerp). Le DOM est
+  // muté une fois par frame uniquement (60fps cap), avec une inertie
+  // naturelle "spring" — fluide, peu coûteux, pas de transition CSS.
+  //
+  // Mappage : position souris (-1..+1 relatif au centre du mock) →
+  // rotateY (±16°, horizontal) et rotateX (±10°, vertical inversé).
+  const mockRef = useRef<HTMLDivElement>(null);
+  const DEFAULT_X = 2;   // rotateX au repos (deg)
+  const DEFAULT_Y = -6;  // rotateY au repos (deg)
+  /** Rotation que l'on souhaite atteindre (mise à jour à chaque mousemove). */
+  const targetTilt = useRef({ x: DEFAULT_X, y: DEFAULT_Y });
+  /** Rotation effectivement appliquée au DOM. Lerpée vers la cible. */
+  const currentTilt = useRef({ x: DEFAULT_X, y: DEFAULT_Y });
+  const rafId = useRef<number | null>(null);
+  const isHovering = useRef(false);
+
+  /** Boucle d'animation : lerp current → target, mute le DOM, planifie la
+   *  frame suivante tant qu'on n'a pas convergé (ou tant que la souris est
+   *  encore sur le mock). */
+  const animate = useCallback(() => {
+    // Facteur d'amortissement : 0.18 réactif au tracking, 0.10 plus mou
+    // au retour pour un effet "spring" plus visible quand la souris quitte.
+    const ease = isHovering.current ? 0.18 : 0.10;
+    currentTilt.current.x += (targetTilt.current.x - currentTilt.current.x) * ease;
+    currentTilt.current.y += (targetTilt.current.y - currentTilt.current.y) * ease;
+
+    const el = mockRef.current;
+    if (el) {
+      el.style.transform = `rotateY(${currentTilt.current.y.toFixed(2)}deg) rotateX(${currentTilt.current.x.toFixed(2)}deg)`;
+    }
+
+    const dx = Math.abs(targetTilt.current.x - currentTilt.current.x);
+    const dy = Math.abs(targetTilt.current.y - currentTilt.current.y);
+    // Continue tant qu'on tracke OU qu'on n'est pas encore à 0.05° de la
+    // cible. En dessous, on stoppe pour économiser les frames.
+    if (isHovering.current || dx > 0.05 || dy > 0.05) {
+      rafId.current = requestAnimationFrame(animate);
+    } else {
+      // Snap final pour éviter les arrondis flottants résiduels
+      currentTilt.current.x = targetTilt.current.x;
+      currentTilt.current.y = targetTilt.current.y;
+      if (el) {
+        el.style.transform = `rotateY(${currentTilt.current.y}deg) rotateX(${currentTilt.current.x}deg)`;
+      }
+      rafId.current = null;
+    }
+  }, []);
+
+  const onMockMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = mockRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+    const cy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+    const dx = Math.max(-1, Math.min(1, cx));
+    const dy = Math.max(-1, Math.min(1, cy));
+    targetTilt.current.y = dx * 16;   // rotateY (horizontal)
+    targetTilt.current.x = -dy * 10;  // rotateX (vertical inversé)
+    isHovering.current = true;
+    if (rafId.current === null) rafId.current = requestAnimationFrame(animate);
+  };
+
+  const onMockMouseLeave = () => {
+    isHovering.current = false;
+    targetTilt.current.x = DEFAULT_X;
+    targetTilt.current.y = DEFAULT_Y;
+    if (rafId.current === null) rafId.current = requestAnimationFrame(animate);
+  };
+
+  // Cleanup : annule la frame en cours au démontage
+  useEffect(() => {
+    return () => {
+      if (rafId.current !== null) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
+
   return (
     <section className="py-12 sm:py-20 overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -120,27 +203,94 @@ export default function Showcase() {
             </button>
           </div>
         </div>
-        {/* Phone - hidden on mobile */}
-        <div className="hidden md:flex justify-center" style={{ perspective: '1200px' }}>
+        {/* Phone - hidden on mobile.
+            Mouse-driven 3D tilt : on attache les listeners au container avec
+            perspective pour que le tracking suive la souris partout autour
+            du mock (même quand elle survole la zone autour, pas seulement le
+            phone). Tilt par défaut (rotateY -6°, rotateX 2°) restauré en
+            spring au mouseleave. */}
+        {/* Perspective réduite (900 au lieu de 1200) → caméra plus proche
+            → effet 3D plus prononcé quand on tilt. */}
+        <div
+          className="hidden md:flex justify-center"
+          style={{ perspective: '900px' }}
+          onMouseMove={onMockMouseMove}
+          onMouseLeave={onMockMouseLeave}
+        >
           <div
-            className="relative transition-transform duration-700 ease-out"
-            style={{ transformStyle: 'preserve-3d', transform: 'rotateY(-6deg) rotateX(2deg)' }}
+            ref={mockRef}
+            className="relative"
+            style={{
+              transformStyle: 'preserve-3d',
+              transform: 'rotateY(-6deg) rotateX(2deg)',
+              // Pas de `transition` ici : la rAF loop ci-dessus gère
+              // l'interpolation manuellement (lerp). Une transition CSS
+              // entrerait en conflit avec les mutations frame-par-frame.
+              willChange: 'transform',
+            }}
           >
-            {/* Subtle glow behind phone */}
-            <div className="absolute -inset-4 rounded-[40px] opacity-15 blur-2xl bg-[var(--primary)]" style={{ transform: 'translateZ(-40px)' }} />
+            {/* ─── PROFONDEUR : empilement Z multi-niveaux ───
+                Au lieu d'avoir tous les éléments à Z=0 (effet feuille de
+                papier), on les stack à différentes profondeurs pour que la
+                rotation crée une vraie parallaxe :
+                  • Glow violet diffus           : Z = -80 px (loin derrière)
+                  • Drop-shadow plate            : Z = -50 px (plan flou)
+                  • Dos du téléphone (épaisseur) : Z = -16 px (corps)
+                  • Cadre / bezel                : Z =   0 px (face avant)
+                  • Écran (légèrement enfoncé)   : Z =  -4 px (recessed)
+                  • Image (le contenu)           : Z =  +2 px (à fleur de bezel)
+                  • Home indicator               : Z =  +6 px (touche relief)
+                  • Reflet spéculaire haut       : Z =  +8 px (highlight glass)
+                Tous les containers intermédiaires ont
+                `transform-style: preserve-3d` pour que les translateZ
+                s'additionnent dans la même scène 3D. */}
 
-            {/* Phone frame — minimal bezel */}
-            <div className="relative w-[270px] rounded-[32px] p-[6px] bg-gradient-to-b from-[#2a2a2e] to-[#1a1a1e]"
+            {/* Glow violet — très loin derrière */}
+            <div
+              className="absolute -inset-6 rounded-[44px] opacity-25 blur-3xl bg-[var(--primary)] pointer-events-none"
+              style={{ transform: 'translateZ(-80px)' }}
+              aria-hidden="true"
+            />
+
+            {/* Ombre portée (élément flou foncé) — plan intermédiaire */}
+            <div
+              className="absolute inset-0 rounded-[36px] bg-black/55 blur-2xl pointer-events-none"
+              style={{ transform: 'translateZ(-50px) translateY(20px) scale(0.98)' }}
+              aria-hidden="true"
+            />
+
+            {/* Dos du téléphone — donne l'illusion d'épaisseur (~16px) */}
+            <div
+              className="absolute inset-0 rounded-[34px] pointer-events-none"
               style={{
+                transform: 'translateZ(-16px)',
+                background: 'linear-gradient(135deg, #1a1a1e 0%, #0a0a0e 100%)',
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.6)',
+              }}
+              aria-hidden="true"
+            />
+
+            {/* Phone frame — face avant (Z=0). preserve-3d pour propager
+                les translateZ aux enfants (écran, indicator, reflet). */}
+            <div
+              className="relative w-[270px] rounded-[32px] p-[6px] bg-gradient-to-b from-[#2a2a2e] to-[#15151a]"
+              style={{
+                transformStyle: 'preserve-3d',
                 boxShadow: [
-                  'inset 0 1px 0 rgba(255,255,255,0.1)',
+                  'inset 0 1px 0 rgba(255,255,255,0.12)',
+                  'inset 0 -1px 0 rgba(0,0,0,0.5)',
                   '0 0 0 1px rgba(255,255,255,0.08)',
-                  '0 12px 40px rgba(0,0,0,0.4)',
+                  '0 18px 45px rgba(0,0,0,0.45)',
                   '0 0 60px var(--primary-glow)',
                 ].join(', '),
               }}
             >
-              {/* Screen */}
+              {/* Screen — l'image reste enfant direct (préservation du
+                  comportement Next/Image `fill`). On NE met PAS preserve-3d
+                  ici car overflow:hidden flatten le contexte 3D et casse le
+                  rendu — la profondeur est portée par les couches Z du
+                  frame parent (dos -16, bezel 0, glow -80, etc), pas par
+                  l'intérieur de l'écran. */}
               <div className="rounded-[26px] overflow-hidden bg-black aspect-[9/19.5] relative">
                 <Image
                   src={IMAGES[idx]}
@@ -151,10 +301,27 @@ export default function Showcase() {
                   priority={idx === 0}
                   className={`object-cover object-top transition-all duration-300 ${animating ? 'opacity-0 -translate-x-5' : 'opacity-100 translate-x-0'}`}
                 />
+
+                {/* Reflet spéculaire haut — overlay 2D simple (pas de
+                    translateZ) qui simule le verre brillant en haut de
+                    l'écran. mixBlendMode screen → blanchit légèrement
+                    sans cacher l'image. */}
+                <div
+                  className="absolute inset-x-0 top-0 h-1/3 pointer-events-none z-10"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 100%)',
+                    mixBlendMode: 'screen',
+                  }}
+                  aria-hidden="true"
+                />
               </div>
 
-              {/* Home indicator */}
-              <div className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[90px] h-[4px] rounded-full bg-white/20 z-20" />
+              {/* Home indicator — touche de relief +6px (sur la couche 3D du frame) */}
+              <div
+                className="absolute bottom-[8px] left-1/2 w-[90px] h-[4px] rounded-full bg-white/25 z-20"
+                style={{ transform: 'translateX(-50%) translateZ(6px)' }}
+                aria-hidden="true"
+              />
             </div>
           </div>
         </div>
