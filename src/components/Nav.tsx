@@ -128,13 +128,26 @@ export default function Nav() {
     </a>
   );
 
-  /** Nav anchor links — same set used in desktop bar and mobile drawer. */
-  const navLinks = [
+  /** Nav anchor links — same set used in desktop bar and mobile drawer.
+   *  `top: true` → click handler scrolle à 0 (au lieu de chercher une ancre).
+   *  L'href reste `/` pour la sémantique + fallback no-JS (la page recharge
+   *  au top), mais le handler `preventDefault` + `scrollTo({ top: 0 })`
+   *  garde l'utilisateur sur la même page sans recharge. */
+  const navLinks: Array<{ href: string; label: string; badge?: string; top?: boolean }> = [
+    { href: '/', label: t('explore'), top: true },
     { href: '#top10', label: t('ranking') },
-    { href: '#explorer', label: t('explore') },
     { href: '#social', label: t('social'), badge: t('new') },
     { href: '#why', label: t('why') },
   ];
+
+  /** Handler partagé desktop + drawer pour les liens "scroll to top". */
+  const onNavLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, link: typeof navLinks[number]) => {
+    if (link.top) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setDrawerOpen(false);
+  };
 
   return (
     <>
@@ -169,8 +182,9 @@ export default function Nav() {
           <div className="hidden lg:flex items-center gap-7 text-sm font-medium text-[var(--text2)]">
             {navLinks.map((l) => (
               <a
-                key={l.href}
+                key={l.label}
                 href={l.href}
+                onClick={(e) => onNavLinkClick(e, l)}
                 className="hover:text-[var(--text)] transition-colors inline-flex items-center gap-1.5"
               >
                 {l.label}
@@ -275,10 +289,10 @@ export default function Nav() {
         <nav className="flex-1 overflow-y-auto px-2 py-4">
           <ul className="flex flex-col gap-1">
             {navLinks.map((l) => (
-              <li key={l.href}>
+              <li key={l.label}>
                 <a
                   href={l.href}
-                  onClick={() => setDrawerOpen(false)}
+                  onClick={(e) => onNavLinkClick(e, l)}
                   className="flex items-center justify-between px-4 py-4 rounded-xl text-base font-semibold text-[var(--text)] hover:bg-[var(--surface)] active:bg-[var(--surface-var)] transition-colors"
                 >
                   <span>{l.label}</span>

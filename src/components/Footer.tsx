@@ -19,6 +19,12 @@ export default function Footer() {
     window.dispatchEvent(new CustomEvent('open-legal', { detail: page }));
   }, []);
 
+  /** "Explorer" = retour en haut de page (cohérent avec la nav). */
+  const scrollToTop = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const showAppStore = !mounted || platform === 'desktop' || platform === 'ios';
   const showPlayStore = !mounted || platform === 'desktop' || platform === 'android';
 
@@ -81,8 +87,8 @@ export default function Footer() {
               {t('colProduit')}
             </h4>
             <ul className="space-y-2.5 text-sm">
+              <li><a href="/" onClick={scrollToTop} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('explore')}</a></li>
               <li><a href="#top10" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('ranking')}</a></li>
-              <li><a href="#explorer" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('explore')}</a></li>
               <li><a href="#app" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('app')}</a></li>
               <li>
                 <a href="#social" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors inline-flex items-center gap-1.5">

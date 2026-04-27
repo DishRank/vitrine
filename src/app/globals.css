@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Smooth scroll global pour les ancres `<a href="#section">`.
+   Désactivé via prefers-reduced-motion plus bas. */
+html {
+  scroll-behavior: smooth;
+}
+
+/* La nav est fixe (h-16 = 64px) ; sans `scroll-margin-top`, l'ancre
+   atterrit pile sous la nav. On ajoute 80px (64 nav + 16 padding) pour
+   que la section visée soit bien dégagée. Cible large : tout id (#why,
+   #social, #explorer, #top10, #faq…). */
+:where([id]) {
+  scroll-margin-top: 80px;
+}
 
 :root {
   --primary: #6C5CE7;
