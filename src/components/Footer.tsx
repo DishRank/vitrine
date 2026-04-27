@@ -25,6 +25,14 @@ export default function Footer() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  /** "Cookies" → rouvre la modal de paramétrage cookies (CookieConsent
+   *  écoute cet event et affiche directement le panneau "Personnaliser"
+   *  pré-rempli avec le choix actuel). */
+  const openCookieSettings = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('open-cookie-settings'));
+  }, []);
+
   const showAppStore = !mounted || platform === 'desktop' || platform === 'ios';
   const showPlayStore = !mounted || platform === 'desktop' || platform === 'android';
 
@@ -110,7 +118,6 @@ export default function Footer() {
             <ul className="space-y-2.5 text-sm">
               <li><a href="https://www.instagram.com/dishrank.app" target="_blank" rel="noopener" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">Instagram</a></li>
               <li><a href="mailto:contact@dishrank.fr" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{t('contact')}</a></li>
-              <li><a href="mailto:contact@dishrank.fr?subject=Presse" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{t('press')}</a></li>
             </ul>
           </div>
 
@@ -123,7 +130,7 @@ export default function Footer() {
               <li><a href="/?page=privacy" onClick={(e) => openLegal(e, 'privacy')} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tl('privacy')}</a></li>
               <li><a href="/?page=terms" onClick={(e) => openLegal(e, 'terms')} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tl('terms')}</a></li>
               <li><a href="/?page=delete" onClick={(e) => openLegal(e, 'delete')} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tl('delete')}</a></li>
-              <li><a href="mailto:contact@dishrank.fr" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{t('cookies')}</a></li>
+              <li><a href="#" onClick={openCookieSettings} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors cursor-pointer">{t('cookies')}</a></li>
             </ul>
           </div>
         </div>

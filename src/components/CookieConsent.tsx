@@ -71,6 +71,34 @@ export default function CookieConsent() {
     }
   }, []);
 
+  // Permet de rouvrir le banner cookies depuis l'extérieur (lien "Cookies"
+  // dans le Footer). On reset `consent` à null pour que le banner principal
+  // re-s'affiche (les 3 boutons), pas la modal Personnaliser. Si l'user
+  // veut ré-affiner, il cliquera "Personnaliser" depuis le banner. Le toggle
+  // est pré-rempli avec le choix actuel pour cohérence.
+  //
+  // IMPORTANT — animation au reopen : on met `visible=false` D'ABORD pour
+  // que le banner monte à sa position cachée (translateY 4, opacity 0),
+  // puis on bascule à `visible=true` au tick d'animation suivant (double
+  // rAF) pour que la CSS transition `transition-all duration-300` ait une
+  // vraie frame "from" à animer. Sans ça, React batch les deux setStates
+  // dans le même render → le banner apparaît instantanément à sa position
+  // finale, pas d'animation perçue.
+  useEffect(() => {
+    const reopen = () => {
+      const stored = getStoredConsent();
+      setAnalyticsEnabled(stored === 'granted');
+      setShowCustomize(false);
+      setVisible(false);
+      setConsent(null);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setVisible(true));
+      });
+    };
+    window.addEventListener('open-cookie-settings', reopen);
+    return () => window.removeEventListener('open-cookie-settings', reopen);
+  }, []);
+
   // Délai avant affichage : laisse l'user voir le site d'abord (meilleur engagement)
   useEffect(() => {
     if (consent !== null) return;
@@ -202,17 +230,30 @@ export default function CookieConsent() {
   }
 
   // ─── BANNER PRINCIPAL ───────────────────────────────────────────────────
+  // IMPORTANT — pourquoi inline `style` au lieu de classes Tailwind pour le
+  // transform : en Tailwind v4, `-translate-x-1/2` et `translate-y-4`
+  // compilent vers la MÊME propriété CSS shorthand `translate` (et non plus
+  // `transform` avec variables comme en v3). Résultat : la dernière classe
+  // écrase la précédente — le centrage X se perd dans l'état caché et
+  // l'animation devient incohérente. On centralise donc le translate dans
+  // un inline style unique. Animation : slide-in horizontal depuis la
+  // gauche (off-screen → centré) + fade.
   return (
     <div
       role="dialog"
       aria-modal="false"
       aria-labelledby="cookie-banner-title"
       aria-describedby="cookie-banner-desc"
-      className={`fixed left-1/2 -translate-x-1/2 z-[400] w-[calc(100%-2rem)] max-w-[720px] transition-all duration-300 ease-out ${
-        visible
-          ? 'bottom-4 sm:bottom-6 opacity-100 translate-y-0'
-          : '-bottom-4 opacity-0 translate-y-4 pointer-events-none'
-      }`}
+      className="fixed bottom-4 sm:bottom-6 z-[400] w-[calc(100%-2rem)] max-w-[720px]"
+      style={{
+        left: '50%',
+        transform: visible
+          ? 'translate(-50%, 0)'
+          : 'translate(-200%, 0)',
+        opacity: visible ? 1 : 0,
+        transition: 'transform 500ms cubic-bezier(0.32, 0.72, 0, 1), opacity 300ms ease-out',
+        pointerEvents: visible ? 'auto' : 'none',
+      }}
     >
       <div
         className="relative bg-[var(--surface)] border-2 border-[var(--primary)]/30 rounded-2xl px-5 sm:px-7 py-5 sm:py-6 shadow-2xl"

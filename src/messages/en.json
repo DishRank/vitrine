@@ -44,6 +44,7 @@
     "topRatedCity": "Top 10 dishes in {city}",
     "topRatedCategory": "Top 10 {category}",
     "topRatedCityCategory": "Top 10 {category} in {city}",
+    "loadingDishes": "Loading top 10 dishes...",
     "noResults": "No dishes found",
     "beFirst": "Be the first to rate a dish!",
     "reviews": "{count} reviews",

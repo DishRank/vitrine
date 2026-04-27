@@ -44,6 +44,7 @@
     "topRatedCity": "Top 10 Gerichte in {city}",
     "topRatedCategory": "Top 10 {category}",
     "topRatedCityCategory": "Top 10 {category} in {city}",
+    "loadingDishes": "Top 10 Gerichte werden geladen...",
     "noResults": "Keine Gerichte gefunden",
     "beFirst": "Sei der Erste, der ein Gericht bewertet!",
     "reviews": "{count} Bewertungen",

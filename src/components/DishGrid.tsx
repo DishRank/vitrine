@@ -53,7 +53,7 @@ export default function DishGrid({
         <div className="flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-3">
             <M3Spinner size={48} />
-            <p className="text-sm text-[var(--text3)]">{t('topRated')}...</p>
+            <p className="text-sm text-[var(--text3)]">{t('loadingDishes')}</p>
           </div>
         </div>
       ) : dishes.length === 0 ? (

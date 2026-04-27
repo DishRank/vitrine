@@ -44,6 +44,7 @@
     "topRatedCity": "Los 10 mejores platos de {city}",
     "topRatedCategory": "Los 10 mejores {category}",
     "topRatedCityCategory": "Los 10 mejores {category} de {city}",
+    "loadingDishes": "Cargando los 10 mejores platos...",
     "noResults": "No se encontraron platos",
     "beFirst": "Se el primero en calificar un plato!",
     "reviews": "{count} opiniones",
