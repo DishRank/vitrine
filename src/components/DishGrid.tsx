@@ -45,8 +45,9 @@ export default function DishGrid({
   }, [initialDishes, q]);
 
   return (
-    <div className="max-w-[1200px] mx-auto px-5 sm:px-8 pb-8 min-h-[300px]">
-      <h2 className="text-base sm:text-lg font-bold py-3 px-1 leading-snug text-center sm:text-left">{title}</h2>
+    <div id="top10" className="max-w-[1200px] mx-auto px-5 sm:px-8 pb-8 min-h-[300px]">
+      {/* Title H3 — match v3 sizing (~28px desktop) and align to the left like v3 Top10 */}
+      <h2 className="text-xl sm:text-3xl font-bold tracking-tight pt-4 pb-5 sm:pb-7 text-center sm:text-left">{title}</h2>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -95,6 +96,20 @@ export default function DishGrid({
                 <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-semibold text-white group-hover:bg-black/80 transition-colors duration-300 inline-flex items-center gap-1">
                   <span>{d.review_count}</span>
                   <span>{t('reviewsLabel', { count: d.review_count })}</span>
+                </div>
+                {/* Rank #X badge bottom-left, big, with text-shadow so it pops on photos */}
+                <div
+                  className="absolute bottom-2 left-2.5 inline-flex items-baseline gap-0.5 text-white pointer-events-none"
+                  style={{ textShadow: '0 2px 14px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5)' }}
+                  aria-label={`Rang ${i + 1}`}
+                >
+                  <span className="font-extrabold opacity-80" style={{ fontSize: 11 }}>#</span>
+                  <span
+                    className="font-extrabold leading-none"
+                    style={{ fontSize: 30, letterSpacing: '-1.5px' }}
+                  >
+                    {i + 1}
+                  </span>
                 </div>
               </div>
               <div className="p-3">

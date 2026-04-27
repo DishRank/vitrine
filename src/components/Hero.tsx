@@ -13,6 +13,22 @@ type Props = {
   bestCategory?: string;
 };
 
+/**
+ * Hero v3 — fidèle au prototype `site-v3/landing.jsx`.
+ *
+ * Design key points:
+ *   • Label "Note les plats · pas les restos" entouré de 2 traits horizontaux
+ *     (24px × 1px, color #a99bff @ 40% opacity), uppercase tracked, tinted
+ *     #a99bff (T.violetHi) — pas la couleur primary qui est plus foncée.
+ *   • Titre H1 92px, blanc — gradient violet 3 stops (#a99bff → #7c6cf7 →
+ *     #5b4fc2) UNIQUEMENT sur la portion <em> (gérée par le rich text i18n).
+ *   • Subtitle 18px, ligne hauteur 1.55, max-width 560px, color textSoft
+ *     (#bfb8e8).
+ *   • Stats line : "200+" / "100%" en blanc bold, le reste en muted.
+ *   • Sur les pages filtrées (city/category), le SEO `intro` paragraph est
+ *     toujours rendu sous la subtitle pour garder le maillage sémantique
+ *     long-tail. Sur la home, on garde le hero épuré façon v3.
+ */
 export default function Hero({ category, city, bestCategory }: Props) {
   const t = useTranslations('hero');
 
@@ -42,54 +58,155 @@ export default function Hero({ category, city, bestCategory }: Props) {
       ? 'introWithCity'
       : 'intro';
 
+  /**
+   * Split `bestCategory` sur le PREMIER MOT (article ou qualifier) :
+   *   • FR : "Les meilleurs plats italiens" → prefix "Les ", label "meilleurs plats italiens"
+   *   • FR : "Le meilleur burger"          → prefix "Le ",  label "meilleur burger"
+   *   • FR : "La meilleure pizza"          → prefix "La ",  label "meilleure pizza"
+   *   • EN : "Best italian dishes"         → prefix "Best ", label "italian dishes"
+   *   • ES : "Mejor burger"                → prefix "Mejor ", label "burger"
+   *
+   * Le résultat : seul le premier mot (article FR / "Best" en EN) est en
+   * plain text, tout le reste (qualifier + plats + label) passe en gradient
+   * violet. Match le pattern du H1 home `Le <em>meilleur plat</em>...`.
+   */
+  const splitParts = (() => {
+    if (!bestCategory) {
+      return { prefix: '', label: '', suffix: '' };
+    }
+    const firstSpaceIdx = bestCategory.indexOf(' ');
+    if (firstSpaceIdx === -1) {
+      // Pas d'espace (cas pathologique) → tout en violet, pas de prefix
+      return { prefix: '', label: bestCategory, suffix: '' };
+    }
+    return {
+      prefix: bestCategory.slice(0, firstSpaceIdx + 1), // "Les " (avec espace)
+      label: bestCategory.slice(firstSpaceIdx + 1),     // "meilleurs plats italiens"
+      suffix: '',
+    };
+  })();
+
   const args = {
     category: category || '',
     city: city || '',
     bestCategory: bestCategory || '',
+    bestPrefix: splitParts.prefix,
+    bestLabel: splitParts.label,
+    bestSuffix: splitParts.suffix,
   };
   const isFiltered = !!(category || city);
 
+  // V3 gradient applied ONLY on the <em> portion of the title (white default
+  // for everything else). 3-stop gradient mirrors the original prototype.
+  const emGradient = (chunks: React.ReactNode) => (
+    <span
+      className="not-italic"
+      style={{
+        background: 'linear-gradient(120deg, #a99bff 0%, #7c6cf7 50%, #5b4fc2 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        color: 'transparent',
+      }}
+    >
+      {chunks}
+    </span>
+  );
+
+  // Bold-number wrapper for the stats line (200+, 100%, Sans pub).
+  // Uses var(--text) so it stays readable in both light and dark themes.
+  const statBold = (chunks: React.ReactNode) => (
+    <b className="text-[var(--text)] font-bold">{chunks}</b>
+  );
+
   return (
-    <section className="relative pt-28 pb-10 text-center overflow-hidden" style={{ contain: 'layout paint' }}>
-      {/* Radial glow: reduced from 900x900 to 600x600 and given paint containment
-          to avoid triggering full-layer repaints on low-end mobile. Gain LCP. */}
+    <section className="relative pt-24 pb-10 sm:pb-12 text-center overflow-hidden" style={{ contain: 'layout paint' }}>
+      {/* Radial glow violet — width clamps so it never overflows on mobile */}
       <div
-        className="absolute top-[-25%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[radial-gradient(circle,var(--primary-glow)_0%,transparent_65%)] pointer-events-none"
-        style={{ contain: 'paint' }}
+        className="absolute -top-[80px] sm:-top-[120px] left-1/2 -translate-x-1/2 rounded-full pointer-events-none"
+        style={{
+          width: 'min(1000px, 100vw)',
+          height: 'min(540px, 60vw)',
+          background: 'radial-gradient(closest-side, rgba(124,108,247,0.25), transparent 70%)',
+          filter: 'blur(40px)',
+          contain: 'paint',
+        }}
         aria-hidden="true"
       />
-      <div className="relative z-10 max-w-[1200px] mx-auto px-6 sm:px-8 flex flex-col items-center">
-        <p className="text-xs font-semibold uppercase tracking-[2.5px] text-[var(--primary)] mb-5">
-          {t('label')}
-        </p>
-        <h1
-          className="font-black leading-[1.08] tracking-tight mb-4 text-center w-full"
-          style={{ fontSize: 'clamp(1.75rem, 5.2vw, 3.5rem)' }}
+
+      <div className="relative z-10 max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-14 flex flex-col items-center">
+        {/* Label avec lignes horizontales sur les côtés.
+            tracking se réduit sur mobile pour éviter de devoir wrap le texte. */}
+        <div
+          className="inline-flex items-center gap-2 sm:gap-3 mb-6 sm:mb-7 text-[10px] sm:text-[11px] font-bold uppercase whitespace-nowrap text-[var(--primary)]"
+          style={{ letterSpacing: '1.8px' }}
         >
-          {t.rich(titleKey, {
-            em: (chunks) => <em className="not-italic text-[var(--primary)]">{chunks}</em>,
-            ...args,
-          })}
+          <span
+            className="inline-block h-px bg-[var(--primary)]"
+            style={{ width: 'clamp(16px, 4vw, 24px)', opacity: 0.4 }}
+          />
+          <span>{t('label')}</span>
+          <span
+            className="inline-block h-px bg-[var(--primary)]"
+            style={{ width: 'clamp(16px, 4vw, 24px)', opacity: 0.4 }}
+          />
+        </div>
+
+        {/* Title — white default, gradient ONLY on <em> portions */}
+        <h1
+          className="font-bold text-[var(--text)] text-center max-w-5xl mb-6"
+          style={{
+            fontSize: 'clamp(2.25rem, 8vw, 5.75rem)',
+            lineHeight: 0.98,
+            letterSpacing: '-0.025em',
+          }}
+        >
+          {t.rich(titleKey, { em: emGradient, ...args })}
         </h1>
-        <p className="text-base text-[var(--text2)] max-w-[600px] leading-relaxed mb-6 px-2">
+
+        {/* Subtitle */}
+        <p
+          className="text-center mb-8 px-2 text-[var(--text2)]"
+          style={{
+            fontSize: 'clamp(0.95rem, 1.6vw, 1.125rem)',
+            lineHeight: 1.55,
+            maxWidth: 560,
+          }}
+        >
           {t(subtitleKey, args)}
         </p>
-        {/* SEO intro paragraph: provides unique long-form text per filtered page */}
-        <p className={`text-sm text-[var(--text2)] max-w-[680px] leading-relaxed mb-8 px-2 ${isFiltered ? 'opacity-90' : 'opacity-70'}`}>
-          {t(introKey, args)}
-        </p>
-        <div className="flex items-center gap-3 mb-6">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-400 text-xs font-semibold rounded-full border border-green-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+
+        {/* SEO intro paragraph: only on filtered pages (kept for long-tail SEO) */}
+        {isFiltered && (
+          <p className="text-sm text-[var(--text2)] max-w-[680px] leading-relaxed mb-8 px-2 opacity-80">
+            {t(introKey, args)}
+          </p>
+        )}
+
+        {/* Beta pill + stats stacked */}
+        <div className="inline-flex flex-col items-center gap-4">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold"
+            style={{
+              background: 'rgba(95,211,154,0.12)',
+              border: '1px solid rgba(95,211,154,0.32)',
+              color: '#5fd39a',
+            }}
+          >
+            <span
+              className="pulse-dot inline-block rounded-full"
+              style={{ width: 7, height: 7, background: '#5fd39a' }}
+            />
             {t('betaOpen')}
-          </span>
-        </div>
-        <div className="flex items-center gap-4 text-xs font-medium text-[var(--text3)]">
-          <span>{t('categories')}</span>
-          <span className="w-1 h-1 rounded-full bg-[var(--border2)]" />
-          <span>{t('free')}</span>
-          <span className="w-1 h-1 rounded-full bg-[var(--border2)]" />
-          <span>{t('community')}</span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-7 gap-y-2 text-xs font-medium text-[var(--text3)]">
+            <span>{t.rich('categories', { b: statBold })}</span>
+            <span style={{ opacity: 0.3 }} className="hidden sm:inline">·</span>
+            <span>{t.rich('free', { b: statBold })}</span>
+            <span style={{ opacity: 0.3 }} className="hidden sm:inline">·</span>
+            <span>{t.rich('noAds', { b: statBold })}</span>
+          </div>
         </div>
       </div>
     </section>

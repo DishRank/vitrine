@@ -54,6 +54,23 @@ export interface CategoryRow {
   icon: string;
 }
 
+/**
+ * Row used by the "En direct" feed marquee (`<SocialProof />`).
+ * Joins reviews + restaurants + profiles to get the displayable info in one query.
+ * Only the fields we actually render are pulled — keep this lean.
+ */
+export interface RecentReviewRow {
+  id: string;
+  dish_name: string;
+  rating: number;
+  created_at: string;
+  restaurant_name: string;
+  user_id: string | null;
+  /** display_name | username | null — null = anonymous review (rare) */
+  display_name: string | null;
+  username: string | null;
+}
+
 // ── Simple server-side cache to avoid hammering Supabase ──
 
 interface CacheEntry<T> {
@@ -189,6 +206,58 @@ export function fetchCities(): Promise<string[]> {
       if (row.city) set.add(row.city);
     }
     return [...set].sort((a, b) => a.localeCompare(b));
+  });
+}
+
+/**
+ * Fetch the N most recent moderated reviews for the homepage "En direct" feed.
+ * Joins to `restaurants` (for the resto name) and `profiles` (for display name).
+ *
+ * Note : `user_id` est récupéré DIRECTEMENT depuis la table `reviews`
+ * (FK column) plutôt que depuis le join profiles, car la table `profiles` n'a
+ * pas de colonne `user_id` (sa PK est `id`). On évite ainsi un select sur une
+ * colonne inexistante côté join.
+ *
+ * Caching : 60s — short enough that the feed feels live, long enough to avoid
+ * hammering Supabase on every page hit.
+ */
+export function fetchRecentReviews(limit = 12): Promise<RecentReviewRow[]> {
+  const cacheKey = `recent-reviews:${limit}`;
+  return cached(cacheKey, 60_000, async () => {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('reviews')
+      .select(
+        'id, dish_name, rating, created_at, user_id, restaurants:restaurant_id(name), profiles:user_id(display_name, username)'
+      )
+      .not('pending_moderation', 'is', true)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) {
+      console.error('[fetchRecentReviews]', error);
+      return [];
+    }
+    type Joined = {
+      id: string;
+      dish_name: string;
+      rating: number;
+      created_at: string;
+      user_id: string | null;
+      restaurants: { name: string } | null;
+      profiles: { display_name: string | null; username: string | null } | null;
+    };
+    return ((data || []) as unknown as Joined[])
+      .filter((r) => r.restaurants?.name) // skip orphans
+      .map((r) => ({
+        id: r.id,
+        dish_name: r.dish_name,
+        rating: Number(r.rating),
+        created_at: r.created_at,
+        restaurant_name: r.restaurants!.name,
+        user_id: r.user_id || null,
+        display_name: r.profiles?.display_name || null,
+        username: r.profiles?.username || null,
+      }));
   });
 }
 

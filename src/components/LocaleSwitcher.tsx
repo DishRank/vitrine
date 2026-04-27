@@ -13,7 +13,16 @@ const LOCALES = [
 
 type LocaleCode = (typeof LOCALES)[number]['code'];
 
-export default function LocaleSwitcher() {
+interface Props {
+  /**
+   * `nav` (default) : compact icon + dropdown — used in the desktop navbar.
+   * `drawer` : 5 large flag pills laid out as a grid — used in the mobile
+   *            burger drawer where space is plentiful.
+   */
+  variant?: 'nav' | 'drawer';
+}
+
+export default function LocaleSwitcher({ variant = 'nav' }: Props) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -48,6 +57,56 @@ export default function LocaleSwitcher() {
     });
   };
 
+  // ─── DRAWER VARIANT — 5 flag pills, all visible at once ────────────────
+  if (variant === 'drawer') {
+    return (
+      <div className="w-full">
+        <div
+          className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text3)] mb-2 px-1"
+          aria-hidden="true"
+        >
+          Langue
+        </div>
+        <div role="radiogroup" aria-label="Choisir la langue" className="grid grid-cols-5 gap-2">
+          {LOCALES.map((l) => {
+            const isActive = l.code === locale;
+            return (
+              <button
+                key={l.code}
+                role="radio"
+                aria-checked={isActive}
+                aria-label={l.label}
+                onClick={() => switchTo(l.code)}
+                disabled={isPending}
+                className={`
+                  flex flex-col items-center justify-center gap-1 py-3 rounded-xl
+                  transition-all duration-200
+                  ${isActive
+                    ? 'bg-[var(--primary-container)] border-2 border-[var(--primary)] scale-[1.04]'
+                    : 'bg-[var(--surface)] border-2 border-transparent hover:border-[var(--primary)]/30 active:scale-95'
+                  }
+                  disabled:opacity-50 disabled:cursor-wait
+                `}
+              >
+                <span className="text-2xl leading-none" aria-hidden="true">
+                  {l.flag}
+                </span>
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider ${
+                    isActive ? 'text-[var(--primary)]' : 'text-[var(--text2)]'
+                  }`}
+                >
+                  {l.code}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── NAV VARIANT (default) — compact icon trigger + dropdown ───────────
   return (
     <div ref={ref} className="relative">
       <button

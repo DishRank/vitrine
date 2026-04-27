@@ -21,6 +21,12 @@
   --border2: #E8E6F0;
   --loader-color: #6C5CE7;
   --card-shadow: rgba(108,92,231,0.1);
+  /* Store buttons (App Store / Google Play) — dark gray instead of pure
+     black in light mode so the contrast n'est pas trop agressif. Reste
+     vraiment "dark button" mais pas un bloc noir massif sur fond clair. */
+  --store-btn-bg: #2A2533;
+  --store-btn-bg-hover: #3a3543;
+  --store-btn-border: #3a3543;
 }
 
 /* Dark theme */
@@ -35,6 +41,10 @@
   --border2: #38345A;
   --loader-color: #FFF;
   --card-shadow: rgba(0,0,0,0.3);
+  /* Pure black store buttons on dark theme — la conv Apple/Google standard. */
+  --store-btn-bg: #000000;
+  --store-btn-bg-hover: #1a1a1a;
+  --store-btn-border: #2d2d2d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,6 +59,9 @@
     --border2: #38345A;
     --loader-color: #FFF;
     --card-shadow: rgba(0,0,0,0.3);
+    --store-btn-bg: #000000;
+    --store-btn-bg-hover: #1a1a1a;
+    --store-btn-border: #2d2d2d;
   }
 }
 
@@ -91,6 +104,194 @@ html, body {
 @keyframes steam {
   0%, 100% { opacity: 0; transform: translateY(0); }
   50% { opacity: 0.5; transform: translateY(-8px); }
+}
+
+/* ────── v3 redesign animations ────────────────────────────────────────
+   Used by: FoodCloud (float-slow), SocialProof (mq-scroll), Hero (pulse-dot). */
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes mq-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.float-slow { animation: float-slow 5s ease-in-out infinite; }
+.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+.mq-track {
+  animation: mq-scroll 60s linear infinite;
+  width: max-content;
+}
+.mq-track:hover { animation-play-state: paused; }
+.mq-mask {
+  mask-image: linear-gradient(90deg, transparent, black 5%, black 95%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 5%, black 95%, transparent);
+  /* `overflow: clip visible` = clip horizontalement (le track est en
+     `width: max-content` donc déborde la viewport, on doit le contenir),
+     mais visible verticalement → permet aux chips d'overflow vers le haut/
+     bas quand ils sont scalés au hover, sans être coupés. `clip` (au lieu
+     de `hidden`) n'établit pas de scroll container, donc l'autre direction
+     peut rester `visible`. Supporté Chrome 90+ / Safari 16+ / Firefox 81+. */
+  overflow: clip visible;
+  padding-block: 18px;
+}
+
+/* Hero gradient title */
+.hero-gradient-text {
+  background: linear-gradient(120deg, #A29BFE 0%, #6C5CE7 50%, #5B4FC2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ────── Search "Chercher" button — shine sweep + hover lift ──────
+   • Periodic diagonal highlight that sweeps across the button every 4.5s.
+   • On hover: subtle scale-up + arrow icon translates right.
+   • Uses ::after pseudo so the underlying button keeps its solid bg. */
+@keyframes search-shine {
+  0% { transform: translateX(-110%) skewX(-18deg); }
+  60% { transform: translateX(220%) skewX(-18deg); }
+  100% { transform: translateX(220%) skewX(-18deg); }
+}
+
+.search-btn-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 4px 14px -4px rgba(108, 92, 231, 0.5);
+}
+.search-btn-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+  animation: search-shine 4.5s ease-in-out infinite;
+  animation-delay: 0.6s;
+  transform: translateX(-110%) skewX(-18deg);
+}
+.search-btn-shine:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 22px -4px rgba(108, 92, 231, 0.65);
+}
+.search-btn-shine:active {
+  transform: scale(0.97);
+}
+.search-btn-shine .search-arrow {
+  transition: transform 0.2s ease;
+}
+.search-btn-shine:hover .search-arrow {
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-btn-shine::after { animation: none; opacity: 0; }
+}
+
+/* Store buttons (App Store / Google Play) — un seul style centralisé pour
+   les 4 emplacements (Nav desktop, Nav drawer, Footer, CtaBanner). On
+   utilise une vraie classe CSS plutôt que des arbitraires Tailwind
+   `bg-[var(...)]` qui ne se compilent pas toujours en Tailwind v4. */
+.store-btn {
+  background-color: var(--store-btn-bg);
+  border-color: var(--store-btn-border);
+}
+.store-btn:hover {
+  background-color: var(--store-btn-bg-hover);
+}
+
+/* Event chips ("En direct" marquee) — hover scale + tint violette.
+   Le marquee parent (.mq-track) pause déjà l'animation au hover.
+   Ici on ajoute le feedback individuel par chip. Les styles de BASE sont
+   définis ici aussi (background, border) plutôt qu'avec des classes
+   Tailwind arbitrary, qui ne se compilent pas systématiquement et créent
+   des conflits de spécificité avec :hover. */
+.event-chip {
+  background-color: var(--surface);
+  border: 1px solid var(--border2);
+  cursor: pointer;
+  position: relative;
+  transition:
+    transform 0.22s ease-out,
+    border-color 0.22s ease-out,
+    background-color 0.22s ease-out,
+    box-shadow 0.22s ease-out;
+  will-change: transform;
+}
+.event-chip:hover {
+  transform: scale(1.06);
+  border-color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--primary) 60%, transparent);
+  z-index: 2;
+}
+
+/* WhySection v3 — responsive internal-only borders.
+   Single big container with 3×2 grid on lg, 2×3 on sm, 1×6 on mobile.
+   Uses :nth-child selectors so the layout stays clean at every breakpoint
+   without inline style overrides per cell.
+   Border color uses var(--border2) so it adapts to light/dark theme. */
+
+/* Mobile (< 640px) — single column : horizontal separators only */
+@media (max-width: 639.98px) {
+  .why-cell:not(:last-child) { border-bottom: 1px solid var(--border2); }
+}
+
+/* Tablet (sm 640-1023px) — 2 cols × 3 rows */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .why-cell:nth-child(odd) { border-right: 1px solid var(--border2); }
+  .why-cell:not(:nth-last-child(-n+2)) { border-bottom: 1px solid var(--border2); }
+}
+
+/* Desktop (lg ≥ 1024px) — 3 cols × 2 rows */
+@media (min-width: 1024px) {
+  .why-cell:not(:nth-child(3n)) { border-right: 1px solid var(--border2); }
+  .why-cell:nth-child(-n+3) { border-bottom: 1px solid var(--border2); }
+}
+
+/* FAQ accordion icon rotation */
+.faq-icon { transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1); }
+.faq-open .faq-icon { transform: rotate(45deg); }
+
+/* FAQ accordion animation — uses grid-template-rows trick (modern, no JS height
+   measurement needed). Closed = 0fr (height 0), open = 1fr (auto height).
+   The inner element must have `overflow: hidden` and `min-height: 0`. */
+.faq-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.2, 0, 0.2, 1);
+}
+.faq-collapse.is-open {
+  grid-template-rows: 1fr;
+}
+.faq-collapse > .faq-collapse-inner {
+  overflow: hidden;
+  min-height: 0;
+  transition: opacity 0.3s ease 0.05s, transform 0.35s cubic-bezier(0.2, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.faq-collapse.is-open > .faq-collapse-inner {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* Reduced motion: disable decorative animations for users who prefer it */

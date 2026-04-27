@@ -10,12 +10,12 @@
     "descWithCityCategory": "{bestCategory} de {city} en 2026 : classement Top 10 par avis communautaires. Adresses, prix, photos et notes vérifiées sur DishRank."
   },
   "hero": {
-    "label": "Note les plats, pas les restos.",
+    "label": "Note les plats · pas les restos",
     "title": "Le <em>meilleur plat</em> près de chez toi.",
-    "titleWithCategory": "<em>{bestCategory}</em>",
+    "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} près de chez toi.",
     "titleWithCity": "Les meilleurs plats à <em>{city}</em>",
-    "titleWithCityCategory": "<em>{bestCategory}</em> à <em>{city}</em>",
-    "subtitle": "Cherche, compare et trouve où manger le meilleur burger, sushi, pizza de ta ville.",
+    "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} à {city}",
+    "subtitle": "Cherche, compare et trouve où manger le meilleur burger, sushi, pizza de ta ville. Avis vérifiés par notre communauté de gourmets.",
     "subtitleWithCategory": "Top {category} classés par les avis de la communauté DishRank.",
     "subtitleWithCity": "Où manger à {city} ? Les plats les mieux notés par la communauté DishRank.",
     "subtitleWithCityCategory": "Top {category} à {city}, classés par les avis de la communauté DishRank.",
@@ -23,14 +23,16 @@
     "introWithCategory": "Découvre le top {category} 2026 classé par les avis vérifiés de la communauté DishRank. Plus de 200 catégories de plats, des notes communautaires fiables et les vraies adresses près de chez toi — sans pub ni recommandation algorithmique.",
     "introWithCity": "Tu cherches où manger à {city} ? DishRank te montre les plats les mieux notés par les gourmets locaux : burger, sushi, pizza, ramen et plus. Classement par plat (et non par resto) basé sur de vrais avis.",
     "introWithCityCategory": "{bestCategory} à {city} ? Voici le classement Top 10 basé sur les notes vraies de la communauté DishRank. Photos, prix et avis détaillés pour chaque adresse — trouve où manger ton prochain {category} à {city} en 1 clic.",
-    "categories": "200+ catégories",
-    "free": "100% gratuit",
+    "categories": "<b>200+</b> catégories",
+    "free": "<b>100%</b> gratuit",
+    "noAds": "<b>Sans pub</b>",
     "community": "Communautaire",
     "betaOpen": "Bêta Android · Live sur iOS"
   },
   "search": {
     "label": "Qu'est-ce que tu veux manger ?",
     "placeholder": "Burger, sushi, ramen...",
+    "cta": "Chercher",
     "allCities": "Toutes les villes",
     "all": "Tout",
     "more": "Plus",
@@ -93,11 +95,22 @@
     "deleteContent": "<h3>Suppression de compte</h3><h4>1. Depuis l'application</h4><p>Profil → Paramètres → Données personnelles → Supprimer mon compte</p><h4>2. Par email</h4><p>Envoyez à <a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a> avec l'objet « Suppression de compte ».</p><h4>Données supprimées</h4><ul><li>Profil, avis, photos, commentaires, likes, favoris</li><li>Amitiés et demandes d'amitié</li><li>Appartenances aux groupes et messages que vous y avez envoyés (les autres membres conservent l'historique du groupe)</li><li>Sondages, votes et RSVP que vous avez créés</li><li>Paramètres, notifications, jetons de push</li></ul><p>Délai de <strong>30 jours</strong> avant suppression définitive (annulable depuis l'app pendant ce délai).</p>"
   },
   "footer": {
-    "contact": "Contact"
+    "contact": "Contact",
+    "press": "Presse",
+    "cookies": "Cookies",
+    "colProduit": "Produit",
+    "colCommunaute": "Communauté",
+    "colLegal": "Légal"
   },
   "nav": {
     "betaClosed": "Bêta fermée",
-    "downloadOn": "Télécharger sur"
+    "downloadOn": "Télécharger sur",
+    "ranking": "Classement",
+    "explore": "Explorer",
+    "app": "L'app",
+    "social": "Entre amis",
+    "why": "Pourquoi",
+    "new": "Nouveau"
   },
   "related": {
     "moreInCity": "Autres plats à {city}",
@@ -117,9 +130,17 @@
     "downloadApp": "Télécharger l'app"
   },
   "cookies": {
-    "title": "Cookies",
-    "description": "Nous utilisons des cookies analytiques pour comprendre comment vous utilisez le site et améliorer votre expérience. Aucune donnée personnelle n'est vendue.",
-    "accept": "Accepter",
-    "deny": "Refuser"
+    "title": "🍪 On respecte ta vie privée",
+    "description": "DishRank est porté par un dev indépendant. Pour comprendre ce qui marche et améliorer le site, on utilise Google Analytics (stats anonymes). Pas de revente de données, jamais. Et l'app reste 100% gratuite.",
+    "accept": "Accepter tout",
+    "deny": "Refuser tout",
+    "customize": "Personnaliser",
+    "analyticsLabel": "Statistiques anonymes",
+    "analyticsDesc": "Google Analytics — m'aide à voir quelles pages fonctionnent et à améliorer DishRank pour toi.",
+    "necessaryLabel": "Cookies essentiels",
+    "necessaryDesc": "Toujours actifs. Servent uniquement à mémoriser tes choix (langue, consentement…).",
+    "alwaysOn": "Toujours actif",
+    "save": "Enregistrer mes choix",
+    "back": "Retour"
   }
 }

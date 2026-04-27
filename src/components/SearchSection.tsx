@@ -80,21 +80,29 @@ export default function SearchSection({
   const visibleChips = allChips.slice(0, limit);
   const hasMore = limit < allChips.length;
 
+  /**
+   * Tap sur un chip → sélectionne la catégorie. Si la même catégorie est
+   * DÉJÀ active, on la désélectionne (toggle) au lieu de relancer la même
+   * recherche. Évite les rechargements de page inutiles et donne un
+   * feedback "active = désactivable" plus naturel.
+   */
   const selectCategory = (slug: string) => {
-    setCategory(slug);
-    navigate(slug, city, query, true);
+    const next = slug === category ? '' : slug;
+    setCategory(next);
+    navigate(next, city, query, true);
     setSheetOpen(false);
   };
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-8 pb-4">
-      <p className="text-lg sm:text-2xl font-extrabold text-center text-[var(--text)] mt-4 sm:mt-6 mb-3 sm:mb-4">
+      {/* Title H2 — match v3 size (~30px on desktop) */}
+      <h2 className="text-2xl sm:text-3xl font-bold text-center text-[var(--text)] tracking-tight mt-4 sm:mt-8 mb-5 sm:mb-7">
         {t('label')}
-      </p>
+      </h2>
 
-      {/* Search bar */}
-      <div className="relative">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-[var(--surface)] border border-[var(--border2)] rounded-2xl sm:rounded-full px-3 py-2 sm:px-2 sm:py-1.5 gap-2 sm:gap-0 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary-container)] transition-all">
+      {/* Search bar (max-width 880, with Chercher button inside on the right) */}
+      <div className="relative max-w-[880px] mx-auto" style={{ boxShadow: '0 20px 60px -20px rgba(124,108,247,0.25)' }}>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-[var(--surface)] border border-[var(--border2)] rounded-2xl sm:rounded-full px-3 py-2 sm:px-1.5 sm:py-1.5 gap-2 sm:gap-0 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary-container)] transition-all">
           {/* City */}
           <div className="flex items-center gap-1.5 sm:pl-3 sm:pr-3 shrink-0">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--primary)" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -129,6 +137,31 @@ export default function SearchSection({
             </button>
           )}
         </div>
+        {/* "Chercher" button — pill purple with periodic shine sweep + hover lift.
+            Animation classes (search-btn-shine, search-arrow) defined in globals.css. */}
+        <button
+          type="button"
+          onClick={() => navigate(category, city, query)}
+          aria-label={t('cta')}
+          className="search-btn-shine hidden sm:inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-full bg-[var(--primary)] hover:bg-[#7c6cf7] text-white text-sm font-bold shrink-0"
+        >
+          <span className="relative z-10">{t('cta')}</span>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="search-arrow relative z-10"
+            aria-hidden="true"
+          >
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="13 6 19 12 13 18" />
+          </svg>
+        </button>
         </div>
         {/* City dropdown — outside search bar to avoid clipping */}
         {cityDropdownOpen && (
@@ -157,8 +190,8 @@ export default function SearchSection({
         )}
       </div>
 
-      {/* Category chips - desktop: inline with animation, mobile: limited + bottom sheet */}
-      <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-3">
+      {/* Category chips — centered, wrap pyramid (justify-center makes wraps narrower at bottom) */}
+      <div className="flex flex-wrap justify-center gap-2 pt-6 max-w-[880px] mx-auto">
         {(isMobile ? allChips.slice(0, 8) : visibleChips).map((c, i) => {
           const isNew = !isMobile && i >= prevLimit;
           return (

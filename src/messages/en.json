@@ -12,9 +12,9 @@
   "hero": {
     "label": "Rate the dishes, not the restaurants.",
     "title": "The <em>best dish</em> near you.",
-    "titleWithCategory": "<em>{bestCategory}</em>",
+    "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} near you.",
     "titleWithCity": "The best dishes in <em>{city}</em>",
-    "titleWithCityCategory": "<em>{bestCategory}</em> in <em>{city}</em>",
+    "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} in {city}",
     "subtitle": "Search, compare and find where to eat the best burger, sushi, pizza in your city.",
     "subtitleWithCategory": "Top {category} ranked by the DishRank community.",
     "subtitleWithCity": "Where to eat in {city}? The top rated dishes by the DishRank community.",
@@ -23,14 +23,16 @@
     "introWithCategory": "Discover the top {category} of 2026, ranked by verified reviews from the DishRank community. 200+ dish categories, reliable community ratings and real addresses near you — no ads, no algorithmic bias.",
     "introWithCity": "Looking for where to eat in {city}? DishRank shows you the top rated dishes by local foodies: burger, sushi, pizza, ramen and more. Ranked by dish (not by restaurant) based on real reviews.",
     "introWithCityCategory": "{bestCategory} in {city}? Here's the Top 10 ranking based on real ratings from the DishRank community. Photos, prices and detailed reviews for every address — find where to eat your next {category} in {city} in one click.",
-    "categories": "200+ categories",
-    "free": "100% free",
+    "categories": "<b>200+</b> categories",
+    "free": "<b>100%</b> free",
     "community": "Community-driven",
+    "noAds": "<b>No ads</b>",
     "betaOpen": "Android beta · Live on iOS"
   },
   "search": {
     "label": "What do you want to eat?",
     "placeholder": "Burger, sushi, ramen...",
+    "cta": "Search",
     "allCities": "All cities",
     "all": "All",
     "more": "More",
@@ -93,11 +95,22 @@
     "deleteContent": "<h3>Account deletion</h3><h4>1. From the app</h4><p>Profile → Settings → Personal data → Delete my account</p><h4>2. By email</h4><p>Send to <a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a> with subject \"Account deletion\".</p><h4>Data removed</h4><ul><li>Profile, reviews, photos, comments, likes, bookmarks</li><li>Friendships and pending friend requests</li><li>Group memberships and messages you sent (other members keep the group history)</li><li>Polls, votes and RSVPs you created</li><li>Settings, notifications, push tokens</li></ul><p><strong>30 days</strong> grace period before permanent deletion (cancellable from the app during this period).</p>"
   },
   "footer": {
-    "contact": "Contact"
+    "contact": "Contact",
+    "press": "Press",
+    "cookies": "Cookies",
+    "colProduit": "Product",
+    "colCommunaute": "Community",
+    "colLegal": "Legal"
   },
   "nav": {
     "betaClosed": "Closed beta",
-    "downloadOn": "Download on"
+    "downloadOn": "Download on",
+    "ranking": "Ranking",
+    "explore": "Explore",
+    "app": "App",
+    "social": "With friends",
+    "why": "Why",
+    "new": "New"
   },
   "related": {
     "moreInCity": "More dishes in {city}",
@@ -117,9 +130,17 @@
     "downloadApp": "Download the app"
   },
   "cookies": {
-    "title": "Cookies",
-    "description": "We use analytics cookies to understand how you use the site and improve your experience. No personal data is sold.",
-    "accept": "Accept",
-    "deny": "Decline"
+    "title": "🍪 We respect your privacy",
+    "description": "DishRank is built by an indie dev. To understand what works and improve the site, we use Google Analytics (anonymous stats). No data resale, ever. And the app stays 100% free.",
+    "accept": "Accept all",
+    "deny": "Decline all",
+    "customize": "Customize",
+    "analyticsLabel": "Anonymous statistics",
+    "analyticsDesc": "Google Analytics — helps me see which pages work and improve DishRank for you.",
+    "necessaryLabel": "Essential cookies",
+    "necessaryDesc": "Always on. Used only to remember your preferences (language, consent…).",
+    "alwaysOn": "Always on",
+    "save": "Save my choices",
+    "back": "Back"
   }
 }

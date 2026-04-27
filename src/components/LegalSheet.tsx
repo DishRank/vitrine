@@ -5,6 +5,25 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 const TABS = ['privacy', 'terms', 'delete'] as const;
 type Tab = (typeof TABS)[number];
 
+/**
+ * Defense-in-depth pour le contenu légal injecté via dangerouslySetInnerHTML.
+ * Le contenu vient de fichiers i18n JSON versionnés (donc safe par design),
+ * mais on strip quand même tout `<script>` ou attribut `on*=...` au cas où
+ * quelqu'un éditerait les messages par erreur ou copy-paste un blob HTML
+ * suspect. Léger (regex simples), pas une lib comme DOMPurify.
+ */
+function sanitizeLegalHtml(html: string): string {
+  return html
+    // Strip <script>...</script> + variantes
+    .replace(/<\s*script[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, '')
+    // Strip <iframe>, <object>, <embed>
+    .replace(/<\s*(iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    // Strip on* event handlers (onClick, onLoad, onError, etc.)
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    // Strip javascript: URLs
+    .replace(/(href|src)\s*=\s*("\s*javascript:[^"]*"|'\s*javascript:[^']*')/gi, '$1="#"');
+}
+
 export default function LegalSheet({ initialPage }: { initialPage: string }) {
   const t = useTranslations('legal');
   const isValidTab = (TABS as readonly string[]).includes(initialPage);
@@ -110,11 +129,15 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
             ))}
           </div>
         </div>
-        {/* Body */}
+        {/* Body — contenu légal injecté via dangerouslySetInnerHTML.
+            Source : i18n JSON statique (versionné dans le repo, pas user-input)
+            → safe en l'état. Mais pour défense en profondeur on strip toute
+            balise <script> ou attribut on* qui aurait pu être glissé par
+            erreur lors d'une édition future des messages. */}
         <div
           className="legal-scroll flex-1 overflow-y-auto overscroll-contain px-6 py-5 text-sm [&_h3]:text-lg [&_h3]:font-extrabold [&_h3]:mb-1 [&_h4]:text-sm [&_h4]:font-bold [&_h4]:mt-5 [&_h4]:mb-1 [&_p]:text-[var(--text2)] [&_p]:leading-relaxed [&_p]:mb-2 [&_a]:text-[var(--primary)] [&_a]:underline [&_ul]:pl-4 [&_ul]:mb-2 [&_li]:text-[var(--text2)] [&_li]:leading-relaxed [&_li]:mb-1"
           style={{ touchAction: 'pan-y' }}
-          dangerouslySetInnerHTML={{ __html: t.raw(`${tab}Content`) as string }}
+          dangerouslySetInnerHTML={{ __html: sanitizeLegalHtml(t.raw(`${tab}Content`) as string) }}
         />
       </div>
     </div>

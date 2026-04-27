@@ -12,9 +12,9 @@
   "hero": {
     "label": "Bewerte die Gerichte, nicht die Restaurants.",
     "title": "Das <em>beste Gericht</em> in deiner Nähe.",
-    "titleWithCategory": "<em>{bestCategory}</em>",
+    "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} in deiner Nähe.",
     "titleWithCity": "Die besten Gerichte in <em>{city}</em>",
-    "titleWithCityCategory": "<em>{bestCategory}</em> in <em>{city}</em>",
+    "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} in {city}",
     "subtitle": "Suche, vergleiche und finde wo du den besten Burger, Sushi, Pizza in deiner Stadt essen kannst.",
     "subtitleWithCategory": "Top {category}, bewertet von der DishRank Community.",
     "subtitleWithCity": "Wo essen in {city}? Die am besten bewerteten Gerichte der DishRank Community.",
@@ -23,14 +23,16 @@
     "introWithCategory": "Entdecke die Top {category} 2026, geordnet nach verifizierten Bewertungen der DishRank Community. Über 200 Gerichtskategorien, zuverlässige Community-Bewertungen und echte Adressen in deiner Nähe — keine Werbung, keine algorithmische Verzerrung.",
     "introWithCity": "Du suchst, wo du in {city} essen kannst? DishRank zeigt dir die am besten bewerteten Gerichte lokaler Foodies: Burger, Sushi, Pizza, Ramen und mehr. Geordnet nach Gericht (nicht nach Restaurant) auf Basis echter Bewertungen.",
     "introWithCityCategory": "{bestCategory} in {city}? Hier ist das Top 10 Ranking auf Basis echter Bewertungen der DishRank Community. Fotos, Preise und detaillierte Reviews für jede Adresse — finde deinen nächsten {category} in {city} mit einem Klick.",
-    "categories": "200+ Kategorien",
-    "free": "100% kostenlos",
+    "categories": "<b>200+</b> Kategorien",
+    "free": "<b>100%</b> kostenlos",
     "community": "Community-basiert",
+    "noAds": "<b>Werbefrei</b>",
     "betaOpen": "Android-Beta · Live auf iOS"
   },
   "search": {
     "label": "Was möchtest du essen?",
     "placeholder": "Burger, Sushi, Ramen...",
+    "cta": "Suchen",
     "allCities": "Alle Städte",
     "all": "Alle",
     "more": "Mehr",
@@ -93,11 +95,22 @@
     "deleteContent": "<h3>Kontolöschung</h3><h4>1. Aus der App</h4><p>Profil → Einstellungen → Persönliche Daten → Mein Konto löschen</p><h4>2. Per E-Mail</h4><p>Senden an <a href=\"mailto:contact@dishrank.fr\">contact@dishrank.fr</a> mit Betreff \"Kontolöschung\".</p><h4>Gelöschte Daten</h4><ul><li>Profil, Bewertungen, Fotos, Kommentare, Likes, Lesezeichen</li><li>Freundschaften und ausstehende Anfragen</li><li>Gruppenmitgliedschaften und gesendete Nachrichten (andere Mitglieder behalten den Gruppenverlauf)</li><li>Umfragen, Stimmen und RSVP, die Sie erstellt haben</li><li>Einstellungen, Benachrichtigungen, Push-Tokens</li></ul><p><strong>30 Tage</strong> Frist vor endgültiger Löschung (während dieser Frist über die App stornierbar).</p>"
   },
   "footer": {
-    "contact": "Kontakt"
+    "contact": "Kontakt",
+    "press": "Presse",
+    "cookies": "Cookies",
+    "colProduit": "Produkt",
+    "colCommunaute": "Community",
+    "colLegal": "Rechtliches"
   },
   "nav": {
     "betaClosed": "Geschlossene Beta",
-    "downloadOn": "Laden im"
+    "downloadOn": "Laden im",
+    "ranking": "Ranking",
+    "explore": "Entdecken",
+    "app": "App",
+    "social": "Mit Freunden",
+    "why": "Warum",
+    "new": "Neu"
   },
   "related": {
     "moreInCity": "Weitere Gerichte in {city}",
@@ -117,9 +130,17 @@
     "downloadApp": "App herunterladen"
   },
   "cookies": {
-    "title": "Cookies",
-    "description": "Wir verwenden Analyse-Cookies, um zu verstehen, wie du die Seite nutzt. Keine personlichen Daten werden verkauft.",
-    "accept": "Akzeptieren",
-    "deny": "Ablehnen"
+    "title": "🍪 Wir respektieren deine Privatsphäre",
+    "description": "DishRank wird von einem unabhängigen Entwickler gebaut. Um zu verstehen, was funktioniert und die Seite zu verbessern, nutzen wir Google Analytics (anonyme Statistiken). Kein Datenverkauf, nie. Die App bleibt 100% kostenlos.",
+    "accept": "Alle akzeptieren",
+    "deny": "Alle ablehnen",
+    "customize": "Anpassen",
+    "analyticsLabel": "Anonyme Statistiken",
+    "analyticsDesc": "Google Analytics — hilft mir zu sehen, welche Seiten funktionieren und DishRank für dich zu verbessern.",
+    "necessaryLabel": "Wesentliche Cookies",
+    "necessaryDesc": "Immer aktiv. Nur zur Speicherung deiner Präferenzen (Sprache, Einwilligung…).",
+    "alwaysOn": "Immer aktiv",
+    "save": "Auswahl speichern",
+    "back": "Zurück"
   }
 }

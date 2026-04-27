@@ -1,4 +1,5 @@
-import { fetchDishes, fetchCategories } from '@/lib/supabase';
+import { headers } from 'next/headers';
+import { fetchDishes, fetchCategories, fetchRecentReviews } from '@/lib/supabase';
 import { localizedCategory } from '@/lib/categoryLabels';
 import { citySlug, cityFromSlug } from '@/lib/slug';
 import { buildFilterPath, buildFilterUrl, buildBestCategoryFragment, buildTopDishesTitle } from '@/lib/seoMetadata';
@@ -6,8 +7,11 @@ import Nav from './Nav';
 import Hero from './Hero';
 import SearchSection from './SearchSection';
 import DishGrid from './DishGrid';
+import SocialProof from './SocialProof';
+import SocialFeatures from './SocialFeatures';
+import FoodCloud from './FoodCloud';
 import WhySection from './WhySection';
-import ExploreCategories from './ExploreCategories';
+import FAQ from './FAQ';
 import Showcase from './Showcase';
 import CtaBanner from './CtaBanner';
 import Footer from './Footer';
@@ -40,13 +44,23 @@ export default async function HomePageContent({
   initialPage,
   allCities,
 }: Props) {
-  // Fetch dishes (cached) — by category if applicable
+  // Fetch dishes (cached) — by category if applicable.
+  // recentReviews used by <SocialProof /> sur toutes les pages — cache 60s
+  // partagé (clé `recent-reviews:12`) donc 1 query pour toutes les pages
+  // dans la fenêtre de cache, négligeable même avec 200+ catégories.
+  // Nonce CSP injecté par middleware — appliqué à tous les <script> JSON-LD
+  // inline pour qu'ils soient autorisés par la CSP `'strict-dynamic'`.
+  const nonce = (await headers()).get('x-nonce') || undefined;
+
   let dishes: Awaited<ReturnType<typeof fetchDishes>> = [];
   let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
+  let recentReviews: Awaited<ReturnType<typeof fetchRecentReviews>> = [];
+  const isHome = !category && !city;
   try {
-    [dishes, categories] = await Promise.all([
+    [dishes, categories, recentReviews] = await Promise.all([
       fetchDishes(category, 100),
       fetchCategories(),
+      fetchRecentReviews(12),
     ]);
   } catch (e) {
     console.error('SSR fetch error:', e);
@@ -149,54 +163,88 @@ export default async function HomePageContent({
   //    without `shippingDetails` / `hasMerchantReturnPolicy` triggers
   //    merchant-listing warnings. The price is instead embedded in the
   //    description text, which Google still picks up for snippets.
+  const pageUrl = buildFilterUrl(locale, city, category);
   const dishListJsonLd = dishes.length > 0
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'ItemList',
-        name:
-          categoryLabel && cityLabel
-            ? `Best ${categoryLabel} in ${cityLabel}`
-            : categoryLabel
-            ? `Best ${categoryLabel}`
-            : 'Top rated dishes',
-        numberOfItems: dishes.length,
-        itemListElement: dishes.slice(0, 10).map((d, i) => {
-          const priceFragment = d.latest_price
-            ? `${Number(d.latest_price).toFixed(2)} ${d.currency || 'EUR'}`
-            : null;
-          const addressFragment = d.restaurant_address ? ` — ${d.restaurant_address}` : '';
-          // Example: "Menu 39€ servi chez Sambahia — Rue du Doyenné, Lyon, 69005. Noté 5/5 sur DishRank (1 avis)."
-          const description = [
-            `${d.dish_name} servi chez ${d.restaurant_name}${addressFragment}.`,
-            priceFragment ? `Prix : ${priceFragment}.` : null,
-            `Noté ${Number(d.avg_rating).toFixed(1)}/5 sur DishRank (${d.review_count} avis).`,
-          ]
-            .filter(Boolean)
-            .join(' ');
+    ? (() => {
+        // Aggregate rating at the ItemList level (moyenne pondérée par review_count)
+        // → permet à Google d'afficher des "rich review snippets" sur la page de
+        //   liste, pas seulement sur les items individuels.
+        const totalReviews = dishes.reduce((s, d) => s + Number(d.review_count || 0), 0);
+        const weightedSum = dishes.reduce(
+          (s, d) => s + Number(d.avg_rating) * Number(d.review_count || 1),
+          0
+        );
+        const totalWeight = dishes.reduce(
+          (s, d) => s + Number(d.review_count || 1),
+          0
+        );
+        const aggRating = totalWeight > 0 ? weightedSum / totalWeight : 0;
 
-          return {
-            '@type': 'ListItem',
-            position: i + 1,
-            item: {
-              '@type': 'Product',
-              name: d.dish_name,
-              description,
-              image: d.cover_photo_url,
-              aggregateRating: {
-                '@type': 'AggregateRating',
-                ratingValue: Number(d.avg_rating),
-                reviewCount: Math.max(Number(d.review_count) || 0, 1),
-                bestRating: 5,
-                worstRating: 1,
+        return {
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          name:
+            categoryLabel && cityLabel
+              ? `Best ${categoryLabel} in ${cityLabel}`
+              : categoryLabel
+              ? `Best ${categoryLabel}`
+              : cityLabel
+              ? `Best dishes in ${cityLabel}`
+              : 'Top rated dishes',
+          url: pageUrl,
+          numberOfItems: dishes.length,
+          // Liste agrégée — utile pour les pages /c/burger qui n'ont pas de
+          // FoodEstablishment (pas de city = pas d'adresse) mais bénéficient
+          // quand même d'un signal "agrégat de notes" auprès de Google.
+          aggregateRating: aggRating > 0 ? {
+            '@type': 'AggregateRating',
+            ratingValue: Math.round(aggRating * 10) / 10,
+            reviewCount: Math.max(totalReviews, dishes.length),
+            bestRating: 5,
+            worstRating: 1,
+          } : undefined,
+          itemListElement: dishes.slice(0, 10).map((d, i) => {
+            const priceFragment = d.latest_price
+              ? `${Number(d.latest_price).toFixed(2)} ${d.currency || 'EUR'}`
+              : null;
+            const addressFragment = d.restaurant_address ? ` — ${d.restaurant_address}` : '';
+            // Example: "Menu 39€ servi chez Sambahia — Rue du Doyenné, Lyon, 69005. Noté 5/5 sur DishRank (1 avis)."
+            const description = [
+              `${d.dish_name} servi chez ${d.restaurant_name}${addressFragment}.`,
+              priceFragment ? `Prix : ${priceFragment}.` : null,
+              `Noté ${Number(d.avg_rating).toFixed(1)}/5 sur DishRank (${d.review_count} avis).`,
+            ]
+              .filter(Boolean)
+              .join(' ');
+
+            return {
+              '@type': 'ListItem',
+              position: i + 1,
+              item: {
+                '@type': 'Product',
+                name: d.dish_name,
+                // url : pointe vers la page de liste avec un fragment qui isole
+                // le plat. Pas de pages individuelles publiques pour les plats,
+                // mais le fragment aide Google à naviguer vers la bonne section.
+                url: `${pageUrl}#dish-${d.restaurant_id}`,
+                description,
+                image: d.cover_photo_url,
+                aggregateRating: {
+                  '@type': 'AggregateRating',
+                  ratingValue: Number(d.avg_rating),
+                  reviewCount: Math.max(Number(d.review_count) || 0, 1),
+                  bestRating: 5,
+                  worstRating: 1,
+                },
+                brand: {
+                  '@type': 'Organization',
+                  name: d.restaurant_name,
+                },
               },
-              brand: {
-                '@type': 'Organization',
-                name: d.restaurant_name,
-              },
-            },
-          };
-        }),
-      }
+            };
+          }),
+        };
+      })()
     : null;
 
   // BreadcrumbList using path-based URLs
@@ -273,31 +321,49 @@ export default async function HomePageContent({
 
   return (
     <>
+      {/* `suppressHydrationWarning` requis sur les <script nonce={...}> :
+          React 19 retire l'attribut `nonce` du DOM après hydratation pour
+          ne pas le leaker au JS client (cf. github.com/facebook/react#26334),
+          ce qui crée un mismatch avec l'arbre serveur qui contient encore
+          le nonce. Le warning est cosmétique — l'attribut a déjà été utilisé
+          par le browser au parse-time pour valider la CSP. */}
       <script
         type="application/ld+json"
+        nonce={nonce}
+        suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <script
         type="application/ld+json"
+        nonce={nonce}
+        suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
       />
       <script
         type="application/ld+json"
+        nonce={nonce}
+        suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
       />
       <script
         type="application/ld+json"
+        nonce={nonce}
+        suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
       {dishListJsonLd && (
         <script
           type="application/ld+json"
+          nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(dishListJsonLd) }}
         />
       )}
       {localBusinessJsonLd && (
         <script
           type="application/ld+json"
+          nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
         />
       )}
@@ -319,7 +385,19 @@ export default async function HomePageContent({
           initialDishes={dishes}
           title={topDishesTitle}
         />
+        {/* CTA banner placed RIGHT AFTER the dish grid (matches v3 download
+            banner position) — strongest conversion spot of the page. */}
         <CtaBanner />
+        {/* "En direct" — feed marquee, montre que la communauté est active.
+            Maintenant affiché sur toutes les pages (home + filtrées) tant
+            qu'on a assez d'avis récents (le composant retourne null en
+            interne si reviews.length < 6). Recent reviews ne sont fetchés
+            que sur la home pour éviter une N+1 query, donc en pratique le
+            marquee n'apparaît qu'à la home pour l'instant. */}
+        <SocialProof reviews={recentReviews} />
+        {/* "Entre amis" — fonctionnalités sociales (Phase 1 plan), big visual.
+            Affiché sur toutes les pages : la valeur sociale est universelle. */}
+        <SocialFeatures />
         {(city || category) && (
           <CityGuide
             locale={locale}
@@ -336,8 +414,14 @@ export default async function HomePageContent({
           category={category}
           allCities={allCities}
         />
+        {/* Transition visuelle nuage d'emojis flottants — affiché sur toutes
+            les pages (décoratif universel, pas de cost SEO). */}
+        <FoodCloud />
         <WhySection />
-        <ExploreCategories />
+        {/* FAQ accordéon — uniquement sur la home pour ne pas dupliquer le
+            JSON-LD FAQPage avec celui de WhySection sur les pages filtrées
+            (sinon Search Console flagge "duplicate FAQPage"). */}
+        {isHome && <FAQ nonce={nonce} />}
         <Showcase />
       </main>
       <Footer />
