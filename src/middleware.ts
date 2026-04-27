@@ -40,6 +40,83 @@ function getClientIP(req: NextRequest): string {
     || 'unknown';
 }
 
+/**
+ * Génère un nonce CSP cryptographiquement sûr (128 bits, base64).
+ * Edge-runtime safe : utilise Web Crypto API (pas de Buffer Node).
+ */
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+/**
+ * Construit la Content-Security-Policy stricte avec nonce + strict-dynamic.
+ *
+ * Pourquoi `'strict-dynamic'` :
+ *   • Ignore les allowlists d'hôtes (script-src https://googletagmanager...)
+ *     → moins de surface d'attaque qu'une whitelist statique.
+ *   • Permet aux scripts noncés (Next.js bundle) de charger d'autres scripts
+ *     dynamiquement (ex: GA chargé par CookieConsent via createElement) sans
+ *     avoir à les whitelister un par un.
+ *   • Les directives `https:` et `'unsafe-inline'` sont des fallbacks pour
+ *     les vieux navigateurs (CSP1/CSP2) ; les navigateurs modernes les
+ *     ignorent quand `'strict-dynamic'` est présent (cf. web.dev/strict-csp).
+ *
+ * style-src garde `'unsafe-inline'` car Next.js + Tailwind + composants React
+ * utilisent des styles inline (`style={...}`, `<style>` runtime) omniprésents
+ * impossibles à noncer un par un. Mitigation : `frame-ancestors 'none'`,
+ * `object-src 'none'`, `base-uri 'self'` ferment les vecteurs d'attaque
+ * principaux qu'un attaquant pourrait exploiter via XSS de style.
+ */
+function buildCsp(nonce: string, isDev: boolean): string {
+  const scriptSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'strict-dynamic'",
+    // Fallbacks pour navigateurs CSP1/CSP2 (ignorés par les modernes)
+    "'unsafe-inline'",
+    'https:',
+    isDev ? "'unsafe-eval'" : '',
+  ].filter(Boolean).join(' ');
+
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSrc}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
+    "img-src 'self' https: data:",
+    "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://yztbhdvrvgozhyaujtjz.supabase.co",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join('; ');
+}
+
+/**
+ * Force la propagation du header `x-nonce` vers le server component qui
+ * traite la requête, indépendamment de ce que fait next-intl. C'est le
+ * mécanisme interne que Next.js utilise sous le capot pour
+ * `NextResponse.next({ request: { headers } })` : on liste les headers à
+ * override dans `x-middleware-override-headers` et on met chaque valeur
+ * dans `x-middleware-request-{name}`.
+ *
+ * Belt-and-suspenders nécessaire car `intlMiddleware(req)` ne forward pas
+ * toujours `req.headers` (sur les redirects de locale, la response perd les
+ * mutations qu'on aurait faites sur `req.headers`).
+ */
+function injectRequestHeaderOverride(response: NextResponse, name: string, value: string) {
+  const existing = response.headers.get('x-middleware-override-headers');
+  const lower = name.toLowerCase();
+  const list = existing ? existing.split(',').map(s => s.trim()) : [];
+  if (!list.includes(lower)) list.push(lower);
+  response.headers.set('x-middleware-override-headers', list.join(','));
+  response.headers.set(`x-middleware-request-${lower}`, value);
+}
+
 export default function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -55,10 +132,20 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  const isDev = process.env.NODE_ENV === 'development';
+  const nonce = generateNonce();
+  const csp = buildCsp(nonce, isDev);
+
   // Top-level deep-link landing pages (outside [locale]) — bypass intl rewrite,
   // otherwise next-intl rewrites /dish to /[locale]/dish which 404s.
+  // CSP + nonce sont quand même appliqués (la page /dish a un script inline
+  // qui lit `headers().get('x-nonce')` pour s'auto-noncer).
   if (pathname === '/dish' || pathname.startsWith('/dish/') || pathname.startsWith('/auth/')) {
-    return NextResponse.next();
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-nonce', nonce);
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.headers.set('Content-Security-Policy', csp);
+    return response;
   }
 
   // === SEO: 301 redirect from old query-string URLs to new path-based URLs ===
@@ -79,7 +166,9 @@ export default function middleware(req: NextRequest) {
     url.pathname = newPath;
     url.searchParams.delete('categorie');
     url.searchParams.delete('ville');
-    return NextResponse.redirect(url, 301);
+    const redirectResponse = NextResponse.redirect(url, 301);
+    redirectResponse.headers.set('Content-Security-Policy', csp);
+    return redirectResponse;
   }
 
   const ua = req.headers.get('user-agent') || '';
@@ -117,8 +206,15 @@ export default function middleware(req: NextRequest) {
     }
   }
 
-  // i18n routing
-  return intlMiddleware(req);
+  // i18n routing — on délègue à next-intl puis on injecte la CSP + le nonce
+  // sur la response retournée. Le nonce est propagé vers le server component
+  // via le mécanisme `x-middleware-override-headers` interne de Next.js
+  // (cf. injectRequestHeaderOverride ci-dessus pour la justification).
+  const response = intlMiddleware(req);
+  response.headers.set('Content-Security-Policy', csp);
+  injectRequestHeaderOverride(response, 'x-nonce', nonce);
+
+  return response;
 }
 
 export const config = {

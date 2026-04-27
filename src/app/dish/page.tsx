@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
+import { headers } from 'next/headers';
 
 export const metadata: Metadata = {
   title: 'DishRank — Voir ce plat',
@@ -12,7 +13,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function DishPage() {
+export default async function DishPage() {
+  // Nonce CSP injecté par middleware — appliqué au script inline ci-dessous
+  // pour qu'il soit autorisé par la CSP `'strict-dynamic'`.
+  const nonce = (await headers()).get('x-nonce') || undefined;
   return (
     <html lang="fr">
       <head>
@@ -42,6 +46,8 @@ export default function DishPage() {
           </p>
         </div>
         <script
+          nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               var p = new URLSearchParams(window.location.search);
