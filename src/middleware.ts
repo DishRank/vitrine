@@ -138,9 +138,14 @@ export default function middleware(req: NextRequest) {
 
   // Top-level deep-link landing pages (outside [locale]) — bypass intl rewrite,
   // otherwise next-intl rewrites /dish to /[locale]/dish which 404s.
-  // CSP + nonce sont quand même appliqués (la page /dish a un script inline
-  // qui lit `headers().get('x-nonce')` pour s'auto-noncer).
-  if (pathname === '/dish' || pathname.startsWith('/dish/') || pathname.startsWith('/auth/')) {
+  // CSP + nonce sont quand même appliqués (les pages /dish et /join ont un
+  // script inline qui lit `headers().get('x-nonce')` pour s'auto-noncer).
+  if (
+    pathname === '/dish' ||
+    pathname.startsWith('/dish/') ||
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/join/')
+  ) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-nonce', nonce);
     const response = NextResponse.next({ request: { headers: requestHeaders } });
