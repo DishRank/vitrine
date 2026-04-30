@@ -1,10 +1,14 @@
 {
   "applinks": {
-    "apps": [],
     "details": [
       {
-        "appID": "TEAM_ID.com.dishrank.app",
-        "paths": ["/dish/*", "/restaurant/*", "/review/*"]
+        "appIDs": ["QMUYZC6YV7.com.dishrank.app"],
+        "components": [
+          { "/": "/dish*", "comment": "Dish detail deep links (incl. /dish?r=&d=)" },
+          { "/": "/restaurant*" },
+          { "/": "/review*" },
+          { "/": "/join/*" }
+        ]
       }
     ]
   }

@@ -58,31 +58,26 @@ export default async function DishPage() {
                 var isAndroid = /Android/i.test(ua);
                 var isIOS = /iPhone|iPad|iPod/i.test(ua);
                 var qs = 'r=' + encodeURIComponent(r) + '&d=' + encodeURIComponent(d);
+                var here = window.location.href;
                 if (isAndroid) {
-                  // Intent URI: Chrome opens the app if the package is
-                  // installed, otherwise falls back to the Play Store URL.
-                  // Setting location.href is reliable on Android Chrome.
+                  // Intent URI without a package constraint — opens any app
+                  // registered for the dishrank:// scheme (covers prod AND
+                  // dev/staging builds with a different applicationId).
+                  // Fallback URL = stay on this page so the install card
+                  // remains visible if no handler is installed (instead of
+                  // yanking the user to the Play Store).
                   window.location.href =
                     'intent://dish?' + qs +
-                    '#Intent;scheme=dishrank;package=com.dishrank.app;' +
-                    'S.browser_fallback_url=' + encodeURIComponent('https://play.google.com/store/apps/details?id=com.dishrank.app') +
+                    '#Intent;scheme=dishrank;' +
+                    'S.browser_fallback_url=' + encodeURIComponent(here) +
                     ';end';
                   return;
                 }
                 if (isIOS) {
-                  // iOS: try the custom scheme; if the app is installed it
-                  // opens immediately. If it's not, the page stays put — we
-                  // fall back to the App Store after a short delay so the
-                  // user isn't stranded. The visibilitychange guard cancels
-                  // the App Store redirect when the app actually opened
-                  // (Safari hides the page once another app takes focus).
-                  var appStore = 'https://apps.apple.com/fr/app/dishrank/id6761752556';
-                  var fallback = setTimeout(function() {
-                    window.location.href = appStore;
-                  }, 1500);
-                  document.addEventListener('visibilitychange', function() {
-                    if (document.hidden) clearTimeout(fallback);
-                  });
+                  // iOS: try the custom scheme. If the app is installed it
+                  // takes over and Safari is hidden. If nothing happens,
+                  // the install card stays — the user can tap the App
+                  // Store CTA themselves rather than being yanked there.
                   window.location.href = 'dishrank://dish?' + qs;
                   return;
                 }

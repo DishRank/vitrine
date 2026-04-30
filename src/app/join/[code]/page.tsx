@@ -273,26 +273,24 @@ export default async function JoinPage({ params }: PageProps) {
                 var isAndroid = /Android/i.test(ua);
                 var isIOS = /iPhone|iPad|iPod/i.test(ua);
                 var enc = encodeURIComponent(code);
+                var here = window.location.href;
                 if (isAndroid) {
-                  // Intent URI — opens the app if installed, falls back
-                  // to the Play Store automatically.
+                  // Intent URI without a package constraint — opens any app
+                  // registered for dishrank:// (works across dev/staging/
+                  // prod builds even when their applicationId differs).
+                  // Fallback = current page so the install card stays
+                  // visible if no handler is installed.
                   window.location.href =
                     'intent://join/' + enc +
-                    '#Intent;scheme=dishrank;package=com.dishrank.app;' +
-                    'S.browser_fallback_url=' + encodeURIComponent('https://play.google.com/store/apps/details?id=com.dishrank.app') +
+                    '#Intent;scheme=dishrank;' +
+                    'S.browser_fallback_url=' + encodeURIComponent(here) +
                     ';end';
                   return;
                 }
                 if (isIOS) {
-                  // iOS: try custom scheme; if the page is still visible
-                  // 1.5s later the app isn't installed → App Store.
-                  var appStore = 'https://apps.apple.com/fr/app/dishrank/id6761752556';
-                  var fallback = setTimeout(function() {
-                    window.location.href = appStore;
-                  }, 1500);
-                  document.addEventListener('visibilitychange', function() {
-                    if (document.hidden) clearTimeout(fallback);
-                  });
+                  // iOS: try the custom scheme; if the app is installed
+                  // it takes over. If not, the install card stays put —
+                  // the user can choose the App Store CTA on the page.
                   try { window.location.href = 'dishrank://join/' + enc; } catch (e) {}
                   return;
                 }
