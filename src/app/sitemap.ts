@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import { fetchCategories, fetchCities } from '@/lib/supabase';
+import { fetchCategories, fetchCities, fetchCityCategoryPairs } from '@/lib/supabase';
 import { citySlug } from '@/lib/slug';
 
 // Force dynamic rendering (rebuilt on each request — cheap because data is cached)
@@ -75,13 +75,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Fetch live data to filter our static lists against what actually exists
   let dbCategorySlugs = new Set<string>();
   let dbCityNames = new Set<string>();
+  let dbCityCategoryPairs: { city: string; category_slug: string; dish_count: number }[] = [];
   try {
-    const [categories, cities] = await Promise.all([
+    const [categories, cities, pairs] = await Promise.all([
       fetchCategories(),
       fetchCities(),
+      fetchCityCategoryPairs(),
     ]);
     dbCategorySlugs = new Set(categories.map((c) => c.slug));
     dbCityNames = new Set(cities);
+    dbCityCategoryPairs = pairs;
   } catch (e) {
     console.error('sitemap: failed to fetch data', e);
   }
@@ -143,14 +146,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // 3. City × category combinations : /<city-slug>/<cat>
-  // Top DB categories × top cities + hierarchy umbrellas × top cities.
-  const cityCatSlugs = [...HIERARCHY_PARENT_SLUGS, ...validCategories];
-  for (const slug of cityCatSlugs) {
+  // Driven by the DB: every (city, category) pair that actually has at least
+  // one moderated review gets indexed. Avoids bloating the sitemap with empty
+  // pages that Google would ignore (or worse, mark as soft-404).
+  // Dedup is implicit since fetchCityCategoryPairs returns distinct rows.
+  for (const pair of dbCityCategoryPairs) {
+    const cs = citySlug(pair.city);
+    if (!cs) continue;
+    // Boost priority when there are multiple dishes — these pages tend to
+    // rank better and deserve more crawl budget.
+    const isPriorityCity = PRIORITY_CITIES.has(pair.city);
+    const priority = isPriorityCity
+      ? Math.min(0.9, 0.7 + Math.min(pair.dish_count, 5) * 0.04)
+      : Math.min(0.7, 0.5 + Math.min(pair.dish_count, 5) * 0.04);
+    urls.push(
+      ...withAlternates(`/${cs}/${pair.category_slug}`, {
+        changeFrequency: 'daily',
+        priority,
+      })
+    );
+  }
+
+  // 3bis. Hierarchy umbrella × top city — these aggregate pages don't have
+  // direct DB rows (they expand at request time via expandCategorySlug), so
+  // we still emit them statically for the priority cities only.
+  for (const slug of HIERARCHY_PARENT_SLUGS) {
     for (const city of validCities) {
+      if (!PRIORITY_CITIES.has(city)) continue;
       urls.push(
         ...withAlternates(`/${citySlug(city)}/${slug}`, {
           changeFrequency: 'daily',
-          priority: PRIORITY_CITIES.has(city) ? 0.85 : 0.65,
+          priority: 0.8,
         })
       );
     }

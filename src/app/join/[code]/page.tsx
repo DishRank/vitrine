@@ -269,9 +269,34 @@ export default async function JoinPage({ params }: PageProps) {
               (function () {
                 var code = ${JSON.stringify(code)};
                 if (!code) return;
-                try {
-                  window.location.href = 'dishrank://join/' + encodeURIComponent(code);
-                } catch (e) {}
+                var ua = navigator.userAgent || '';
+                var isAndroid = /Android/i.test(ua);
+                var isIOS = /iPhone|iPad|iPod/i.test(ua);
+                var enc = encodeURIComponent(code);
+                if (isAndroid) {
+                  // Intent URI — opens the app if installed, falls back
+                  // to the Play Store automatically.
+                  window.location.href =
+                    'intent://join/' + enc +
+                    '#Intent;scheme=dishrank;package=com.dishrank.app;' +
+                    'S.browser_fallback_url=' + encodeURIComponent('https://play.google.com/store/apps/details?id=com.dishrank.app') +
+                    ';end';
+                  return;
+                }
+                if (isIOS) {
+                  // iOS: try custom scheme; if the page is still visible
+                  // 1.5s later the app isn't installed → App Store.
+                  var appStore = 'https://apps.apple.com/fr/app/dishrank/id6761752556';
+                  var fallback = setTimeout(function() {
+                    window.location.href = appStore;
+                  }, 1500);
+                  document.addEventListener('visibilitychange', function() {
+                    if (document.hidden) clearTimeout(fallback);
+                  });
+                  try { window.location.href = 'dishrank://join/' + enc; } catch (e) {}
+                  return;
+                }
+                // Desktop stays on the install card.
               })();
             `,
           }}

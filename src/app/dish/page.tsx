@@ -50,9 +50,44 @@ export default async function DishPage() {
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
-              var p = new URLSearchParams(window.location.search);
-              var r = p.get('r'), d = p.get('d');
-              if (r && d) { window.location.href = 'dishrank://dish?r=' + encodeURIComponent(r) + '&d=' + encodeURIComponent(d); }
+              (function() {
+                var p = new URLSearchParams(window.location.search);
+                var r = p.get('r'), d = p.get('d');
+                if (!r || !d) return;
+                var ua = navigator.userAgent || '';
+                var isAndroid = /Android/i.test(ua);
+                var isIOS = /iPhone|iPad|iPod/i.test(ua);
+                var qs = 'r=' + encodeURIComponent(r) + '&d=' + encodeURIComponent(d);
+                if (isAndroid) {
+                  // Intent URI: Chrome opens the app if the package is
+                  // installed, otherwise falls back to the Play Store URL.
+                  // Setting location.href is reliable on Android Chrome.
+                  window.location.href =
+                    'intent://dish?' + qs +
+                    '#Intent;scheme=dishrank;package=com.dishrank.app;' +
+                    'S.browser_fallback_url=' + encodeURIComponent('https://play.google.com/store/apps/details?id=com.dishrank.app') +
+                    ';end';
+                  return;
+                }
+                if (isIOS) {
+                  // iOS: try the custom scheme; if the app is installed it
+                  // opens immediately. If it's not, the page stays put — we
+                  // fall back to the App Store after a short delay so the
+                  // user isn't stranded. The visibilitychange guard cancels
+                  // the App Store redirect when the app actually opened
+                  // (Safari hides the page once another app takes focus).
+                  var appStore = 'https://apps.apple.com/fr/app/dishrank/id6761752556';
+                  var fallback = setTimeout(function() {
+                    window.location.href = appStore;
+                  }, 1500);
+                  document.addEventListener('visibilitychange', function() {
+                    if (document.hidden) clearTimeout(fallback);
+                  });
+                  window.location.href = 'dishrank://dish?' + qs;
+                  return;
+                }
+                // Desktop: leave the install card visible, no redirect.
+              })();
             `,
           }}
         />
