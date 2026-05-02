@@ -325,6 +325,15 @@ html, body {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
   }
+  /* Exception : le marquee "En direct" porte du contenu (avis live), pas
+     décoratif. Sans le défilement, la moitié des chips est invisible hors
+     viewport — c'est de la perte d'info, pas du confort visuel. Le marquee
+     pause déjà au hover (cf. .mq-track:hover), donc l'utilisateur peut
+     l'arrêter quand il veut → on l'exempte complètement de reduced-motion. */
+  .mq-track {
+    animation-duration: 60s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 
 /* Disable hover effects on touch devices */

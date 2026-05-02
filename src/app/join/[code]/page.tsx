@@ -269,6 +269,15 @@ export default async function JoinPage({ params }: PageProps) {
               (function () {
                 var code = ${JSON.stringify(code)};
                 if (!code) return;
+                // One-shot guard: the Android intent fallback URL points
+                // to this same page, which would re-fire the script in a
+                // loop if the app isn't installed. Mark sessionStorage
+                // and skip on subsequent loads.
+                try {
+                  var key = 'dishrank-deeplink:join:' + code;
+                  if (sessionStorage.getItem(key)) return;
+                  sessionStorage.setItem(key, '1');
+                } catch (e) {}
                 var ua = navigator.userAgent || '';
                 var isAndroid = /Android/i.test(ua);
                 var isIOS = /iPhone|iPad|iPod/i.test(ua);

@@ -54,6 +54,15 @@ export default async function DishPage() {
                 var p = new URLSearchParams(window.location.search);
                 var r = p.get('r'), d = p.get('d');
                 if (!r || !d) return;
+                // One-shot guard: if the app isn't installed, the Android
+                // intent fallback brings the user back to this same page,
+                // which would re-fire the script forever. Mark that we
+                // already tried in sessionStorage and skip on reload.
+                try {
+                  var key = 'dishrank-deeplink:' + r + ':' + d;
+                  if (sessionStorage.getItem(key)) return;
+                  sessionStorage.setItem(key, '1');
+                } catch (e) {}
                 var ua = navigator.userAgent || '';
                 var isAndroid = /Android/i.test(ua);
                 var isIOS = /iPhone|iPad|iPod/i.test(ua);

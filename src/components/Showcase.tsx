@@ -3,15 +3,18 @@ import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const IMAGES = [
-  '/img/01_feed.webp',
-  '/img/02_dish_detail.webp',
-  '/img/03_categories.webp',
-  '/img/04_add_review.webp',
-  '/img/05_settings.webp',
-  '/img/06_map.webp',
-  '/img/07_restaurant.webp',
-  '/img/08_profile.webp',
+// Chaque slide a une variante dark et une variante light. Lorsque l'utilisateur
+// a un thème clair actif (système ou classe `.light`/.dark sur <html>), on
+// bascule sur la variante light.
+const IMAGES: { dark: string; light: string }[] = [
+  { dark: '/img/01_feed.webp',        light: '/img/01_feed_light.webp' },
+  { dark: '/img/02_dish_detail.webp', light: '/img/02_dish_detail_light.webp' },
+  { dark: '/img/03_categories.webp',  light: '/img/03_categories_light.webp' },
+  { dark: '/img/04_add_review.webp',  light: '/img/04_add_review_light.webp' },
+  { dark: '/img/05_settings.webp',    light: '/img/05_settings_light.webp' },
+  { dark: '/img/06_map.webp',         light: '/img/06_map_light.webp' },
+  { dark: '/img/07_restaurant.webp',  light: '/img/07_restaurant_light.webp' },
+  { dark: '/img/08_profile.webp',     light: '/img/08_profile_light.webp' },
 ];
 
 export default function Showcase() {
@@ -19,7 +22,40 @@ export default function Showcase() {
   const slides = t.raw('slides') as { title: string; desc: string }[];
   const [idx, setIdx] = useState(0);
   const [animating, setAnimating] = useState(false);
+  // SSR : on rend toujours la version dark (pas d'accès au prefers-color-scheme
+  // côté serveur). Au mount client, on bascule sur light si applicable.
+  // Pas de mismatch d'hydratation : le serveur et le 1er render client
+  // utilisent la même valeur (`false`) avant l'effet.
+  const [isLightTheme, setIsLightTheme] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Détection du thème : miroir de la logique de `init.js` + globals.css.
+  //   - classe `.dark` sur <html> → forcé dark
+  //   - classe `.light` sur <html> → forcé light
+  //   - sinon : on suit `prefers-color-scheme`
+  // On observe aussi les changements de classe sur <html> au cas où un toggle
+  // manuel serait ajouté plus tard, et le `change` de la media query pour
+  // les utilisateurs qui changent leur préférence système en cours de visite.
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const compute = () => {
+      const cl = document.documentElement.classList;
+      if (cl.contains('dark')) return false;
+      if (cl.contains('light')) return true;
+      return mq.matches;
+    };
+    setIsLightTheme(compute());
+    const onChange = () => setIsLightTheme(compute());
+    mq.addEventListener('change', onChange);
+    const observer = new MutationObserver(onChange);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => {
+      mq.removeEventListener('change', onChange);
+      observer.disconnect();
+    };
+  }, []);
+
+  const currentSrc = isLightTheme ? IMAGES[idx].light : IMAGES[idx].dark;
 
   const goNext = useCallback(() => {
     setAnimating(true);
@@ -293,7 +329,7 @@ export default function Showcase() {
                   l'intérieur de l'écran. */}
               <div className="rounded-[26px] overflow-hidden bg-black aspect-[9/19.5] relative">
                 <Image
-                  src={IMAGES[idx]}
+                  src={currentSrc}
                   alt={slides[idx].title}
                   fill
                   sizes="270px"
