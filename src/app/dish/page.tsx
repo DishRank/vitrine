@@ -50,9 +50,48 @@ export default async function DishPage() {
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
-              var p = new URLSearchParams(window.location.search);
-              var r = p.get('r'), d = p.get('d');
-              if (r && d) { window.location.href = 'dishrank://dish?r=' + encodeURIComponent(r) + '&d=' + encodeURIComponent(d); }
+              (function() {
+                var p = new URLSearchParams(window.location.search);
+                var r = p.get('r'), d = p.get('d');
+                if (!r || !d) return;
+                // One-shot guard: if the app isn't installed, the Android
+                // intent fallback brings the user back to this same page,
+                // which would re-fire the script forever. Mark that we
+                // already tried in sessionStorage and skip on reload.
+                try {
+                  var key = 'dishrank-deeplink:' + r + ':' + d;
+                  if (sessionStorage.getItem(key)) return;
+                  sessionStorage.setItem(key, '1');
+                } catch (e) {}
+                var ua = navigator.userAgent || '';
+                var isAndroid = /Android/i.test(ua);
+                var isIOS = /iPhone|iPad|iPod/i.test(ua);
+                var qs = 'r=' + encodeURIComponent(r) + '&d=' + encodeURIComponent(d);
+                var here = window.location.href;
+                if (isAndroid) {
+                  // Intent URI without a package constraint — opens any app
+                  // registered for the dishrank:// scheme (covers prod AND
+                  // dev/staging builds with a different applicationId).
+                  // Fallback URL = stay on this page so the install card
+                  // remains visible if no handler is installed (instead of
+                  // yanking the user to the Play Store).
+                  window.location.href =
+                    'intent://dish?' + qs +
+                    '#Intent;scheme=dishrank;' +
+                    'S.browser_fallback_url=' + encodeURIComponent(here) +
+                    ';end';
+                  return;
+                }
+                if (isIOS) {
+                  // iOS: try the custom scheme. If the app is installed it
+                  // takes over and Safari is hidden. If nothing happens,
+                  // the install card stays — the user can tap the App
+                  // Store CTA themselves rather than being yanked there.
+                  window.location.href = 'dishrank://dish?' + qs;
+                  return;
+                }
+                // Desktop: leave the install card visible, no redirect.
+              })();
             `,
           }}
         />

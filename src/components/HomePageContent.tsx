@@ -166,19 +166,16 @@ export default async function HomePageContent({
   const pageUrl = buildFilterUrl(locale, city, category);
   const dishListJsonLd = dishes.length > 0
     ? (() => {
-        // Aggregate rating at the ItemList level (moyenne pondérée par review_count)
-        // → permet à Google d'afficher des "rich review snippets" sur la page de
-        //   liste, pas seulement sur les items individuels.
-        const totalReviews = dishes.reduce((s, d) => s + Number(d.review_count || 0), 0);
-        const weightedSum = dishes.reduce(
-          (s, d) => s + Number(d.avg_rating) * Number(d.review_count || 1),
-          0
-        );
-        const totalWeight = dishes.reduce(
-          (s, d) => s + Number(d.review_count || 1),
-          0
-        );
-        const aggRating = totalWeight > 0 ? weightedSum / totalWeight : 0;
+        // Note: we deliberately do NOT attach an `aggregateRating` to the
+        // ItemList. Google's review-snippet schema only accepts AggregateRating
+        // under a fixed list of parent types (Product, LocalBusiness, Recipe,
+        // Organization, …). ItemList is not in that list, and adding it
+        // triggered the Search Console error
+        //   "Type d'objet non valide pour le champ <parent_node>".
+        // Individual itemListElement[].item entries are Product objects, which
+        // ARE valid parents — so the signal is preserved per dish, plus the
+        // FoodEstablishment JSON-LD on city pages carries the page-level
+        // aggregate.
 
         return {
           '@context': 'https://schema.org',
@@ -193,16 +190,6 @@ export default async function HomePageContent({
               : 'Top rated dishes',
           url: pageUrl,
           numberOfItems: dishes.length,
-          // Liste agrégée — utile pour les pages /c/burger qui n'ont pas de
-          // FoodEstablishment (pas de city = pas d'adresse) mais bénéficient
-          // quand même d'un signal "agrégat de notes" auprès de Google.
-          aggregateRating: aggRating > 0 ? {
-            '@type': 'AggregateRating',
-            ratingValue: Math.round(aggRating * 10) / 10,
-            reviewCount: Math.max(totalReviews, dishes.length),
-            bestRating: 5,
-            worstRating: 1,
-          } : undefined,
           itemListElement: dishes.slice(0, 10).map((d, i) => {
             const priceFragment = d.latest_price
               ? `${Number(d.latest_price).toFixed(2)} ${d.currency || 'EUR'}`
