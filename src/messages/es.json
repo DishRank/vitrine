@@ -12,6 +12,7 @@
   "hero": {
     "label": "Califica los platos, no los restaurantes.",
     "title": "El <em>mejor plato</em> cerca de ti.",
+    "tagline": "Y la app que pone fin a los debates del grupo de <em>WhatsApp</em>.",
     "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} cerca de ti.",
     "titleWithCity": "Los mejores platos en <em>{city}</em>",
     "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} en {city}",
@@ -75,13 +76,13 @@
       { "title": "Ranking por plato", "desc": "Buscas \"mejor hamburguesa de Lyon\"? Encuentras el ranking, no un restaurante." },
       { "title": "200+ categorias", "desc": "Hamburguesa, sushi, ramen, crepes, kebab, postre, bubble tea, pho... lo tenemos todo." },
       { "title": "100% gratis", "desc": "Sin publicidad, sin suscripcion. Solo los mejores platos de tu ciudad." },
-      { "title": "Comunitario", "desc": "Las notas vienen de personas reales, no de algoritmos oscuros." },
-      { "title": "Mapa interactivo", "desc": "Visualiza los platos a tu alrededor en el mapa. Filtra por categoria y distancia." }
+      { "title": "Mejor con amigos", "desc": "Crea un grupo, fusionen sus favoritos, chateen en la app. Adios al '¿donde vamos?' sin respuesta." },
+      { "title": "Salidas en 30 segundos", "desc": "Fijen fecha + tipo (restaurante / bar / cafe) + preferencias. DishRank propone los mejores sitios del grupo. Voto o sorteo, listo." }
     ]
   },
   "cta": {
-    "title": "Califica los platos, no los restaurantes.",
-    "subtitle": "Gratis. Sin publicidad. Descarga la app y empieza a calificar tus platos favoritos."
+    "title": "Califica platos. Decide en grupo.",
+    "subtitle": "Gratis. Sin publicidad. Descarga la app, anade a tus amigos y organiza tu proxima salida en 30 segundos."
   },
   "modal": {
     "downloadCta": "Descarga DishRank para calificar este plato",

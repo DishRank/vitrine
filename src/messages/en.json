@@ -12,6 +12,7 @@
   "hero": {
     "label": "Rate the dishes, not the restaurants.",
     "title": "The <em>best dish</em> near you.",
+    "tagline": "And the app that ends the <em>WhatsApp</em> group debates.",
     "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} near you.",
     "titleWithCity": "The best dishes in <em>{city}</em>",
     "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} in {city}",
@@ -75,13 +76,13 @@
       { "title": "Ranked by dish", "desc": "Looking for \"best burger in Lyon\"? You find the ranking, not a restaurant." },
       { "title": "200+ categories", "desc": "Burger, sushi, ramen, crepes, kebab, dessert, bubble tea, pho... we have it all." },
       { "title": "100% free", "desc": "No ads, no subscription. Just the best dishes in your city." },
-      { "title": "Community-driven", "desc": "Ratings come from real people, not obscure algorithms." },
-      { "title": "Interactive map", "desc": "See dishes around you on the map. Filter by category and distance." }
+      { "title": "Better with friends", "desc": "Create a group, merge your favorites, chat in-app. Never 'where to eat?' without an answer again." },
+      { "title": "Outings in 30 seconds", "desc": "Set the date + venue type (restaurant / bar / café) + preferences. DishRank suggests the best spots for the group. Vote or random pick, done." }
     ]
   },
   "cta": {
-    "title": "Rate the dishes, not the restaurants.",
-    "subtitle": "Free. No ads. Download the app and start rating your favorite dishes."
+    "title": "Rate dishes. Decide as a group.",
+    "subtitle": "Free. No ads. Download the app, add your friends and plan your next outing in 30 seconds."
   },
   "modal": {
     "downloadCta": "Download DishRank to rate this dish",

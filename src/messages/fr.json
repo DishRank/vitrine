@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "DishRank — Top plats par ville · Classement & avis 2026",
-    "description": "Trouve où manger le meilleur burger, sushi, pizza de ta ville. Classement par plat (et non par resto) avec notes, prix, photos et avis vérifiés de la communauté DishRank.",
+    "description": "Trouve où manger le meilleur burger, sushi, pizza de ta ville. Classement par plat (et non par resto) avec avis vérifiés. Crée un groupe avec tes potes, fusionnez vos favoris et organisez vos sorties en 30 secondes.",
     "titleWithCategory": "{bestCategory} 2026 — Top classement & avis | DishRank",
     "titleWithCityCategory": "{bestCategory} à {city} 2026 — Top 10 & avis | DishRank",
     "titleWithCity": "Où manger à {city} 2026 — Meilleurs plats notés | DishRank",
@@ -12,6 +12,7 @@
   "hero": {
     "label": "Note les plats · pas les restos",
     "title": "Le <em>meilleur plat</em> près de chez toi.",
+    "tagline": "Et l'app qui met fin aux débats sur le groupe <em>WhatsApp</em>.",
     "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} près de chez toi.",
     "titleWithCity": "Les meilleurs plats à <em>{city}</em>",
     "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} à {city}",
@@ -75,13 +76,13 @@
       { "title": "Classement par plat", "desc": "Tu cherches \"meilleur burger de Lyon\" ? Tu trouves le classement, pas un restaurant." },
       { "title": "200+ catégories", "desc": "Burger, sushi, ramen, crêpes, kebab, dessert, bubble tea, pho... on a tout." },
       { "title": "100% gratuit", "desc": "Pas de pub, pas d'abonnement. Juste les meilleurs plats de ta ville." },
-      { "title": "Communautaire", "desc": "Les notes viennent de vrais gens, pas d'algorithmes obscurs." },
-      { "title": "Carte interactive", "desc": "Visualise les plats autour de toi sur la carte. Filtre par catégorie et distance." }
+      { "title": "Entre amis, c'est mieux", "desc": "Crée un groupe avec tes potes, fusionnez vos favoris, discutez dans le chat intégré. Plus jamais 'on va où ?' sans réponse." },
+      { "title": "Sorties en 30 secondes", "desc": "Fixez date + type (resto / bar / café) + préférences. DishRank propose les meilleures adresses du groupe. Vote ou tirage au sort, c'est réglé." }
     ]
   },
   "cta": {
-    "title": "Note les plats, pas les restos.",
-    "subtitle": "Gratuit. Pas de pub. Télécharge l'app et commence à noter tes plats préférés."
+    "title": "Note les plats. Décide en groupe.",
+    "subtitle": "Gratuit. Pas de pub. Télécharge l'app, ajoute tes potes et organise ta prochaine sortie en 30 secondes."
   },
   "modal": {
     "downloadCta": "Télécharge DishRank pour noter ce plat",
