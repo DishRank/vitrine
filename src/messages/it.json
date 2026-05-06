@@ -12,6 +12,7 @@
   "hero": {
     "label": "Valuta i piatti, non i ristoranti.",
     "title": "Il <em>miglior piatto</em> vicino a te.",
+    "tagline": "E l'app che mette fine ai dibattiti del gruppo <em>WhatsApp</em>.",
     "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} vicino a te.",
     "titleWithCity": "I migliori piatti a <em>{city}</em>",
     "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} a {city}",
@@ -75,13 +76,13 @@
       { "title": "Classifica per piatto", "desc": "Cerchi \"miglior burger a Lione\"? Trovi la classifica, non un ristorante." },
       { "title": "200+ categorie", "desc": "Burger, sushi, ramen, crepes, kebab, dolci, bubble tea, pho... abbiamo tutto." },
       { "title": "100% gratuito", "desc": "Niente pubblicita, niente abbonamento. Solo i migliori piatti della tua città." },
-      { "title": "Community", "desc": "I voti vengono da persone vere, non da algoritmi oscuri." },
-      { "title": "Mappa interattiva", "desc": "Visualizza i piatti intorno a te sulla mappa. Filtra per categoria e distanza." }
+      { "title": "Meglio in compagnia", "desc": "Crea un gruppo, unite i preferiti, chattate nell'app. Basta con 'dove si mangia?' senza risposta." },
+      { "title": "Uscite in 30 secondi", "desc": "Fissate data + tipo (ristorante / bar / caffe) + preferenze. DishRank propone i migliori posti del gruppo. Voto o sorteggio, fatto." }
     ]
   },
   "cta": {
-    "title": "Valuta i piatti, non i ristoranti.",
-    "subtitle": "Gratuito. Niente pubblicita. Scarica l'app e inizia a valutare i tuoi piatti preferiti."
+    "title": "Vota i piatti. Decidi in gruppo.",
+    "subtitle": "Gratuito. Niente pubblicita. Scarica l'app, aggiungi i tuoi amici e organizza la prossima uscita in 30 secondi."
   },
   "modal": {
     "downloadCta": "Scarica DishRank per valutare questo piatto",

@@ -12,6 +12,7 @@
   "hero": {
     "label": "Bewerte die Gerichte, nicht die Restaurants.",
     "title": "Das <em>beste Gericht</em> in deiner Nähe.",
+    "tagline": "Und die App, die <em>WhatsApp</em>-Gruppendebatten beendet.",
     "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} in deiner Nähe.",
     "titleWithCity": "Die besten Gerichte in <em>{city}</em>",
     "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} in {city}",
@@ -75,13 +76,13 @@
       { "title": "Ranking nach Gericht", "desc": "Du suchst \"bester Burger in Lyon\"? Du findest das Ranking, nicht ein Restaurant." },
       { "title": "200+ Kategorien", "desc": "Burger, Sushi, Ramen, Crepes, Kebab, Dessert, Bubble Tea, Pho... wir haben alles." },
       { "title": "100% kostenlos", "desc": "Keine Werbung, kein Abo. Nur die besten Gerichte deiner Stadt." },
-      { "title": "Community-basiert", "desc": "Die Bewertungen kommen von echten Menschen, nicht von undurchsichtigen Algorithmen." },
-      { "title": "Interaktive Karte", "desc": "Sieh Gerichte um dich herum auf der Karte. Filtere nach Kategorie und Entfernung." }
+      { "title": "Besser mit Freunden", "desc": "Erstelle eine Gruppe, vereint eure Favoriten, chattet in der App. Nie wieder 'wo essen?' ohne Antwort." },
+      { "title": "Ausfluge in 30 Sekunden", "desc": "Legt Datum + Typ (Restaurant / Bar / Cafe) + Praferenzen fest. DishRank schlagt die besten Orte der Gruppe vor. Abstimmung oder Zufall, fertig." }
     ]
   },
   "cta": {
-    "title": "Bewerte die Gerichte, nicht die Restaurants.",
-    "subtitle": "Kostenlos. Keine Werbung. Lade die App herunter und bewerte deine Lieblingsgerichte."
+    "title": "Bewerte Gerichte. Entscheide als Gruppe.",
+    "subtitle": "Kostenlos. Keine Werbung. Lade die App herunter, fuge deine Freunde hinzu und plant euren nachsten Ausflug in 30 Sekunden."
   },
   "modal": {
     "downloadCta": "Lade DishRank herunter um dieses Gericht zu bewerten",

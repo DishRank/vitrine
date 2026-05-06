@@ -45,7 +45,7 @@ export interface ReviewRow {
   currency: string;
   photo_url: string;
   created_at: string;
-  profiles: { username: string; avatar_url: string | null; display_name: string | null } | null;
+  profiles: { avatar_url: string | null; display_name: string | null } | null;
 }
 
 export interface CategoryRow {
@@ -66,9 +66,10 @@ export interface RecentReviewRow {
   created_at: string;
   restaurant_name: string;
   user_id: string | null;
-  /** display_name | username | null — null = anonymous review (rare) */
+  /** display_name | null — null = profil anonyme (rare).
+   *  Note : la colonne `username` a été retirée de `profiles` lors de la
+   *  release sociale ; seul `display_name` reste comme identifiant lisible. */
   display_name: string | null;
-  username: string | null;
 }
 
 // ── Simple server-side cache to avoid hammering Supabase ──
@@ -298,7 +299,7 @@ export function fetchRecentReviews(limit = 12): Promise<RecentReviewRow[]> {
     const { data, error } = await supabase
       .from('reviews')
       .select(
-        'id, dish_name, rating, created_at, user_id, restaurants:restaurant_id(name), profiles:user_id(display_name, username)'
+        'id, dish_name, rating, created_at, user_id, restaurants:restaurant_id(name), profiles:user_id(display_name)'
       )
       .not('pending_moderation', 'is', true)
       .order('created_at', { ascending: false })
@@ -314,7 +315,7 @@ export function fetchRecentReviews(limit = 12): Promise<RecentReviewRow[]> {
       created_at: string;
       user_id: string | null;
       restaurants: { name: string } | null;
-      profiles: { display_name: string | null; username: string | null } | null;
+      profiles: { display_name: string | null } | null;
     };
     return ((data || []) as unknown as Joined[])
       .filter((r) => r.restaurants?.name) // skip orphans
@@ -326,7 +327,6 @@ export function fetchRecentReviews(limit = 12): Promise<RecentReviewRow[]> {
         restaurant_name: r.restaurants!.name,
         user_id: r.user_id || null,
         display_name: r.profiles?.display_name || null,
-        username: r.profiles?.username || null,
       }));
   });
 }
@@ -336,7 +336,7 @@ export function fetchReviews(restaurantId: string, dishName: string): Promise<Re
   return cached(cacheKey, FIVE_MIN, async () => {
     const { data, error } = await getSupabase()
       .from('reviews')
-      .select('id, dish_name, rating, comment, price, currency, photo_url, created_at, profiles:user_id(username, avatar_url, display_name)')
+      .select('id, dish_name, rating, comment, price, currency, photo_url, created_at, profiles:user_id(avatar_url, display_name)')
       .eq('restaurant_id', restaurantId)
       .ilike('dish_name', dishName)
       .not('photo_url', 'is', null)

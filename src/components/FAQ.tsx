@@ -10,19 +10,27 @@ import { useState } from 'react';
 const QUESTIONS: Array<{ q: string; a: string }> = [
   {
     q: 'Comment fonctionne DishRank ?',
-    a: "Tu ouvres l'app, tu cherches un plat (burger, sushi, ramen…) et tu vois le classement des meilleurs dans ta ville, basé sur les notes de la communauté. Tu peux noter un plat en 10 secondes : photo + 4 critères (goût, présentation, prix, quantité).",
+    a: "Tu ouvres l'app, tu cherches un plat (burger, sushi, ramen…) et tu vois le classement des meilleurs dans ta ville, basé sur les notes de la communauté. Tu peux noter en 10 secondes : photo + 4 critères (goût, présentation, prix, quantité). Et avec tes amis, tu crées des groupes pour décider d'une sortie sans débat WhatsApp.",
+  },
+  {
+    q: "Comment ça marche les groupes et les sorties entre amis ?",
+    a: "Tu ajoutes tes potes par pseudo, QR code ou lien, puis tu crées un groupe (famille, collègues, bande de potes). Vos listes de favoris sont fusionnées automatiquement, vous discutez dans le chat intégré, et au moment de sortir vous fixez date + type (resto / bar / café) + préférences (végé, prix, ambiance). DishRank propose les meilleures adresses parmi les favoris du groupe — vote, sondage ou tirage au sort, c'est réglé en 30 secondes.",
+  },
+  {
+    q: "Mes amis voient-ils tout ce que je fais sur l'app ?",
+    a: "Non, tu contrôles tout. Tes amis voient uniquement les avis que tu publies (comme avant) et les groupes où vous êtes ensemble. Les messages d'un groupe restent dans ce groupe — ils ne sont jamais partagés ailleurs ni vendus. Tu peux quitter un groupe ou bloquer quelqu'un à tout moment depuis son profil.",
   },
   {
     q: "C'est vraiment gratuit ?",
-    a: "Oui, 100% gratuit. Pas de pub, pas d'abonnement, pas d'achat in-app. Le projet est porté par un dev solo qui veut rendre les choix resto plus simples — la monétisation viendra plus tard, et jamais au détriment des utilisateurs.",
+    a: "Oui, 100% gratuit. Pas de pub, pas d'abonnement, pas d'achat in-app, et pas non plus le social en mode \"premium\". Le projet est porté par un dev solo qui veut rendre les choix resto plus simples — la monétisation viendra plus tard, et jamais au détriment des utilisateurs.",
   },
   {
     q: 'Pourquoi noter les plats et pas les restos ?',
-    a: "Un resto à 4,2★ sur Google peut servir une excellente salade et un plat de pâtes catastrophique. La note moyenne ne te dit rien sur ce que TOI tu vas commander. DishRank note chaque plat individuellement — tu sais exactement quoi prendre.",
+    a: "Un resto à 4,2★ sur Google peut servir une excellente salade et un plat de pâtes catastrophique. La note moyenne ne te dit rien sur ce que TOI tu vas commander. DishRank note chaque plat individuellement — tu sais exactement quoi prendre, et tu peux comparer les choix de tes amis dans un groupe.",
   },
   {
     q: "Sur quelles villes l'app est dispo ?",
-    a: "L'app fonctionne partout, mais le contenu est principalement à Lyon au lancement. Plus la communauté grandit, plus les villes se remplissent. Tu peux contribuer dès aujourd'hui où que tu sois — chaque avis compte.",
+    a: "L'app fonctionne partout, mais le contenu est principalement à Lyon au lancement. Plus la communauté et tes groupes d'amis grandissent, plus les villes se remplissent. Tu peux contribuer dès aujourd'hui où que tu sois — chaque avis compte.",
   },
   {
     q: "L'app Android est dispo quand ?",

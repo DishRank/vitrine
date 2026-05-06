@@ -154,7 +154,7 @@ export default function Hero({ category, city, bestCategory }: Props) {
 
         {/* Title — white default, gradient ONLY on <em> portions */}
         <h1
-          className="font-bold text-[var(--text)] text-center max-w-5xl mb-6"
+          className="font-bold text-[var(--text)] text-center max-w-5xl mb-4 sm:mb-5"
           style={{
             fontSize: 'clamp(2.25rem, 8vw, 5.75rem)',
             lineHeight: 0.98,
@@ -163,6 +163,23 @@ export default function Hero({ category, city, bestCategory }: Props) {
         >
           {t.rich(titleKey, { em: emGradient, ...args })}
         </h1>
+
+        {/* Tagline émotionnelle — uniquement sur la home (pas filtré).
+            Évite de diluer le focus SEO des pages catégorie/ville où le
+            visiteur est arrivé via une intention précise ("burger Lyon"). */}
+        {!isFiltered && (
+          <p
+            className="text-center text-[var(--text)] font-semibold mb-5 sm:mb-6 px-2"
+            style={{
+              fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)',
+              lineHeight: 1.35,
+              letterSpacing: '-0.01em',
+              maxWidth: 640,
+            }}
+          >
+            {t.rich('tagline', { em: emGradient })}
+          </p>
+        )}
 
         {/* Subtitle */}
         <p

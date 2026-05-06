@@ -26,9 +26,10 @@ function Star({ size = 9 }: { size?: number }) {
   );
 }
 
-/** Nom affiché : display_name > username > "Anonyme". */
+/** Nom affiché : display_name > "Anonyme".
+ *  La colonne `username` a été retirée de `profiles` lors de la release sociale. */
 function getWho(r: RecentReviewRow): string {
-  return r.display_name || r.username || 'Anonyme';
+  return r.display_name || 'Anonyme';
 }
 
 /** Initiales 2 lettres pour l'avatar (premières lettres des mots du nom). */

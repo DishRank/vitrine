@@ -372,8 +372,14 @@ export default async function HomePageContent({
           initialDishes={dishes}
           title={topDishesTitle}
         />
-        {/* CTA banner placed RIGHT AFTER the dish grid (matches v3 download
-            banner position) — strongest conversion spot of the page. */}
+        {/* "Entre amis" — promu juste après le Top 10 pour servir le pitch
+            social tôt dans le scroll : tu viens de voir des plats notés,
+            tu apprends que tu peux décider en groupe sans débat WhatsApp.
+            Cohérent avec le tagline du Hero ("met fin aux débats"). */}
+        <SocialFeatures />
+        {/* CTA banner placé après les deux pitchs (top 10 + social) —
+            l'utilisateur a vu la valeur produit ET la valeur sociale, c'est
+            le bon moment pour télécharger. */}
         <CtaBanner />
         {/* "En direct" — feed marquee, montre que la communauté est active.
             Maintenant affiché sur toutes les pages (home + filtrées) tant
@@ -382,9 +388,6 @@ export default async function HomePageContent({
             que sur la home pour éviter une N+1 query, donc en pratique le
             marquee n'apparaît qu'à la home pour l'instant. */}
         <SocialProof reviews={recentReviews} />
-        {/* "Entre amis" — fonctionnalités sociales (Phase 1 plan), big visual.
-            Affiché sur toutes les pages : la valeur sociale est universelle. */}
-        <SocialFeatures />
         {(city || category) && (
           <CityGuide
             locale={locale}
