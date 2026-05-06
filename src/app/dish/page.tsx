@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import { headers } from 'next/headers';
+import { PLAY_STORE_URL } from '@/lib/downloadLinks';
 
 export const metadata: Metadata = {
   title: 'DishRank — Voir ce plat',
@@ -36,7 +37,7 @@ export default async function DishPage() {
             Installez DishRank pour decouvrir les avis de la communaute sur ce plat et des milliers d&apos;autres.
           </p>
           <a
-            href="https://play.google.com/store/apps/details?id=com.dishrank.app"
+            href={PLAY_STORE_URL}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#6C5CE7', color: '#fff', padding: '14px 28px', borderRadius: 14, fontSize: 16, fontWeight: 600, textDecoration: 'none' }}
           >
             Installer l&apos;app
