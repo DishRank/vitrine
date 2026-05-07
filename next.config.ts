@@ -95,6 +95,34 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
+      // iOS Safari et plusieurs navigateurs probent ces deux URLs à la
+      // racine pour récupérer l'icône d'accueil même si <link rel=
+      // "apple-touch-icon"> pointe ailleurs. Sans le fichier au root,
+      // chaque visiteur iOS génère un 404 + un SSR par-dessus.
+      {
+        source: '/apple-touch-icon.png',
+        headers: [
+          { key: 'Content-Type', value: 'image/png' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/apple-touch-icon-precomposed.png',
+        headers: [
+          { key: 'Content-Type', value: 'image/png' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // RFC 9116 : indique aux chercheurs en sécurité comment signaler
+      // une vulnérabilité. Mozilla Observatory et plusieurs scanners
+      // de conformité vérifient sa présence.
+      {
+        source: '/.well-known/security.txt',
+        headers: [
+          { key: 'Content-Type', value: 'text/plain; charset=utf-8' },
+          { key: 'Cache-Control', value: 'public, max-age=86400' },
+        ],
+      },
     ];
   },
 
