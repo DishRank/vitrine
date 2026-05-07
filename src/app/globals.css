@@ -20,6 +20,11 @@ html {
   --primary-container: rgba(108, 92, 231, 0.12);
   --primary-glow: rgba(108, 92, 231, 0.2);
   --star: #F9CA24;
+  /* Accents secondaires — formalisés à partir des couleurs déjà utilisées
+     ponctuellement (badge "NEW" orange, badge "BETA" vert) pour casser le
+     mono-violet et donner de la respiration à la palette. */
+  --accent-warm: #ff7a3d;
+  --accent-success: #5fd39a;
 }
 
 /* Light theme (default) */
@@ -53,10 +58,14 @@ html {
   --border: rgba(255,255,255,0.08);
   --border2: #38345A;
   --loader-color: #FFF;
-  --card-shadow: rgba(0,0,0,0.3);
-  /* Pure black store buttons on dark theme — la conv Apple/Google standard. */
-  --store-btn-bg: #000000;
-  --store-btn-bg-hover: #1a1a1a;
+  /* Shadow teintée violet (au lieu d'un noir générique) — conforme à la
+     règle skill "Tint shadows to match the background hue". Garde de la
+     présence sur fond sombre tout en restant cohérent avec la palette. */
+  --card-shadow: rgba(108,92,231,0.22);
+  /* Off-black tinté plutôt que pur #000 — convention Apple/Google
+     conservée mais sans le contraste agressif d'un noir pur. */
+  --store-btn-bg: #0a0a0a;
+  --store-btn-bg-hover: #1f1f1f;
   --store-btn-border: #2d2d2d;
 }
 
@@ -71,9 +80,9 @@ html {
     --border: rgba(255,255,255,0.08);
     --border2: #38345A;
     --loader-color: #FFF;
-    --card-shadow: rgba(0,0,0,0.3);
-    --store-btn-bg: #000000;
-    --store-btn-bg-hover: #1a1a1a;
+    --card-shadow: rgba(108,92,231,0.22);
+    --store-btn-bg: #0a0a0a;
+    --store-btn-bg-hover: #1f1f1f;
     --store-btn-border: #2d2d2d;
   }
 }
@@ -84,6 +93,39 @@ html, body {
   color: var(--text);
   overflow-x: hidden;
   max-width: 100vw;
+}
+
+/* Typo premium — fix orphans + better wrapping.
+   `text-wrap: balance` (h1-h3) → répartit les mots équitablement sur les
+   dernières lignes, évite les "veuves" (mot seul) et les déséquilibres.
+   `text-wrap: pretty` (p) → optimise le wrapping mais sans le coût perf
+   de balance sur des paragraphes longs.
+   Supporté Chrome 114+ / Safari 17.5+ / Firefox 121+ — graceful fallback. */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+/* Tabular figures — chiffres alignés en grille fixe (pas de proportional).
+   Le skill flag les nombres en font proportionnel comme un tell d'AI design.
+   À appliquer via la classe `.tabular` sur les stats, prix, %, durées. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Focus ring global — uniquement au clavier (`:focus-visible`), jamais à
+   la souris. Outline ring 2px violet + offset 2px ; les browsers modernes
+   (Chrome 94+, Safari 16.4+, Firefox) font suivre l'outline au
+   `border-radius` de l'élément automatiquement. Accessibilité requise
+   (skill: "Missing focus ring. Ensure visible focus indicators").
+   `:where()` → spécificité 0 pour ne pas écraser un focus stylé
+   explicitement (ex: search input avec border violet). */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 @keyframes fadeUp {
@@ -173,9 +215,11 @@ html, body {
   padding-block: 18px;
 }
 
-/* Hero gradient title */
+/* Hero gradient title — saturation alignée avec Hero.tsx (cf. comment
+   `emGradient` côté React). Triplet 70/60/51% au lieu du 100/76/51 d'origine
+   pour atténuer le pattern "AI purple". */
 .hero-gradient-text {
-  background: linear-gradient(120deg, #A29BFE 0%, #6C5CE7 50%, #5B4FC2 100%);
+  background: linear-gradient(120deg, #aba0e8 0%, #7669d0 50%, #5B4FC2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -273,6 +317,30 @@ html, body {
    Uses :nth-child selectors so the layout stays clean at every breakpoint
    without inline style overrides per cell.
    Border color uses var(--border2) so it adapts to light/dark theme. */
+
+/* Hover spotlight — radial gradient violet qui apparaît à l'entrée du
+   curseur sur la cell. Donne un focal point visuel sans dépendre de JS
+   (le vrai "follow cursor" exigerait un client component). Le ::after
+   est en pointer-events:none donc n'interfère pas avec les interactions
+   éventuelles (liens, boutons) à l'intérieur. */
+.why-cell { position: relative; }
+.why-cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 32%,
+    color-mix(in srgb, var(--primary) 10%, transparent) 0%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.why-cell:hover::after { opacity: 1; }
+@media (hover: none) {
+  .why-cell::after { display: none; }
+}
 
 /* Mobile (< 640px) — single column : horizontal separators only */
 @media (max-width: 639.98px) {

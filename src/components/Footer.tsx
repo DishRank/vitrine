@@ -40,12 +40,12 @@ export default function Footer() {
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--bg)] mt-12">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12 sm:py-16">
-        {/* 4 columns grid : Brand (2x wide) | Produit | Communauté | Légal.
-            Switches to the proper 4-col layout dès md (768px) au lieu de lg —
-            il y a largement la place dès cette largeur, pas besoin d'attendre
-            1024px pour passer en mode "ligne unique". */}
-        <div className="grid grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr] gap-8 md:gap-10">
-          {/* Brand + tagline + store buttons */}
+        {/* 3 columns grid : Brand (2x wide) | Produit | Légal.
+            La colonne "Communauté" (Instagram + contact) a été fusionnée
+            sous le bloc Brand en row d'icônes sociales — réduit le "footer
+            link farm" tout en gardant les 2 liens accessibles. */}
+        <div className="grid grid-cols-2 md:grid-cols-[2fr_1fr_1fr] gap-8 md:gap-10">
+          {/* Brand + tagline + store buttons + social icons */}
           <div className="col-span-2 md:col-span-1">
             <a
               href="/"
@@ -58,7 +58,7 @@ export default function Footer() {
             <p className="text-sm text-[var(--text3)] leading-relaxed mb-5 max-w-sm">
               Note les plats, pas les restos. Trouve la meilleure adresse près de chez toi grâce à la communauté.
             </p>
-            <div className="flex flex-row flex-wrap items-start gap-2 sm:gap-3">
+            <div className="flex flex-row flex-wrap items-start gap-2 sm:gap-3 mb-5">
               {showAppStore && (
                 <a
                   href={APP_STORE_URL}
@@ -90,6 +90,36 @@ export default function Footer() {
                 </a>
               )}
             </div>
+            {/* Icônes sociales — remplacent la colonne "Communauté" pour
+                alléger le footer. Chaque icône a un aria-label explicite. */}
+            <div className="flex items-center gap-2">
+              <a
+                href="https://www.instagram.com/dishrank.app"
+                target="_blank"
+                rel="noopener"
+                className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border2)] text-[var(--text2)] hover:text-[var(--accent-warm)] hover:border-[var(--accent-warm)] transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="2" y="2" width="20" height="20" rx="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                </svg>
+                {/* sr-only : texte d'ancrage lisible par les screen readers
+                    ET crawlers, invisible visuellement. Remplace `aria-label`
+                    qui n'est pas indexé aussi fiablement par tous les bots. */}
+                <span className="sr-only">DishRank sur Instagram</span>
+              </a>
+              <a
+                href="mailto:contact@dishrank.fr"
+                className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border2)] text-[var(--text2)] hover:text-[var(--primary)] hover:border-[var(--primary)] transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+                <span className="sr-only">{t('contact')}</span>
+              </a>
+            </div>
           </div>
 
           {/* Produit */}
@@ -110,17 +140,6 @@ export default function Footer() {
                 </a>
               </li>
               <li><a href="#why" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('why')}</a></li>
-            </ul>
-          </div>
-
-          {/* Communauté */}
-          <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-[1.6px] text-[var(--text3)] mb-4">
-              {t('colCommunaute')}
-            </h4>
-            <ul className="space-y-2.5 text-sm">
-              <li><a href="https://www.instagram.com/dishrank.app" target="_blank" rel="noopener" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">Instagram</a></li>
-              <li><a href="mailto:contact@dishrank.fr" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{t('contact')}</a></li>
             </ul>
           </div>
 
