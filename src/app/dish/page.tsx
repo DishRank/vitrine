@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { headers } from 'next/headers';
 import { PLAY_STORE_URL } from '@/lib/downloadLinks';
 
 export const metadata: Metadata = {
@@ -14,10 +13,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function DishPage() {
-  // Nonce CSP injecté par middleware — appliqué au script inline ci-dessous
-  // pour qu'il soit autorisé par la CSP `'strict-dynamic'`.
-  const nonce = (await headers()).get('x-nonce') || undefined;
+// Page synchrone, sans `headers()` ni fetch dynamique → Next.js peut la
+// pré-rendre au build et le CDN la sert depuis le cache. La CSP est
+// définie dans le middleware avec `'unsafe-inline'` pour autoriser le
+// script inline ci-dessous (cf. middleware.ts §dish).
+export default function DishPage() {
   return (
     <html lang="fr">
       <head>
@@ -47,8 +47,6 @@ export default async function DishPage() {
           </p>
         </div>
         <script
-          nonce={nonce}
-          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
