@@ -5,6 +5,7 @@ import AnimatedLogo from './AnimatedLogo';
 import LocaleSwitcher from './LocaleSwitcher';
 import { usePlatform } from '@/lib/usePlatform';
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/downloadLinks';
+import { trackDownloadClick } from '@/lib/analytics';
 
 /**
  * Nav v3 — fully responsive.
@@ -79,7 +80,10 @@ export default function Nav() {
       target="_blank"
       rel="noopener"
       aria-label={`${t('downloadOn')} Google Play`}
-      onClick={() => setDrawerOpen(false)}
+      onClick={() => {
+        trackDownloadClick('play', variant === 'desktop' ? 'nav_desktop' : 'nav_drawer');
+        setDrawerOpen(false);
+      }}
       className={
         variant === 'desktop'
           ? 'store-btn inline-flex items-center gap-2 px-3.5 py-2 text-white rounded-lg transition-colors border'
@@ -107,7 +111,10 @@ export default function Nav() {
       target="_blank"
       rel="noopener"
       aria-label={`${t('downloadOn')} App Store`}
-      onClick={() => setDrawerOpen(false)}
+      onClick={() => {
+        trackDownloadClick('apple', variant === 'desktop' ? 'nav_desktop' : 'nav_drawer');
+        setDrawerOpen(false);
+      }}
       className={
         variant === 'desktop'
           ? 'store-btn inline-flex items-center gap-2 px-3.5 py-2 text-white rounded-lg transition-colors border'

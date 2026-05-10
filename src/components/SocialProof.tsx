@@ -104,7 +104,7 @@ function EventChip({ ev }: { ev: EventChipData }) {
             ))}
           </span>
           <span>·</span>
-          <span>{ev.ago}</span>
+          <span className="tabular">{ev.ago}</span>
         </div>
       </div>
     </div>
@@ -162,7 +162,7 @@ export default function SocialProof({ reviews }: Props) {
               Les avis qui tombent en ce moment
             </h3>
           </div>
-          <div className="text-left sm:text-right text-[13px] text-[var(--text3)] leading-snug">
+          <div className="tabular text-left sm:text-right text-[13px] text-[var(--text3)] leading-snug">
             <b className="text-[var(--text)] font-bold">{totalReviews} avis</b> récents
             <span className="sm:hidden"> · </span>
             <br className="hidden sm:block" />

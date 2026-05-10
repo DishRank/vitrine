@@ -73,10 +73,10 @@ export default function FAQ({ nonce }: { nonce?: string }) {
           return (
             <div
               key={i}
-              className={`rounded-2xl bg-[var(--surface)] border overflow-hidden transition-colors duration-300 ${
+              className={`rounded-2xl bg-[var(--surface)] border overflow-hidden transition-all duration-300 ${
                 isOpen
-                  ? 'border-[var(--primary)]/40 faq-open'
-                  : 'border-[var(--border2)] hover:border-[var(--primary)]/30'
+                  ? 'border-[var(--primary)]/40 faq-open shadow-lg shadow-[var(--card-shadow)]'
+                  : 'border-[var(--border2)] hover:border-[var(--primary)]/30 hover:-translate-y-0.5 hover:shadow-md hover:shadow-[var(--card-shadow)]'
               }`}
             >
               <button

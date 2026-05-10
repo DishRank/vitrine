@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import dynamic from 'next/dynamic';
 import { fetchDishes, fetchCategories, fetchRecentReviews } from '@/lib/supabase';
 import { localizedCategory } from '@/lib/categoryLabels';
 import { citySlug, cityFromSlug } from '@/lib/slug';
@@ -15,12 +16,23 @@ import FAQ from './FAQ';
 import Showcase from './Showcase';
 import CtaBanner from './CtaBanner';
 import Footer from './Footer';
-import DishModal from './DishModal';
-import LegalSheet from './LegalSheet';
-import CookieConsent from './CookieConsent';
-import BetaModal from './BetaModal';
 import RelatedFilters from './RelatedFilters';
 import CityGuide from './CityGuide';
+import TrackInView from './TrackInView';
+
+// ─── Lazy-loaded modals ────────────────────────────────────────────────
+// Ces composants ne s'affichent jamais au first paint (ils répondent à
+// un user gesture ou à un délai). Les charger à la demande retire ~30 KB
+// de JS du First Load Bundle de la home.
+//
+// On garde le SSR (`ssr: true` est le défaut) pour que l'HTML initial du
+// LegalSheet soit pré-rendu si l'URL contient déjà `?page=privacy` (cas
+// du partage direct sur Reddit etc.). Les autres modals n'ont pas
+// d'usage SSR mais peuvent rester en SSR sans coût significatif.
+const DishModal = dynamic(() => import('./DishModal'));
+const LegalSheet = dynamic(() => import('./LegalSheet'));
+const CookieConsent = dynamic(() => import('./CookieConsent'));
+const BetaModal = dynamic(() => import('./BetaModal'));
 
 type Props = {
   locale: string;
@@ -379,7 +391,9 @@ export default async function HomePageContent({
             social tôt dans le scroll : tu viens de voir des plats notés,
             tu apprends que tu peux décider en groupe sans débat WhatsApp.
             Cohérent avec le tagline du Hero ("met fin aux débats"). */}
-        <SocialFeatures />
+        <TrackInView section="social_features">
+          <SocialFeatures />
+        </TrackInView>
         {/* CTA banner placé après les deux pitchs (top 10 + social) —
             l'utilisateur a vu la valeur produit ET la valeur sociale, c'est
             le bon moment pour télécharger. */}

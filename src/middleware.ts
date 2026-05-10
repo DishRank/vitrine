@@ -93,6 +93,11 @@ function buildCsp(nonce: string, isDev: boolean): string {
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
+    // Remontée des violations CSP réelles → /api/csp-report (cf. cette
+    // route). report-uri est CSP2 (déprécié mais encore très utilisé) ;
+    // report-to est CSP3. On envoie les deux pour couvrir tous les
+    // browsers — ceux qui supportent report-to ignorent report-uri.
+    "report-uri /api/csp-report",
   ].join('; ');
 }
 
@@ -136,16 +141,34 @@ export default function middleware(req: NextRequest) {
   const nonce = generateNonce();
   const csp = buildCsp(nonce, isDev);
 
-  // Top-level deep-link landing pages (outside [locale]) — bypass intl rewrite,
-  // otherwise next-intl rewrites /dish to /[locale]/dish which 404s.
-  // CSP + nonce sont quand même appliqués (les pages /dish et /join ont un
-  // script inline qui lit `headers().get('x-nonce')` pour s'auto-noncer).
-  if (
-    pathname === '/dish' ||
-    pathname.startsWith('/dish/') ||
-    pathname.startsWith('/auth/') ||
-    pathname.startsWith('/join/')
-  ) {
+  // /dish — page de redirect deeplink, pure static (pas de DB, pas de
+  // données dynamiques). On envoie une CSP avec `'unsafe-inline'` pour
+  // autoriser le script inline trivial qu'on ship (geo redirect vers le
+  // schéma `dishrank://`), SANS propager x-nonce → la page peut être
+  // pré-rendue au build et cachée par le CDN. Le script est noindex,
+  // bien connu, et n'utilise que `encodeURIComponent` sur les query
+  // params → surface XSS minimale.
+  if (pathname === '/dish' || pathname.startsWith('/dish/')) {
+    const response = NextResponse.next();
+    const dishCsp = [
+      "default-src 'self'",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' https: data:",
+      "connect-src 'self' https://yztbhdvrvgozhyaujtjz.supabase.co",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+    ].join('; ');
+    response.headers.set('Content-Security-Policy', dishCsp);
+    return response;
+  }
+
+  // /auth/* et /join/* — pages dynamiques avec scripts inline (deeplinks
+  // contextuels). Nonce CSP propagé pour autoriser leurs scripts inline
+  // tout en restant strict.
+  if (pathname.startsWith('/auth/') || pathname.startsWith('/join/')) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-nonce', nonce);
     const response = NextResponse.next({ request: { headers: requestHeaders } });

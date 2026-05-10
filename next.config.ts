@@ -67,6 +67,62 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
         ],
       },
+      // Chrome Privacy Preserving Prefetch Proxy probe — expects JSON
+      // following the trafficadvice spec.
+      {
+        source: '/.well-known/traffic-advice',
+        headers: [
+          { key: 'Content-Type', value: 'application/trafficadvice+json; charset=utf-8' },
+          { key: 'Cache-Control', value: 'public, max-age=86400' },
+        ],
+      },
+      // /favicon.ico contient en réalité une image WebP (renommée pour
+      // satisfaire les probers /favicon.ico des browsers et Vercel).
+      // On force le Content-Type pour que les browsers utilisent le
+      // bon décodeur ; ils détectent de toute façon le format via
+      // les magic bytes RIFF...WEBP.
+      {
+        source: '/favicon.ico',
+        headers: [
+          { key: 'Content-Type', value: 'image/webp' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/favicon.png',
+        headers: [
+          { key: 'Content-Type', value: 'image/png' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // iOS Safari et plusieurs navigateurs probent ces deux URLs à la
+      // racine pour récupérer l'icône d'accueil même si <link rel=
+      // "apple-touch-icon"> pointe ailleurs. Sans le fichier au root,
+      // chaque visiteur iOS génère un 404 + un SSR par-dessus.
+      {
+        source: '/apple-touch-icon.png',
+        headers: [
+          { key: 'Content-Type', value: 'image/png' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/apple-touch-icon-precomposed.png',
+        headers: [
+          { key: 'Content-Type', value: 'image/png' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // RFC 9116 : indique aux chercheurs en sécurité comment signaler
+      // une vulnérabilité. Mozilla Observatory et plusieurs scanners
+      // de conformité vérifient sa présence.
+      {
+        source: '/.well-known/security.txt',
+        headers: [
+          { key: 'Content-Type', value: 'text/plain; charset=utf-8' },
+          { key: 'Cache-Control', value: 'public, max-age=86400' },
+        ],
+      },
     ];
   },
 

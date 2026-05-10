@@ -97,12 +97,14 @@ export default function Hero({ category, city, bestCategory }: Props) {
   const isFiltered = !!(category || city);
 
   // V3 gradient applied ONLY on the <em> portion of the title (white default
-  // for everything else). 3-stop gradient mirrors the original prototype.
+  // for everything else). 3-stop gradient — saturation lowered (skill flags
+  // 100% S as the "AI purple" tell). Same hue (~247°), saturations now
+  // 70/60/51 instead of 100/89/51.
   const emGradient = (chunks: React.ReactNode) => (
     <span
       className="not-italic"
       style={{
-        background: 'linear-gradient(120deg, #a99bff 0%, #7c6cf7 50%, #5b4fc2 100%)',
+        background: 'linear-gradient(120deg, #aba0e8 0%, #7669d0 50%, #5b4fc2 100%)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',
@@ -205,19 +207,19 @@ export default function Hero({ category, city, bestCategory }: Props) {
           <div
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold"
             style={{
-              background: 'rgba(95,211,154,0.12)',
-              border: '1px solid rgba(95,211,154,0.32)',
-              color: '#5fd39a',
+              background: 'color-mix(in srgb, var(--accent-success) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent-success) 32%, transparent)',
+              color: 'var(--accent-success)',
             }}
           >
             <span
               className="pulse-dot inline-block rounded-full"
-              style={{ width: 7, height: 7, background: '#5fd39a' }}
+              style={{ width: 7, height: 7, background: 'var(--accent-success)' }}
             />
             {t('betaOpen')}
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-7 gap-y-2 text-xs font-medium text-[var(--text3)]">
+          <div className="tabular flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-7 gap-y-2 text-xs font-medium text-[var(--text3)]">
             <span>{t.rich('categories', { b: statBold })}</span>
             <span style={{ opacity: 0.3 }} className="hidden sm:inline">·</span>
             <span>{t.rich('free', { b: statBold })}</span>

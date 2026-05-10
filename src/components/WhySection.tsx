@@ -79,31 +79,39 @@ export default function WhySection() {
         }}
       >
         {items.map((item, i) => {
+          // Première cellule mise en valeur — gradient violet très léger en
+          // diagonale, taille d'icône bumpée, numéro plus contrasté. Casse la
+          // grille 3×2 égale (pattern AI flag par le skill) sans toucher la
+          // structure des borders internes.
+          const featured = i === 0;
           return (
             <div
               key={i}
-              className="why-cell px-6 sm:px-7 lg:px-[30px] pt-7 pb-8 sm:pt-8 sm:pb-9"
+              className="why-cell relative px-6 sm:px-7 lg:px-[30px] pt-7 pb-8 sm:pt-8 sm:pb-9"
+              style={featured ? {
+                background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 7%, transparent) 0%, transparent 70%)',
+              } : undefined}
             >
               {/* Icon + number row */}
               <div className="flex items-center justify-between mb-5">
                 <div
                   className="flex items-center justify-center text-[var(--primary)] bg-[var(--primary-container)]"
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
+                    width: featured ? 52 : 44,
+                    height: featured ? 52 : 44,
+                    borderRadius: featured ? 14 : 12,
                     border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
                   }}
                 >
                   <WhyIcon kind={ICONS[i] || 'plate'} />
                 </div>
                 <span
-                  className="font-bold text-[var(--primary)]"
+                  className="font-bold text-[var(--primary)] tabular"
                   style={{
                     fontFamily: 'ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace',
                     fontSize: 12,
                     letterSpacing: 1,
-                    opacity: 0.7,
+                    opacity: featured ? 1 : 0.7,
                   }}
                 >
                   {String(i + 1).padStart(2, '0')}
@@ -112,7 +120,10 @@ export default function WhySection() {
 
               <h3
                 className="font-bold text-[var(--text)] mb-2"
-                style={{ fontSize: 18, letterSpacing: '-0.4px' }}
+                style={{
+                  fontSize: featured ? 19 : 18,
+                  letterSpacing: '-0.4px',
+                }}
               >
                 {item.title}
               </h3>
