@@ -96,6 +96,7 @@ export default async function HomePageContent({
     '@type': 'Organization',
     '@id': 'https://dishrank.fr/#organization',
     name: 'DishRank',
+    alternateName: ['Dish Rank', 'Dish-Rank', 'dishrank'],
     url: 'https://dishrank.fr',
     logo: 'https://dishrank.fr/img/icon.webp',
     sameAs: [
@@ -111,6 +112,7 @@ export default async function HomePageContent({
     '@id': 'https://dishrank.fr/#website',
     url: 'https://dishrank.fr',
     name: 'DishRank',
+    alternateName: ['Dish Rank', 'Dish-Rank', 'dishrank'],
     description: 'Note les plats, pas les restos.',
     publisher: { '@id': 'https://dishrank.fr/#organization' },
     inLanguage: ['fr-FR', 'en-US', 'es-ES', 'de-DE', 'it-IT'],
@@ -131,6 +133,7 @@ export default async function HomePageContent({
     '@type': 'SoftwareApplication',
     '@id': 'https://dishrank.fr/#app',
     name: 'DishRank',
+    alternateName: ['Dish Rank', 'Dish-Rank'],
     operatingSystem: 'iOS, Android',
     applicationCategory: 'LifestyleApplication',
     description: 'Note les plats, pas les restos. Trouve le meilleur burger, sushi, pizza de ta ville grâce aux avis vérifiés de la communauté DishRank.',

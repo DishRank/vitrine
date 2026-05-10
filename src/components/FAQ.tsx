@@ -36,6 +36,10 @@ const QUESTIONS: Array<{ q: string; a: string }> = [
     q: "L'app Android est dispo quand ?",
     a: "L'app est déjà live sur iOS et en bêta ouverte sur Android : tu peux la télécharger librement depuis Google Play dès maintenant. Le passage en production complète est en cours.",
   },
+  {
+    q: "DishRank ou Dish Rank ? C'est la même chose ?",
+    a: "Oui, DishRank et Dish Rank désignent la même app — l'orthographe officielle est DishRank en un seul mot, mais beaucoup l'écrivent en deux mots Dish Rank. Tu peux la trouver sur l'App Store et Google Play sous le nom DishRank, et sur le web à l'adresse dishrank.fr.",
+  },
 ];
 
 export default function FAQ({ nonce }: { nonce?: string }) {
