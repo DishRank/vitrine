@@ -63,7 +63,7 @@ src/
 │   ├── es.json             # Espagnol
 │   ├── de.json             # Allemand
 │   └── it.json             # Italien
-└── middleware.ts           # Rate limiting + anti-scraping + i18n
+└── proxy.ts                # Rate limiting + anti-scraping + i18n (Next 16 proxy)
 ```
 
 ## SEO
@@ -124,7 +124,7 @@ Configures dans `next.config.ts` :
 
 ### Rate limiting
 
-Dans `middleware.ts` : 60 requetes/minute par IP. Au-dela, reponse 429.
+Dans `proxy.ts` : 60 requetes/minute par IP. Au-dela, reponse 429.
 
 ### Anti-scraping
 

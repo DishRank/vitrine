@@ -4,7 +4,7 @@ import type { NextConfig } from 'next';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 // Note : la Content-Security-Policy n'est PAS définie ici. Elle est générée
-// par requête dans `src/middleware.ts` avec un nonce cryptographique +
+// par requête dans `src/proxy.ts` avec un nonce cryptographique +
 // `'strict-dynamic'`. Définir une CSP statique ici l'écraserait avec une
 // version sans nonce (= regression sécurité).
 const securityHeaders = [

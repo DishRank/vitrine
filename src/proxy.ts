@@ -122,7 +122,7 @@ function injectRequestHeaderOverride(response: NextResponse, name: string, value
   response.headers.set(`x-middleware-request-${lower}`, value);
 }
 
-export default function middleware(req: NextRequest) {
+export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Skip static files and internal Next.js routes

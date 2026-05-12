@@ -15,8 +15,8 @@ export const metadata: Metadata = {
 
 // Page synchrone, sans `headers()` ni fetch dynamique → Next.js peut la
 // pré-rendre au build et le CDN la sert depuis le cache. La CSP est
-// définie dans le middleware avec `'unsafe-inline'` pour autoriser le
-// script inline ci-dessous (cf. middleware.ts §dish).
+// définie dans le proxy avec `'unsafe-inline'` pour autoriser le
+// script inline ci-dessous (cf. proxy.ts §dish).
 export default function DishPage() {
   return (
     <html lang="fr">
