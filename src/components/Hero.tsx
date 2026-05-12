@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+import DownloadButtons from './DownloadButtons';
 
 type Props = {
   /** Localized category label (e.g. "pizza", "pâtes") */
@@ -200,6 +201,15 @@ export default function Hero({ category, city, bestCategory }: Props) {
           <p className="text-sm text-[var(--text2)] max-w-[680px] leading-relaxed mb-8 px-2 opacity-80">
             {t(introKey, args)}
           </p>
+        )}
+
+        {/* Download CTA — home only. Placé avant la beta pill / stats pour
+            capturer l'intention dès le viewport initial. Sur les pages
+            filtrées, le visiteur arrive via une intention SEO précise
+            ("burger Lyon") : on le laisse scroller vers les plats avant de
+            pousser le CTA (qui revient plus bas via <CtaBanner />). */}
+        {!isFiltered && (
+          <DownloadButtons size="lg" className="mb-7 sm:mb-8" />
         )}
 
         {/* Beta pill + stats stacked */}

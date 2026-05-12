@@ -12,6 +12,22 @@ const OG_LOCALE_MAP: Record<string, string> = {
   it: 'it_IT',
 };
 
+/**
+ * BCP-47 codes pour `<link rel="alternate" hreflang="...">`.
+ * Google accepte les codes langue seuls (`fr`) mais les codes
+ * langue-région (`fr-FR`) donnent un meilleur ciblage pays — utile
+ * dès qu'on commence à diversifier (ex : `es-ES` vs `es-MX`, `de-DE`
+ * vs `de-AT`). Cohérent avec le ciblage initial : France (fr-FR),
+ * marchés européens principaux pour les autres.
+ */
+const HREFLANG_BY_LOCALE: Record<string, string> = {
+  fr: 'fr-FR',
+  en: 'en-US',
+  es: 'es-ES',
+  de: 'de-DE',
+  it: 'it-IT',
+};
+
 const SITE = 'https://dishrank.fr';
 const OG_IMAGE = `${SITE}/img/play_store_feature_graphic.webp`;
 
@@ -110,11 +126,11 @@ export async function buildSeoMetadata({
     alternates: {
       canonical: buildFilterUrl(locale, city, category),
       languages: {
-        fr: buildFilterUrl('fr', city, category),
-        en: buildFilterUrl('en', city, category),
-        es: buildFilterUrl('es', city, category),
-        de: buildFilterUrl('de', city, category),
-        it: buildFilterUrl('it', city, category),
+        [HREFLANG_BY_LOCALE.fr]: buildFilterUrl('fr', city, category),
+        [HREFLANG_BY_LOCALE.en]: buildFilterUrl('en', city, category),
+        [HREFLANG_BY_LOCALE.es]: buildFilterUrl('es', city, category),
+        [HREFLANG_BY_LOCALE.de]: buildFilterUrl('de', city, category),
+        [HREFLANG_BY_LOCALE.it]: buildFilterUrl('it', city, category),
         'x-default': buildFilterUrl('fr', city, category),
       },
     },

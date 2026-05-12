@@ -1,18 +1,21 @@
 {
   "meta": {
     "title": "DishRank — Best dishes by city · Rankings & reviews 2026",
-    "description": "Find where to eat the best burger, sushi, pizza in your city. Ranking by dish (not by restaurant) with verified ratings. Create a group with your friends, merge your favorites and plan your outings in 30 seconds.",
+    "description": "The app that rates dishes, not restaurants. Top burger, sushi, pizza in your city. Restaurant, bar, café with friends: vote and DishRank finds the spot right in the middle.",
     "titleWithCategory": "{bestCategory} 2026 — Top ranking & reviews | DishRank",
     "titleWithCityCategory": "{bestCategory} in {city} 2026 — Top 10 & reviews | DishRank",
     "titleWithCity": "Where to eat in {city} 2026 — Top rated dishes | DishRank",
     "descWithCategory": "Top {category} 2026: ranked by community reviews. Addresses, prices, photos and ratings to find {bestCategory} near you.",
     "descWithCity": "Discover the best dishes in {city} in 2026: burger, sushi, pizza and more. Ranking by dish with ratings, photos and verified community reviews.",
-    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 ranking by community reviews. Addresses, prices, photos and verified ratings on DishRank."
+    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 ranking by community reviews. Addresses, prices, photos and verified ratings on DishRank.",
+    "siteTagline": "Rate the dishes, not the restaurants.",
+    "appDescription": "Rate the dishes, not the restaurants. Find the best burger, sushi, pizza in your city with verified ratings from the DishRank community. Create a group with your friends, vote for the meeting spot, DishRank picks the address right in the middle of everyone."
   },
   "hero": {
     "label": "Rate the dishes, not the restaurants.",
     "title": "The <em>best dish</em> near you.",
-    "tagline": "And the app that ends the <em>WhatsApp</em> group debates.",
+    "tagline": "And the app that helps your group pick a spot — without the endless <em>WhatsApp</em> debate.",
+    "downloadCta": "Download the app",
     "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} near you.",
     "titleWithCity": "The best dishes in <em>{city}</em>",
     "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} in {city}",
@@ -69,6 +72,94 @@
     "title": "Everything you love to eat.",
     "subtitle": "200+ categories. From street food to fine dining."
   },
+  "faq": {
+    "title": "Frequently asked questions",
+    "subtitle": "Everything we get asked most often.",
+    "items": [
+      {
+        "q": "How does DishRank work?",
+        "a": "You open the app, search for a dish (burger, sushi, ramen…) and see the ranking of the best in your city, based on community ratings. You can rate in 10 seconds: photo + 4 criteria (taste, presentation, price, quantity). And with your friends, you create groups to plan an outing without the WhatsApp debate."
+      },
+      {
+        "q": "How do groups and outings with friends work?",
+        "a": "You add your friends by username, QR code or link, then create a group (family, colleagues, crew). Your favorites are merged automatically, you chat in the in-app messenger, and when it's time to go out you set the date + venue type (restaurant / bar / café). DishRank suggests the best spots in the middle of everyone (the group's midpoint) from your shared favorites — the group votes, done in 30 seconds."
+      },
+      {
+        "q": "Do my friends see everything I do on the app?",
+        "a": "No, you control everything. Your friends only see the reviews you publish (as before) and the groups you share. Group messages stay in the group — they're never shared elsewhere or sold. You can leave a group or block someone at any time from their profile."
+      },
+      {
+        "q": "Is it really free?",
+        "a": "Yes, 100% free. No ads, no subscription, no in-app purchases, and no \"premium\" social tier either. The project is built by a solo dev who wants to make restaurant choices simpler — monetization will come later, and never at users' expense."
+      },
+      {
+        "q": "Why rate dishes instead of restaurants?",
+        "a": "A restaurant rated 4.2★ on Google can serve an excellent salad and a disastrous pasta. The average rating tells you nothing about what YOU should order. DishRank rates each dish individually — you know exactly what to pick, and you can compare your friends' picks in a group."
+      },
+      {
+        "q": "Which cities is the app available in?",
+        "a": "The app works everywhere, but content is mainly in Lyon at launch. As the community and your friend groups grow, more cities fill up. You can contribute today wherever you are — every review counts."
+      },
+      {
+        "q": "When will the Android app be available?",
+        "a": "The app is already live on iOS and in open beta on Android: you can download it freely from Google Play right now. Full production rollout is in progress."
+      },
+      {
+        "q": "DishRank or Dish Rank? Is it the same thing?",
+        "a": "Yes, DishRank and Dish Rank refer to the same app — the official spelling is DishRank as one word, but many people write it as two words Dish Rank. You can find it on the App Store and Google Play under the name DishRank, and on the web at dishrank.fr."
+      }
+    ]
+  },
+  "dishVsResto": {
+    "badge": "Demo",
+    "title": "Same restaurant. <em>Opposite verdicts.</em>",
+    "body": "A restaurant's rating doesn't tell you <strong>what to order</strong>. DishRank rates each dish independently — so you know exactly what's worth a try, and what to skip.",
+    "footnote": "That's why we rate the dishes, not the restaurants.",
+    "restaurantName": "Le Bistrot du Coin",
+    "restaurantMeta": "Google rating: 4.2 ★",
+    "dish1Name": "Smash bacon burger",
+    "dish1Reviews": "23 reviews",
+    "dish2Name": "Homemade tartare",
+    "dish2Reviews": "9 reviews"
+  },
+  "socialFeatures": {
+    "pill": "New · With friends",
+    "headline": "DishRank is better <em>together.</em>",
+    "subtitle": "We rate the dishes — then help your group actually pick a spot, together. Not yet another poll, a real decision tool.",
+    "andAlso": "Also",
+    "barycentre": {
+      "pill": "Exclusive · Outings",
+      "title": "We help you pick <em>where to meet.</em>",
+      "venues": "Restaurant · Bar · Café",
+      "illustrationAlt": "Diagram: three friends spread around a central point representing the meeting place",
+      "steps": [
+        { "num": "01", "title": "You start the outing" },
+        { "num": "02", "title": "DishRank suggests the best spots" },
+        { "num": "03", "title": "The group votes" },
+        { "num": "04", "title": "Plan locked in" }
+      ]
+    },
+    "items": [
+      {
+        "pill": "Groups",
+        "title": "Groups with your crew",
+        "desc": "Your friends share their reviews, you see their activity, and never \"where do we eat?\" without an answer again.",
+        "bullets": ["Invite codes and shared links", "Centralized group activity", "Per-group notifications"]
+      },
+      {
+        "pill": "Polls",
+        "title": "Decide in 30 seconds",
+        "desc": "No more endless WhatsApp debates. The group votes for the place, the verdict drops.",
+        "bullets": ["Filter by venue type", "Spots in the middle of everyone", "Group's favorites surfaced"]
+      },
+      {
+        "pill": "Shared lists",
+        "title": "Your gems, together",
+        "desc": "One living list with the group's best spots — added by everyone, shareable by link.",
+        "bullets": ["Real-time multi-collaborator", "Auto lists by category", "Public or private link sharing"]
+      }
+    ]
+  },
   "why": {
     "title": "Why DishRank?",
     "items": [
@@ -77,7 +168,7 @@
       { "title": "200+ categories", "desc": "Burger, sushi, ramen, crepes, kebab, dessert, bubble tea, pho... we have it all." },
       { "title": "100% free", "desc": "No ads, no subscription. Just the best dishes in your city." },
       { "title": "Better with friends", "desc": "Create a group, merge your favorites, chat in-app. Never 'where to eat?' without an answer again." },
-      { "title": "Outings in 30 seconds", "desc": "Set the date + venue type (restaurant / bar / café) + preferences. DishRank suggests the best spots for the group. Vote or random pick, done." }
+      { "title": "Outings in 30 seconds", "desc": "Set the date + venue type (restaurant / bar / café). DishRank suggests the best spots in the middle of the group. The group votes, done." }
     ]
   },
   "cta": {

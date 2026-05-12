@@ -1,11 +1,13 @@
 import { headers } from 'next/headers';
 import dynamic from 'next/dynamic';
+import { getTranslations } from 'next-intl/server';
 import { fetchDishes, fetchCategories, fetchRecentReviews } from '@/lib/supabase';
 import { localizedCategory } from '@/lib/categoryLabels';
 import { citySlug, cityFromSlug } from '@/lib/slug';
 import { buildFilterPath, buildFilterUrl, buildBestCategoryFragment, buildTopDishesTitle } from '@/lib/seoMetadata';
 import Nav from './Nav';
 import Hero from './Hero';
+import DishVsRestoDemo from './DishVsRestoDemo';
 import SearchSection from './SearchSection';
 import DishGrid from './DishGrid';
 import SocialProof from './SocialProof';
@@ -63,6 +65,13 @@ export default async function HomePageContent({
   // Nonce CSP injecté par middleware — appliqué à tous les <script> JSON-LD
   // inline pour qu'ils soient autorisés par la CSP `'strict-dynamic'`.
   const nonce = (await headers()).get('x-nonce') || undefined;
+
+  // Traductions pour le JSON-LD (description WebSite + SoftwareApplication).
+  // Sans ça, ces descriptions restaient hardcodées FR sur toutes les locales
+  // → mismatch de langue côté schema.org sur /en/, /es/, etc.
+  const tMeta = await getTranslations({ locale, namespace: 'meta' });
+  const siteTagline = tMeta('siteTagline');
+  const appDescription = tMeta('appDescription');
 
   let dishes: Awaited<ReturnType<typeof fetchDishes>> = [];
   let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
@@ -125,7 +134,7 @@ export default async function HomePageContent({
     url: 'https://dishrank.fr',
     name: 'DishRank',
     alternateName: ['Dish Rank', 'Dish-Rank', 'dishrank'],
-    description: 'Note les plats, pas les restos.',
+    description: siteTagline,
     publisher: { '@id': 'https://dishrank.fr/#organization' },
     inLanguage: ['fr-FR', 'en-US', 'es-ES', 'de-DE', 'it-IT'],
     potentialAction: {
@@ -148,7 +157,7 @@ export default async function HomePageContent({
     alternateName: ['Dish Rank', 'Dish-Rank'],
     operatingSystem: 'iOS, Android',
     applicationCategory: 'LifestyleApplication',
-    description: 'Note les plats, pas les restos. Trouve le meilleur burger, sushi, pizza de ta ville grâce aux avis vérifiés de la communauté DishRank.',
+    description: appDescription,
     url: 'https://dishrank.fr',
     downloadUrl: [
       'https://apps.apple.com/fr/app/dishrank/id6761752556',
@@ -376,6 +385,16 @@ export default async function HomePageContent({
           city={cityLabel || undefined}
           bestCategory={bestCategory || undefined}
         />
+        {/* Démo "même resto, plats opposés" — preuve visuelle immédiate du
+            value prop. Home uniquement : sur les pages filtrées catégorie/
+            ville, le visiteur est déjà en shopping intent, on ne ré-explique
+            pas le concept. Trackée pour mesurer son impact sur les
+            conversions (corrélation avec téléchargements post-vue). */}
+        {isHome && (
+          <TrackInView section="dish_vs_resto_demo">
+            <DishVsRestoDemo />
+          </TrackInView>
+        )}
         <SearchSection
           categories={categories}
           initialCategory={category || ''}
