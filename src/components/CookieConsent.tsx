@@ -59,6 +59,9 @@ export default function CookieConsent() {
   const t = useTranslations('cookies');
   const [consent, setConsent] = useState<Consent>('granted'); // SSR default: hidden
   const [showCustomize, setShowCustomize] = useState(false);
+  /** `closingCustomize` = customize en cours de sortie. On garde le DOM
+   *  monté pendant l'animation modal-down (~280ms) puis on unmount. */
+  const [closingCustomize, setClosingCustomize] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false); // case décochée par défaut
   const [visible, setVisible] = useState(false);
 
@@ -128,15 +131,26 @@ export default function CookieConsent() {
 
   // "Personnaliser" → user décide explicitement, on enregistre selon les toggles
   const saveCustom = useCallback(() => {
-    setVisible(false);
+    // Animation sortie customize → puis on persist + ferme.
+    setClosingCustomize(true);
     window.setTimeout(() => {
       const choice: Consent = analyticsEnabled ? 'granted' : 'denied';
       localStorage.setItem(CONSENT_KEY, choice);
       setConsent(choice);
       if (choice === 'granted') loadGA();
       setShowCustomize(false);
-    }, 300);
+      setClosingCustomize(false);
+    }, 280);
   }, [analyticsEnabled]);
+
+  /** "Retour" depuis customize → animation sortie puis retour banner principal. */
+  const backFromCustomize = useCallback(() => {
+    setClosingCustomize(true);
+    window.setTimeout(() => {
+      setShowCustomize(false);
+      setClosingCustomize(false);
+    }, 280);
+  }, []);
 
   // Si déjà répondu, on n'affiche rien
   if (consent !== null) return null;
@@ -148,9 +162,9 @@ export default function CookieConsent() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="cookie-customize-title"
-        className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease]"
+        className={`fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm ${closingCustomize ? 'backdrop-out' : 'backdrop-in'}`}
       >
-        <div className="relative w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border2)] rounded-2xl shadow-2xl animate-[slideUp_0.3s_ease]">
+        <div className={`relative w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border2)] rounded-2xl shadow-2xl ${closingCustomize ? 'modal-down' : 'modal-up'}`}>
           {/* Header */}
           <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--border)]">
             <h2 id="cookie-customize-title" className="font-bold text-xl text-[var(--text)]">
@@ -211,7 +225,7 @@ export default function CookieConsent() {
           <div className="px-6 sm:px-8 py-4 border-t border-[var(--border)] flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end">
             <button
               type="button"
-              onClick={() => setShowCustomize(false)}
+              onClick={backFromCustomize}
               className="px-5 py-2.5 rounded-lg text-sm font-semibold text-[var(--text)] bg-transparent border border-[var(--border2)] hover:bg-[var(--surface-var)] transition-colors cursor-pointer"
             >
               {t('back')}
@@ -236,8 +250,13 @@ export default function CookieConsent() {
   // `transform` avec variables comme en v3). Résultat : la dernière classe
   // écrase la précédente — le centrage X se perd dans l'état caché et
   // l'animation devient incohérente. On centralise donc le translate dans
-  // un inline style unique. Animation : slide-in horizontal depuis la
-  // gauche (off-screen → centré) + fade.
+  // un inline style unique.
+  //
+  // Animation : slide-in depuis le BAS (translateY +120% → 0) avec une
+  // courbe spring iOS-style. Cohérent avec le pattern "sheet from bottom"
+  // utilisé partout sur le site (LegalSheet, BetaModal, CookieConsent
+  // customize). L'horizontal slide d'origine était visuellement isolé
+  // par rapport au reste.
   return (
     <div
       role="dialog"
@@ -249,9 +268,9 @@ export default function CookieConsent() {
         left: '50%',
         transform: visible
           ? 'translate(-50%, 0)'
-          : 'translate(-200%, 0)',
+          : 'translate(-50%, calc(100% + 32px))',
         opacity: visible ? 1 : 0,
-        transition: 'transform 500ms cubic-bezier(0.32, 0.72, 0, 1), opacity 300ms ease-out',
+        transition: 'transform 460ms cubic-bezier(0.32, 0.72, 0, 1), opacity 280ms ease-out',
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >

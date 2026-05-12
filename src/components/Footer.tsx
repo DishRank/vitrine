@@ -20,11 +20,52 @@ export default function Footer() {
     window.dispatchEvent(new CustomEvent('open-legal', { detail: page }));
   }, []);
 
+  /** Smooth scroll custom — implémentation rAF qui IGNORE la préférence
+   *  système `prefers-reduced-motion`. Justification : naviguer vers une
+   *  section EST une intention explicite de l'utilisateur (il a cliqué
+   *  un lien d'ancrage), pas de la déco passive. Sans le smooth, l'user
+   *  est téléporté et perd la repère visuel "je viens de descendre".
+   *  Le browser désactive `scrollIntoView({ behavior: smooth })` quand
+   *  reduced-motion est actif → on contourne en pilotant le scroll
+   *  frame-par-frame avec une easing inOutQuad (650ms par défaut). */
+  const smoothScrollTo = useCallback((targetY: number, duration = 650) => {
+    const startY = window.scrollY;
+    const distance = targetY - startY;
+    if (Math.abs(distance) < 1) return;
+    let start: number | null = null;
+    const easeInOutQuad = (t: number) =>
+      t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const step = (ts: number) => {
+      if (start === null) start = ts;
+      const t = Math.min(1, (ts - start) / duration);
+      window.scrollTo(0, startY + distance * easeInOutQuad(t));
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, []);
+
   /** "Explorer" = retour en haut de page (cohérent avec la nav). */
   const scrollToTop = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    smoothScrollTo(0);
+  }, [smoothScrollTo]);
+
+  /** Anchor link → smooth scroll custom (cf. smoothScrollTo). Met à jour
+   *  le hash de l'URL pour le partage. Le `scroll-margin-top: 80px` global
+   *  est compensé en JS via -80 sur la position cible. */
+  const scrollToAnchor = useCallback((e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
+    e.preventDefault();
+    const el = document.querySelector(hash) as HTMLElement | null;
+    if (el) {
+      // 80px = hauteur nav (h-16 = 64px) + 16px d'air, identique à la valeur
+      // de `scroll-margin-top` posée sur `:where([id])` dans globals.css.
+      const targetY = el.getBoundingClientRect().top + window.scrollY - 80;
+      smoothScrollTo(Math.max(0, targetY));
+      // Update URL hash sans push (replace) → pas de pollution de l'historique
+      // navigateur sur les clics rapides successifs.
+      window.history.replaceState(null, '', hash);
+    }
+  }, [smoothScrollTo]);
 
   /** "Cookies" → rouvre la modal de paramétrage cookies (CookieConsent
    *  écoute cet event et affiche directement le panneau "Personnaliser"
@@ -128,18 +169,18 @@ export default function Footer() {
               {t('colProduit')}
             </h4>
             <ul className="space-y-2.5 text-sm">
-              <li><a href="/" onClick={scrollToTop} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('explore')}</a></li>
-              <li><a href="#top10" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('ranking')}</a></li>
-              <li><a href="#app" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('app')}</a></li>
+              <li><a href="/" onClick={scrollToTop} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tn('explore')}</a></li>
+              <li><a href="#top10" onClick={(e) => scrollToAnchor(e, '#top10')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tn('ranking')}</a></li>
+              <li><a href="#app" onClick={(e) => scrollToAnchor(e, '#app')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tn('app')}</a></li>
               <li>
-                <a href="#social" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors inline-flex items-center gap-1.5">
+                <a href="#social" onClick={(e) => scrollToAnchor(e, '#social')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">
                   {tn('social')}
                   <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#ff7a3d]/15 text-[#ff7a3d] border border-[#ff7a3d]/30">
                     {tn('new')}
                   </span>
                 </a>
               </li>
-              <li><a href="#why" className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tn('why')}</a></li>
+              <li><a href="#why" onClick={(e) => scrollToAnchor(e, '#why')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tn('why')}</a></li>
             </ul>
           </div>
 
@@ -149,14 +190,37 @@ export default function Footer() {
               {t('colLegal')}
             </h4>
             <ul className="space-y-2.5 text-sm">
-              <li><a href="/?page=privacy" onClick={(e) => openLegal(e, 'privacy')} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tl('privacy')}</a></li>
-              <li><a href="/?page=terms" onClick={(e) => openLegal(e, 'terms')} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tl('terms')}</a></li>
-              <li><a href="/?page=delete" onClick={(e) => openLegal(e, 'delete')} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors">{tl('delete')}</a></li>
-              <li><a href="#" onClick={openCookieSettings} className="text-[var(--text2)] hover:text-[var(--text)] transition-colors cursor-pointer">{t('cookies')}</a></li>
+              <li><a href="/?page=privacy" onClick={(e) => openLegal(e, 'privacy')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tl('privacy')}</a></li>
+              <li><a href="/?page=terms" onClick={(e) => openLegal(e, 'terms')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tl('terms')}</a></li>
+              <li><a href="/?page=delete" onClick={(e) => openLegal(e, 'delete')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tl('delete')}</a></li>
+              <li><a href="#" onClick={openCookieSettings} className="footer-link text-[var(--text2)] hover:text-[var(--text)] cursor-pointer">{t('cookies')}</a></li>
             </ul>
           </div>
         </div>
 
+        {/* Sub-footer : copyright + petite ligne "Made in France" + back-to-top.
+            Sépare visuellement la zone légale / signature des link columns
+            au-dessus. Border-top discret pour ancrer le bloc. */}
+        <div className="mt-10 sm:mt-14 pt-6 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--text3)]">
+          <p className="tabular">
+            © {new Date().getFullYear()} DishRank ·{' '}
+            <span className="inline-flex items-center gap-1">
+              <span>Made in France</span>
+              <span aria-hidden="true">🇫🇷</span>
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={() => smoothScrollTo(0)}
+            className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border2)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
+            aria-label="Retour en haut"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+            <span>{t('backToTop')}</span>
+          </button>
+        </div>
       </div>
     </footer>
   );

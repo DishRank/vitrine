@@ -58,7 +58,19 @@ export default function DishGrid({
         </div>
       ) : dishes.length === 0 ? (
         <div className="text-center py-16">
-          <span className="text-5xl block mb-3">&#128269;</span>
+          <div
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 text-[var(--primary)]"
+            style={{
+              background: 'var(--primary-container)',
+              border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
+            }}
+            aria-hidden="true"
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
           <p className="text-lg font-bold mb-1">{t('noResults')}</p>
           <p className="text-[var(--text2)] text-sm mb-5">{t('beFirst')}</p>
           <DownloadButtons size="lg" />
@@ -71,11 +83,27 @@ export default function DishGrid({
               role="button"
               tabIndex={0}
               aria-label={`${d.dish_name} — ${d.restaurant_name}${d.restaurant_city ? `, ${d.restaurant_city}` : ''} — ${d.avg_rating}/5`}
-              className="group bg-[var(--surface)] rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-[var(--card-shadow)] transition-all duration-300 animate-[fadeUp_0.4s_ease_both] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
+              className="dish-card group relative bg-[var(--surface)] rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-[var(--card-shadow)] transition-all duration-300 animate-[fadeUp_0.4s_ease_both] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
               style={{ animationDelay: `${i * 40}ms` }}
+              onMouseMove={(e) => {
+                // Track cursor pour le shine radial. On stocke en CSS var
+                // sur la card (`--mx`/`--my` en %) → l'overlay
+                // `.dish-card-shine` consomme via `radial-gradient` qui se
+                // recalcule à chaque paint (donc à chaque pointermove).
+                // Throttle naturel : pointermove vient déjà capé à ~60Hz.
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const mx = ((e.clientX - rect.left) / rect.width) * 100;
+                const my = ((e.clientY - rect.top) / rect.height) * 100;
+                e.currentTarget.style.setProperty('--mx', `${mx}%`);
+                e.currentTarget.style.setProperty('--my', `${my}%`);
+              }}
               onClick={() => window.dispatchEvent(new CustomEvent('open-dish', { detail: d }))}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('open-dish', { detail: d })); } }}
             >
+              {/* Shine radial qui suit le curseur — overlay au-dessus de tout
+                  le contenu mais sous les badges (z-index 1). pointer-events
+                  none pour ne pas bloquer le click. */}
+              <div className="dish-card-shine pointer-events-none absolute inset-0 z-[1] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-hidden="true" />
               <div className="relative h-36 overflow-hidden">
                 <Image
                   src={d.cover_photo_url}

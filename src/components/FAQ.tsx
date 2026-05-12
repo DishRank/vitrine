@@ -56,16 +56,26 @@ export default function FAQ({ nonce }: { nonce?: string }) {
                 type="button"
                 onClick={() => setOpen(isOpen ? null : i)}
                 aria-expanded={isOpen}
-                className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-5 text-left"
+                className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-5 text-left cursor-pointer"
               >
                 <span className="font-semibold text-[var(--text)] text-base sm:text-lg pr-2">
                   {item.q}
                 </span>
+                {/* Chevron SVG plutôt qu'un `+` glyph : taille stable cross-browser
+                    (le caractère + a un line-height inégal en fonction de la
+                    police système), rotation propre, et matche le langage
+                    iconographique du reste du site (Heroicons-style 1.8 stroke). */}
                 <span
-                  className="faq-icon text-2xl text-[var(--primary)] font-light leading-none shrink-0"
+                  className="faq-icon flex items-center justify-center w-9 h-9 rounded-full text-[var(--primary)] shrink-0"
+                  style={{
+                    background: isOpen ? 'var(--primary-container)' : 'transparent',
+                    border: '1px solid color-mix(in srgb, var(--primary) 22%, transparent)',
+                  }}
                   aria-hidden="true"
                 >
-                  +
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </span>
               </button>
               {/* Animated collapse using grid-rows 0fr→1fr transition (CSS) */}

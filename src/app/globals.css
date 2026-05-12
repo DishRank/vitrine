@@ -151,17 +151,51 @@ p {
   from { opacity: 1; }
   to { opacity: 0; }
 }
+/* Sheet animations — courbes iOS-style spring plutôt que `ease` linéaire :
+   • Up : décélération marquée à la fin (cubic-bezier(0.32, 0.72, 0, 1)) →
+     ressenti "arrive avec un petit overshoot mais s'arrête doux".
+   • Down : accélération en sortie (cubic-bezier(0.4, 0, 0.7, 0.2)) →
+     "se laisse tomber", plus rapide qu'un ease symétrique.
+   Les keyframes sont juste les états from/to ; la courbe est appliquée
+   via `animation-timing-function` sur la classe utilisée (cf. classes
+   utilitaires .sheet-up / .sheet-down ci-dessous). */
 @keyframes sheetUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from { transform: translateY(100%); opacity: 0.6; }
+  to   { transform: translateY(0); opacity: 1; }
 }
 @keyframes sheetDown {
-  from { transform: translateY(0); }
-  to { transform: translateY(100%); }
+  from { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0.4; }
 }
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px) scale(0.97); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; transform: translateY(36px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes slideDownOut {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(36px) scale(0.97); }
+}
+
+/* Classes utilitaires sheet — appliquées par LegalSheet / BetaModal /
+   CookieConsent customize. La courbe iOS distingue l'entrée (décélère
+   doux) de la sortie (s'enfonce vite). */
+.sheet-up {
+  animation: sheetUp 380ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.sheet-down {
+  animation: sheetDown 280ms cubic-bezier(0.4, 0, 0.7, 0.2) both;
+}
+.modal-up {
+  animation: slideUp 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.modal-down {
+  animation: slideDownOut 240ms cubic-bezier(0.4, 0, 0.7, 0.2) both;
+}
+.backdrop-in {
+  animation: fadeIn 240ms ease-out both;
+}
+.backdrop-out {
+  animation: fadeOut 240ms ease-in both;
 }
 @keyframes chipPop {
   from { opacity: 0; transform: scale(0.7); }
@@ -281,9 +315,23 @@ p {
 .store-btn {
   background-color: var(--store-btn-bg);
   border-color: var(--store-btn-border);
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  will-change: transform;
 }
 .store-btn:hover {
   background-color: var(--store-btn-bg-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.35);
+}
+.store-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+}
+@media (hover: none) {
+  .store-btn:hover { transform: none; box-shadow: none; }
 }
 
 /* Event chips ("En direct" marquee) — hover scale + tint violette.
@@ -359,9 +407,16 @@ p {
   .why-cell:nth-child(-n+3) { border-bottom: 1px solid var(--border2); }
 }
 
-/* FAQ accordion icon rotation */
-.faq-icon { transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1); }
-.faq-open .faq-icon { transform: rotate(45deg); }
+/* FAQ accordion icon rotation — chevron pivote de 180° (down → up).
+   `transition` couvre la rotation ET la teinte de fond (chevron actif passe
+   transparent → primary-container) pour qu'elles bougent d'un seul tempo. */
+.faq-icon {
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0, 0.2, 1),
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+.faq-open .faq-icon { transform: rotate(180deg); }
 
 /* FAQ accordion animation — uses grid-template-rows trick (modern, no JS height
    measurement needed). Closed = 0fr (height 0), open = 1fr (auto height).
@@ -386,12 +441,290 @@ p {
   transform: translateY(0);
 }
 
+/* ────── Wow-effect animations (scroll-reveal, mesh blob, shimmer) ─────
+   Animations utilisées par :
+     • Reveal stagger (.reveal / .reveal-stagger) — IntersectionObserver
+       côté JS pose la classe `.in` quand la section entre dans le viewport,
+       et chaque enfant `[data-reveal-child]` est délayé par `--ri`.
+     • Mesh blob (.mesh-blob) — fond Hero qui dérive lentement.
+     • Shimmer (.shimmer) — sweep diagonal périodique sur un élément (ribbon
+       "Top" de WhySection, badges…). */
+
+/* Reveal — état au repos : caché en bas + scale léger.
+   Quand `.in` est posé par l'observer, transition vers l'état final. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px) scale(0.985);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+.reveal.in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Reveal stagger — enfants directs marqués `data-reveal-child` reçoivent
+   un delay basé sur leur index (posé en CSS var `--ri` par le composant).
+   On utilise une CSS var fallback à 0 pour rester gracieux si non posé. */
+.reveal-stagger > [data-reveal-child] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ri, 0) * 70ms),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ri, 0) * 70ms);
+  will-change: transform, opacity;
+}
+.reveal-stagger.in > [data-reveal-child] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Mesh blob — gradient radial qui dérive lentement (drift). Variation
+   discrète : translation circulaire + scale très léger. 18s loop. */
+@keyframes mesh-drift {
+  0%, 100% { transform: translate(-50%, 0) scale(1); }
+  25%      { transform: translate(-45%, -3%) scale(1.04); }
+  50%      { transform: translate(-50%, -1%) scale(1.07); }
+  75%      { transform: translate(-55%, -2%) scale(1.03); }
+}
+.mesh-blob {
+  animation: mesh-drift 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Mesh blob secondaire — phase inversée pour casser la symétrie. */
+@keyframes mesh-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(4%, 2%) scale(1.05); }
+  66%      { transform: translate(-3%, -2%) scale(0.96); }
+}
+.mesh-blob-2 {
+  animation: mesh-drift-2 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Shimmer — sweep diagonal sur un élément `relative` + `overflow:hidden`.
+   On l'applique via ::after pour ne pas perturber le contenu. */
+@keyframes shimmer-sweep {
+  0%   { transform: translateX(-130%) skewX(-18deg); opacity: 0; }
+  35%  { opacity: 1; }
+  70%  { transform: translateX(230%) skewX(-18deg); opacity: 0; }
+  100% { transform: translateX(230%) skewX(-18deg); opacity: 0; }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 55%;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
+  pointer-events: none;
+  animation: shimmer-sweep 3.4s ease-in-out infinite;
+  animation-delay: 1.2s;
+  transform: translateX(-130%) skewX(-18deg);
+}
+
+/* Glow pulse — halo lent autour d'un élément (utilisé pour la beta pill,
+   ou tout badge "live"). Très léger pour ne pas distraire. */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 30%, transparent); }
+  50%      { box-shadow: 0 0 0 8px color-mix(in srgb, currentColor 0%, transparent); }
+}
+.glow-pulse {
+  animation: glow-pulse 2.4s ease-in-out infinite;
+}
+
+/* `.dish-card-shine` — overlay radial qui suit le curseur sur les cards
+   DishGrid. Les CSS vars `--mx` / `--my` sont posées en JS via onMouseMove
+   sur le parent (pourcentages X/Y dans la card). Désactivé sur touch. */
+.dish-card-shine {
+  background: radial-gradient(
+    200px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--primary) 24%, transparent),
+    transparent 60%
+  );
+  mix-blend-mode: overlay;
+}
+.dark .dish-card-shine { mix-blend-mode: screen; }
+@media (hover: none) { .dish-card-shine { display: none; } }
+
+/* `.magnetic` — élément dont la transform est mise à jour en JS via
+   pointermove (voir useMagnetic dans DownloadButtons). Pas de transition
+   CSS ici : pendant le follow, on veut un track instantané (sinon lag
+   perceptible). Le repli (pointerleave → 0,0) est géré côté JS via une
+   transition temporaire posée juste pour cette frame. */
+.magnetic {
+  will-change: transform;
+}
+
+/* Card tilt — la carte parent reçoit `--mx`/`--my` (0..1) du curseur via JS,
+   un enfant `.card-tilt-inner` les consomme pour appliquer une rotation 3D.
+   Léger : ±6° max. Le shine est un overlay radial qui suit le curseur. */
+.card-tilt {
+  perspective: 800px;
+  transform-style: preserve-3d;
+}
+.card-tilt-inner {
+  transform:
+    rotateY(calc((var(--mx, 0.5) - 0.5) * 10deg))
+    rotateX(calc((0.5 - var(--my, 0.5)) * 8deg));
+  transition: transform 0.18s ease-out;
+  transform-style: preserve-3d;
+}
+.card-tilt:not(:hover) .card-tilt-inner {
+  transform: rotateY(0) rotateX(0);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-tilt-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(
+    220px circle at calc(var(--mx, 0.5) * 100%) calc(var(--my, 0.5) * 100%),
+    rgba(255, 255, 255, 0.22),
+    transparent 50%
+  );
+  mix-blend-mode: overlay;
+  border-radius: inherit;
+}
+.card-tilt:hover .card-tilt-shine {
+  opacity: 1;
+}
+@media (hover: none) {
+  .card-tilt-inner { transform: none !important; }
+  .card-tilt-shine { display: none; }
+}
+
+/* Animations reduced-motion : neutralise les drifts décoratifs. */
+@media (prefers-reduced-motion: reduce) {
+  .mesh-blob, .mesh-blob-2, .shimmer::after, .glow-pulse { animation: none !important; }
+  .reveal, .reveal-stagger > [data-reveal-child] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ────── Shared design-system helpers ─────────────────────────────────
+   Common micro-interaction patterns extracted as utility classes so the
+   site stays internally consistent (skill: "Use same style across all
+   pages"). Use these instead of one-off arbitrary Tailwind utilities. */
+
+/* `.footer-link` — link visual avec underline animée. Idéal pour le footer
+   où les liens sont denses : l'underline qui grandit du gauche au droit
+   au hover signale clairement l'interactivité sans changer la couleur
+   de fond. Compatible avec n'importe quel `<a>` ou `<button>`. */
+.footer-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s ease;
+}
+.footer-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -2px;
+  height: 1px;
+  background: currentColor;
+  transition: right 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  pointer-events: none;
+}
+.footer-link:hover::after { right: 0; }
+.footer-link:active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) {
+  .footer-link::after { transition: none; }
+}
+
+/* `.lift` — standard hover treatment for clickable cards/links :
+   subtle Y translate + tinted card shadow, 200ms. Use on <article>,
+   <a>, <button> that are visually "card-shaped". */
+.lift {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  will-change: transform;
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -10px var(--card-shadow);
+}
+@media (hover: none) {
+  .lift:hover { transform: none; box-shadow: none; }
+}
+
+/* `.cta-shadow` — glow + lift for primary CTA pills (download buttons,
+   "Chercher", "Télécharger l'app"). Distinct from `.lift` because the
+   shadow is tinted violet (brand presence) rather than neutral. */
+.cta-shadow {
+  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--primary) 55%, transparent);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+.cta-shadow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--primary) 70%, transparent);
+}
+.cta-shadow:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+@media (hover: none) {
+  .cta-shadow:hover { transform: none; }
+}
+
+/* `.feature-card` — utilisé par <SocialFeatures />. Hover qui consomme une
+   CSS variable `--feat-color` posée par le React parent → chaque card a sa
+   propre signature couleur (violet/orange/vert) tout en partageant la même
+   classe. Évite l'usage de handlers JS dans un Server Component. */
+.feature-card {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  will-change: transform;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--feat-color, var(--primary)) 40%, transparent);
+  box-shadow: 0 18px 36px -18px color-mix(in srgb, var(--feat-color, var(--primary)) 60%, transparent);
+}
+@media (hover: none) {
+  .feature-card:hover { transform: none; box-shadow: none; border-color: var(--border2); }
+}
+
+/* `.surface-card` — base card visual : surface bg + subtle border + radius.
+   Pairs with `.lift` for interactive ones. Useful to avoid copy-pasting the
+   same trio across 8 components. */
+.surface-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+}
+
 /* Reduced motion: disable decorative animations for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+  }
+  /* Coupe les translateY de hover pour les users qui préfèrent reduced
+     motion — le shadow change toujours pour garder le signal d'hover. */
+  .lift:hover, .cta-shadow:hover, .store-btn:hover {
+    transform: none !important;
   }
   /* Exception : le marquee "En direct" porte du contenu (avis live), pas
      décoratif. Sans le défilement, la moitié des chips est invisible hors
@@ -402,6 +735,23 @@ p {
     animation-duration: 60s !important;
     animation-iteration-count: infinite !important;
   }
+  /* Exception : sheet/modal animations sont des indices fonctionnels
+     ("ce panneau arrive du bas, donc c'est un drawer modal") plutôt que
+     de la déco. Sans elles, le panel apparaît instantanément → l'user ne
+     comprend pas qu'il peut le fermer en swipant vers le bas. On garde
+     une durée raccourcie mais perceptible (180-220ms). Idem pour le scroll
+     smooth déclenché par scrollIntoView() côté JS : c'est l'indice qu'on
+     descend vers la section cible, pas du flair. */
+  .sheet-up   { animation-duration: 220ms !important; }
+  .sheet-down { animation-duration: 180ms !important; }
+  .modal-up   { animation-duration: 200ms !important; }
+  .modal-down { animation-duration: 160ms !important; }
+  .backdrop-in, .backdrop-out { animation-duration: 160ms !important; }
+  /* Le scroll smooth via scrollIntoView() reste actif (le JS l'a demandé
+     explicitement → c'est de l'intention, pas du flair). On laisse
+     `scroll-behavior: auto` au-dessus pour les liens natifs `<a href="#…">`,
+     mais on remet `smooth` sur les ancres internes qu'on contrôle. */
+  html:has(:target) { scroll-behavior: smooth !important; }
 }
 
 /* Disable hover effects on touch devices */

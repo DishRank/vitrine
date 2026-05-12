@@ -16,7 +16,8 @@ export default function BetaModal() {
 
   const close = () => {
     setClosing(true);
-    setTimeout(() => { setOpen(false); setClosing(false); setSubmitted(false); setEmail(''); }, 250);
+    // 280ms = durée de l'animation `modal-down` définie dans globals.css.
+    setTimeout(() => { setOpen(false); setClosing(false); setSubmitted(false); setEmail(''); }, 280);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -42,13 +43,13 @@ export default function BetaModal() {
 
   return (
     <div
-      className={`fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 ${closing ? 'animate-[fadeOut_0.25s_ease_forwards]' : 'animate-[fadeIn_0.2s_ease]'}`}
+      className={`fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 ${closing ? 'backdrop-out' : 'backdrop-in'}`}
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <div
         role="dialog"
         aria-modal="true"
-        className={`bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-[420px] p-6 sm:p-8 text-center ${closing ? 'animate-[sheetDown_0.25s_ease_forwards]' : 'animate-[slideUp_0.3s_ease]'}`}
+        className={`bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-[420px] p-6 sm:p-8 text-center ${closing ? 'modal-down' : 'modal-up'}`}
       >
         <span className="inline-flex items-center gap-2 px-3 py-1 text-xs font-bold bg-[var(--primary-container)] text-[var(--primary)] rounded-full mb-4">
           {/* Google Play icon */}

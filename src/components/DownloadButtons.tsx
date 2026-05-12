@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { openBetaModal } from './BetaModal';
 import { APP_STORE_URL, PLAY_STORE_URL, ANDROID_LIVE, detectPlatform, type Platform } from '@/lib/downloadLinks';
 
@@ -13,7 +13,62 @@ const SIZE_CLASSES: Record<Size, string> = {
 };
 
 const BASE_CLASSES =
-  'cursor-pointer inline-flex items-center gap-2 bg-[var(--primary)] text-white font-semibold rounded-full hover:bg-[var(--primary-light)] transition-colors';
+  'cta-shadow magnetic cursor-pointer inline-flex items-center gap-2 bg-[var(--primary)] text-white font-semibold rounded-full hover:bg-[var(--primary-light)]';
+
+/**
+ * Hook "magnetic" — la souris attire légèrement l'élément vers son centre.
+ * Effet subtil (±6px max) qui donne un ressenti premium / haptic-like.
+ * Coût : 2 listeners par bouton + une CSS transform. Désactivé sur touch
+ * (les listeners pointermove n'existent pas vraiment, et le hover state
+ * ne s'applique pas — la transform reste à 0).
+ */
+function useMagnetic(strength = 0.35, max = 6) {
+  const ref = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Pas d'effet magnétique pour les users qui préfèrent reduced motion.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let raf: number | null = null;
+    let tx = 0, ty = 0;
+    const apply = () => {
+      el.style.transform = `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px)`;
+      raf = null;
+    };
+    const onMove = (e: PointerEvent) => {
+      // Track instantané pendant le follow : on coupe la transition CSS
+      // pour éviter le lag (sinon chaque pointermove déclenche un nouveau
+      // tween 60fps → effet "ballast"). Le repli (onLeave) la remet.
+      el.style.transition = 'none';
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) * strength;
+      const dy = (e.clientY - cy) * strength;
+      tx = Math.max(-max, Math.min(max, dx));
+      ty = Math.max(-max, Math.min(max, dy));
+      if (raf === null) raf = requestAnimationFrame(apply);
+    };
+    const onLeave = () => {
+      // Spring de retour : on pose une transition unique pour cette
+      // animation, puis l'effet "rubber band" ramène à 0,0.
+      el.style.transition = 'transform 0.4s cubic-bezier(0.18, 0.9, 0.3, 1.2)';
+      tx = 0; ty = 0;
+      if (raf === null) raf = requestAnimationFrame(apply);
+    };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+    return () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerleave', onLeave);
+      if (raf !== null) cancelAnimationFrame(raf);
+    };
+  }, [strength, max]);
+
+  return ref;
+}
 
 function AppleIcon({ size = 14 }: { size?: number }) {
   return (
@@ -49,8 +104,15 @@ export default function DownloadButtons({
   const sizeClass = SIZE_CLASSES[size];
   const iconSize = size === 'sm' ? 12 : size === 'lg' ? 16 : 14;
 
+  // Refs magnetic — un par bouton. Les 2 hooks sont toujours appelés (ordre
+  // stable côté React) même si un seul bouton est rendu pour la plateforme
+  // courante.
+  const appleRef = useMagnetic();
+  const playRef = useMagnetic();
+
   const appStoreBtn = (
     <a
+      ref={appleRef}
       href={APP_STORE_URL}
       target="_blank"
       rel="noopener"
@@ -64,6 +126,7 @@ export default function DownloadButtons({
 
   const playStoreBtn = ANDROID_LIVE ? (
     <a
+      ref={playRef}
       href={PLAY_STORE_URL}
       target="_blank"
       rel="noopener"
@@ -75,6 +138,7 @@ export default function DownloadButtons({
     </a>
   ) : (
     <a
+      ref={playRef}
       href="#"
       onClick={openBetaModal}
       aria-label="Telecharger sur Google Play (beta)"

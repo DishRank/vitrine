@@ -10,6 +10,7 @@
  * (pill, titre, desc, bullets) viennent de `t.raw('items')`.
  */
 import { useTranslations } from 'next-intl';
+import Reveal from './Reveal';
 
 type FeatureIconKind = 'groups' | 'poll' | 'list';
 
@@ -248,14 +249,23 @@ export default function SocialFeatures() {
         {t('andAlso')}
       </p>
 
-      {/* 3 cards en grille — stack mobile, 3 cols à md+ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+      {/* 3 cards en grille — stack mobile, 3 cols à md+. Reveal stagger :
+          chaque card animée au scroll-in avec un delay basé sur son index DOM. */}
+      <Reveal stagger className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
         {items.map((item, i) => {
           const style = FEATURE_STYLES[i] || FEATURE_STYLES[0];
           return (
             <article
               key={i}
-              className="relative rounded-2xl p-6 sm:p-7 bg-[var(--surface)] border border-[var(--border2)] flex flex-col transition-all hover:-translate-y-1 hover:border-[var(--primary)]/30"
+              data-reveal-child
+              className="feature-card relative rounded-2xl p-6 sm:p-7 bg-[var(--surface)] border border-[var(--border2)] flex flex-col"
+              style={{
+                // CSS var consommée par `.feature-card:hover` dans globals.css.
+                // Chaque card a sa signature couleur propre (groups=violet,
+                // poll=orange, list=vert) au lieu d'un primary uniforme.
+                ['--feat-color' as string]: style.color,
+                ['--ri' as string]: i,
+              }}
             >
               {/* Glow ambient teinté à la couleur de la feature */}
               <div
@@ -321,7 +331,7 @@ export default function SocialFeatures() {
             </article>
           );
         })}
-      </div>
+      </Reveal>
     </section>
   );
 }

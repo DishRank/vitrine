@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import DownloadButtons from './DownloadButtons';
+import CountUpStat from './CountUpStat';
 
 type Props = {
   /** Localized category label (e.g. "pizza", "pâtes") */
@@ -117,22 +118,41 @@ export default function Hero({ category, city, bestCategory }: Props) {
   );
 
   // Bold-number wrapper for the stats line (200+, 100%, Sans pub).
-  // Uses var(--text) so it stays readable in both light and dark themes.
+  // `<CountUpStat>` auto-détecte si chunks contient un nombre :
+  //   • "200+"     → count-up de 0 → 200 + suffixe "+"
+  //   • "100%"     → count-up de 0 → 100 + suffixe "%"
+  //   • "Sans pub" → texte rendu tel quel (pas de chiffre, pas d'animation)
+  // Déclenché par IntersectionObserver à la première intersection avec le
+  // viewport, donc l'utilisateur voit toujours l'animation au premier scroll.
   const statBold = (chunks: React.ReactNode) => (
-    <b className="text-[var(--text)] font-bold">{chunks}</b>
+    <CountUpStat className="text-[var(--text)] font-bold">{chunks}</CountUpStat>
   );
 
   return (
     <section className="relative pt-24 pb-10 sm:pb-12 text-center overflow-hidden" style={{ contain: 'layout paint' }}>
-      {/* Radial glow violet — width clamps so it never overflows on mobile */}
+      {/* Radial glow principal — derive lentement (mesh-blob), width clamps
+          so it never overflows on mobile. */}
       <div
-        className="absolute -top-[80px] sm:-top-[120px] left-1/2 -translate-x-1/2 rounded-full pointer-events-none"
+        className="mesh-blob absolute -top-[80px] sm:-top-[120px] left-1/2 rounded-full pointer-events-none"
         style={{
           width: 'min(1000px, 100vw)',
           height: 'min(540px, 60vw)',
-          background: 'radial-gradient(closest-side, rgba(124,108,247,0.25), transparent 70%)',
+          background: 'radial-gradient(closest-side, rgba(124,108,247,0.28), transparent 70%)',
           filter: 'blur(40px)',
           contain: 'paint',
+        }}
+        aria-hidden="true"
+      />
+      {/* Mesh blob secondaire — accent orange chaud en off-center pour
+          casser le mono-violet. Très transparent, dérive en phase inverse
+          → impression de "lumière qui vit" dans le fond. */}
+      <div
+        className="mesh-blob-2 absolute top-[40px] right-[-100px] sm:right-[-60px] rounded-full pointer-events-none hidden sm:block"
+        style={{
+          width: 'min(420px, 50vw)',
+          height: 'min(420px, 50vw)',
+          background: 'radial-gradient(closest-side, color-mix(in srgb, var(--accent-warm) 18%, transparent), transparent 70%)',
+          filter: 'blur(50px)',
         }}
         aria-hidden="true"
       />
