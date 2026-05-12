@@ -25,7 +25,12 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: 'MJ12bot', disallow: '/' },
       { userAgent: 'DotBot', disallow: '/' },
     ],
+    // Sitemap absolue → Bing/Google/Yandex utilisent ça pour découvrir les URLs.
     sitemap: 'https://dishrank.fr/sitemap.xml',
-    host: 'https://dishrank.fr',
+    // Note : on n'émet PAS de directive `Host:`. C'est une extension Yandex
+    // que Yandex lui-même a dépréciée en 2018, que Google n'a jamais
+    // implémentée, et que le Bing robots.txt Tester reporte comme "Syntax
+    // not understood". Le host préféré est déjà déclaré via le canonical
+    // HTML (`<link rel="canonical">`) + les URLs absolues dans sitemap.xml.
   };
 }
