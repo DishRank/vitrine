@@ -161,6 +161,7 @@
     ]
   },
   "why": {
+    "eyebrow": "Die App, die alles ändert",
     "title": "Warum DishRank?",
     "items": [
       { "title": "Wir bewerten Gerichte", "desc": "Nicht das Restaurant, nicht den Kellner, nicht den Parkplatz. Das Gericht. Punkt." },
@@ -193,7 +194,8 @@
     "cookies": "Cookies",
     "colProduit": "Produkt",
     "colCommunaute": "Community",
-    "colLegal": "Rechtliches"
+    "colLegal": "Rechtliches",
+    "backToTop": "Nach oben"
   },
   "nav": {
     "betaClosed": "Geschlossene Beta",

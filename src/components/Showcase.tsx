@@ -218,23 +218,25 @@ export default function Showcase() {
           >
             {slides[idx].desc}
           </p>
-          {/* Dots */}
+          {/* Dots — active state plus large (w-7) + hover patterns alignés
+              avec le langage du site (translate subtil, pas scale 1.25). */}
           <div className="flex gap-2 mt-2">
             {slides.map((_, i) => (
               <button
                 key={i}
                 onClick={() => goTo(i)}
                 aria-label={`Slide ${i + 1}`}
-                className={`cursor-pointer h-2.5 rounded-full transition-all duration-300 ${i === idx ? 'w-7 bg-[var(--primary)]' : 'w-2.5 bg-[var(--border2)] hover:bg-[var(--text3)] hover:scale-125'}`}
+                className={`cursor-pointer h-2.5 rounded-full transition-all duration-300 ${i === idx ? 'w-7 bg-[var(--primary)]' : 'w-2.5 bg-[var(--border2)] hover:bg-[var(--primary)]/60'}`}
               />
             ))}
           </div>
-          {/* Arrows — hidden on mobile (dots are enough for touch) */}
+          {/* Arrows — translate-only on hover (skill: stable hover states,
+              avoid scale that shifts layout). */}
           <div className="hidden md:flex gap-2 mt-1">
-            <button onClick={goPrev} aria-label="Previous slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:-translate-x-0.5 hover:scale-110 transition-all duration-200">
+            <button onClick={goPrev} aria-label="Previous slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:-translate-x-0.5 transition-all duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
-            <button onClick={goNextManual} aria-label="Next slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:translate-x-0.5 hover:scale-110 transition-all duration-200">
+            <button onClick={goNextManual} aria-label="Next slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] hover:translate-x-0.5 transition-all duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
             </button>
           </div>

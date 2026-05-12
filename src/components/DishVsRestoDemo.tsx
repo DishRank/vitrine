@@ -47,13 +47,20 @@ export default function DishVsRestoDemo() {
               }}
             >
               <div
-                className="w-11 h-11 rounded-lg flex items-center justify-center text-xl shrink-0"
+                className="w-11 h-11 rounded-lg flex items-center justify-center text-white shrink-0"
                 style={{
-                  background: 'linear-gradient(135deg, #ffb86b 0%, #ff7a3d 100%)',
+                  background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-warm) 75%, white) 0%, var(--accent-warm) 100%)',
+                  boxShadow: '0 4px 12px -4px color-mix(in srgb, var(--accent-warm) 60%, transparent)',
                 }}
                 aria-hidden="true"
               >
-                🍽️
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2v9a2 2 0 0 0 2 2v8a1 1 0 0 0 2 0v-8a2 2 0 0 0 2-2V2" />
+                  <path d="M8 2v6" />
+                  <path d="M10 2v6" />
+                  <path d="M17 2v20" />
+                  <path d="M21 8c0-3.3-1.8-6-4-6v10h4" />
+                </svg>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-[var(--text)] truncate">

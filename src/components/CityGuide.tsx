@@ -91,9 +91,23 @@ export default function CityGuide({ locale, category, city, dishes }: Props) {
           </article>
         ))}
 
-        {/* Conclusion */}
-        <div className="mt-10 p-5 sm:p-6 rounded-2xl bg-[var(--primary-container)] border border-[var(--primary)]/20">
-          <p className="text-sm sm:text-base text-[var(--text)] leading-relaxed">
+        {/* Conclusion — petit accent visuel à gauche pour signaler "synthèse"
+            sans transformer la box en CTA (les vrais CTA sont CtaBanner +
+            DownloadButtons). Border opacity alignée sur le reste du site
+            (≈30% au lieu de 20%). */}
+        <div
+          className="relative mt-10 p-5 sm:p-6 rounded-2xl"
+          style={{
+            background: 'var(--primary-container)',
+            border: '1px solid color-mix(in srgb, var(--primary) 28%, transparent)',
+          }}
+        >
+          <span
+            className="absolute left-0 top-5 bottom-5 w-1 rounded-full"
+            style={{ background: 'var(--primary)' }}
+            aria-hidden="true"
+          />
+          <p className="text-sm sm:text-base text-[var(--text)] leading-relaxed pl-3">
             {guide.conclusion}
           </p>
         </div>

@@ -161,6 +161,7 @@
     ]
   },
   "why": {
+    "eyebrow": "The app that changes everything",
     "title": "Why DishRank?",
     "items": [
       { "title": "We rate the dishes", "desc": "Not the restaurant, not the waiter, not the parking. The dish. Period." },
@@ -193,7 +194,8 @@
     "cookies": "Cookies",
     "colProduit": "Product",
     "colCommunaute": "Community",
-    "colLegal": "Legal"
+    "colLegal": "Legal",
+    "backToTop": "Back to top"
   },
   "nav": {
     "betaClosed": "Closed beta",

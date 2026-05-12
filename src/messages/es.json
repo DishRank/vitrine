@@ -161,6 +161,7 @@
     ]
   },
   "why": {
+    "eyebrow": "La app que lo cambia todo",
     "title": "Por que DishRank?",
     "items": [
       { "title": "Calificamos los platos", "desc": "No el restaurante, no el camarero, no el parking. El plato. Punto." },
@@ -193,7 +194,8 @@
     "cookies": "Cookies",
     "colProduit": "Producto",
     "colCommunaute": "Comunidad",
-    "colLegal": "Legal"
+    "colLegal": "Legal",
+    "backToTop": "Volver arriba"
   },
   "nav": {
     "betaClosed": "Beta cerrada",

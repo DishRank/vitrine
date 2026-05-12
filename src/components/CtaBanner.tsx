@@ -14,14 +14,33 @@ export default function CtaBanner() {
 
   return (
     <section className="max-w-[1200px] mx-auto px-4 sm:px-8 my-6 sm:my-8">
-      <div className="relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-10 overflow-hidden">
+      <div
+        className="relative rounded-2xl p-6 sm:p-10 overflow-hidden"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid color-mix(in srgb, var(--primary) 22%, var(--border2))',
+          boxShadow: '0 24px 60px -30px var(--card-shadow)',
+        }}
+      >
+        {/* Glow centré derrière le bandeau */}
         <div className="absolute top-[-50%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-[radial-gradient(circle,var(--primary-glow)_0%,transparent_70%)] pointer-events-none" />
+        {/* Stripe diagonal subtil — donne du caractère au CTA sans
+            l'écraser de couleur. Visible juste en dark mode où le contraste
+            avec la surface neutre est suffisant. */}
+        <div
+          className="absolute -bottom-12 -right-12 w-72 h-72 rounded-full pointer-events-none opacity-60"
+          style={{
+            background: 'radial-gradient(closest-side, color-mix(in srgb, var(--accent-warm) 14%, transparent), transparent 70%)',
+            filter: 'blur(36px)',
+          }}
+          aria-hidden="true"
+        />
         <div className="relative z-10 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-center sm:text-left">
-          <div className="shrink-0 text-[#6C5CE7] dark:text-white" aria-hidden>
+          <div className="shrink-0 text-[var(--primary)] dark:text-white" aria-hidden>
             <AnimatedLogo size={48} />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg sm:text-xl font-bold mb-1">{t('title')}</h2>
+            <h2 className="text-lg sm:text-xl font-bold mb-1 tracking-tight">{t('title')}</h2>
             <p className="text-xs sm:text-sm text-[var(--text2)]">{t('subtitle')}</p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
