@@ -10,8 +10,14 @@ export default function robots(): MetadataRoute.Robots {
         // - /auth/*  : Supabase email confirm landing (deeplink target only)
         // - /dish?*  : deeplink page (already noindex via meta but belt-and-suspenders)
         // - /*?q=*   : in-page text search results (would create infinite duplicates)
-        // - /*?page= : legal sheet open state (rendered modally on the homepage)
-        disallow: ['/auth/', '/dish', '/*?q=', '/*?page='],
+        //
+        // Note : `/*?page=` est volontairement AUTORISÉ (privacy/terms/delete).
+        // Le canonical URL renvoie vers `/` donc pas de risque de duplicate
+        // content. Bloquer ces URLs faisait remonter une erreur "Blocked by
+        // robots.txt" dans Bing Webmaster (les liens footer pointent dessus)
+        // et empêchait la découverte des pages légales par les crawlers — ce
+        // qui est contre-productif pour la conformité CNIL et la confiance.
+        disallow: ['/auth/', '/dish', '/*?q='],
       },
       // Block known scraper bots that abuse crawl budget without sending traffic
       { userAgent: 'AhrefsBot', disallow: '/' },
