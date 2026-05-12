@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "DishRank — Beste Gerichte nach Stadt · Ranking & Bewertungen 2026",
-    "description": "Finde, wo du den besten Burger, Sushi, Pizza in deiner Stadt isst. Ranking nach Gericht (nicht nach Restaurant) mit verifizierten Bewertungen. Erstelle eine Gruppe mit Freunden, vereint eure Favoriten und plant eure Ausflüge in 30 Sekunden.",
+    "description": "Bewerte Gerichte, keine Restaurants. Top Burger, Sushi, Pizza in deiner Stadt. Plant Ausflüge mit Freunden — DishRank wählt den Ort.",
     "titleWithCategory": "{bestCategory} 2026 — Top Ranking & Bewertungen | DishRank",
     "titleWithCityCategory": "{bestCategory} in {city} 2026 — Top 10 & Bewertungen | DishRank",
     "titleWithCity": "Wo essen in {city} 2026 — Top bewertete Gerichte | DishRank",
     "descWithCategory": "Top {category} 2026: nach Community-Bewertungen geordnet. Adressen, Preise, Fotos und Bewertungen, um {bestCategory} in deiner Nähe zu finden.",
-    "descWithCity": "Entdecke die besten Gerichte in {city} 2026: Burger, Sushi, Pizza und mehr. Ranking nach Gericht mit Bewertungen, Fotos und verifizierten Community-Reviews.",
-    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 Ranking nach Community-Bewertungen. Adressen, Preise, Fotos und verifizierte Bewertungen auf DishRank.",
+    "descWithCity": "Beste Gerichte in {city} 2026: Burger, Sushi, Pizza und mehr. Ranking nach Gericht mit Fotos, Bewertungen und verifizierten Reviews.",
+    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 nach Community-Bewertungen, mit Adressen, Preisen, Fotos und verifizierten Bewertungen.",
     "siteTagline": "Bewerte die Gerichte, nicht die Restaurants.",
     "appDescription": "Bewerte die Gerichte, nicht die Restaurants. Finde den besten Burger, Sushi, Pizza in deiner Stadt mit verifizierten Bewertungen der DishRank-Community. Erstelle eine Gruppe mit deinen Freunden, stimmt für den Treffpunkt ab, DishRank schlägt die Adresse genau in der Mitte aller vor."
   },

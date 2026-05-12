@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "DishRank — Best dishes by city · Rankings & reviews 2026",
-    "description": "The app that rates dishes, not restaurants. Top burger, sushi, pizza in your city. Restaurant, bar, café with friends: vote and DishRank finds the spot right in the middle.",
+    "description": "Rate dishes, not restaurants. Top burger, sushi, pizza in your city. Plan outings with friends — DishRank votes and picks the spot.",
     "titleWithCategory": "{bestCategory} 2026 — Top ranking & reviews | DishRank",
     "titleWithCityCategory": "{bestCategory} in {city} 2026 — Top 10 & reviews | DishRank",
     "titleWithCity": "Where to eat in {city} 2026 — Top rated dishes | DishRank",
     "descWithCategory": "Top {category} 2026: ranked by community reviews. Addresses, prices, photos and ratings to find {bestCategory} near you.",
-    "descWithCity": "Discover the best dishes in {city} in 2026: burger, sushi, pizza and more. Ranking by dish with ratings, photos and verified community reviews.",
-    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 ranking by community reviews. Addresses, prices, photos and verified ratings on DishRank.",
+    "descWithCity": "Best dishes in {city} 2026: burger, sushi, pizza and more. Ranked by dish with photos, ratings and verified community reviews.",
+    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 by community reviews, with addresses, prices, photos and verified ratings.",
     "siteTagline": "Rate the dishes, not the restaurants.",
     "appDescription": "Rate the dishes, not the restaurants. Find the best burger, sushi, pizza in your city with verified ratings from the DishRank community. Create a group with your friends, vote for the meeting spot, DishRank picks the address right in the middle of everyone."
   },

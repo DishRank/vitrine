@@ -1,13 +1,13 @@
 {
   "meta": {
     "title": "DishRank — Top plats par ville · Classement & avis 2026",
-    "description": "L'app qui note les plats, pas les restos. Top burger, sushi, pizza de ta ville. Resto, bar, café avec tes potes : votez et DishRank trouve l'adresse pile à mi-chemin.",
+    "description": "On note les plats, pas les restos. Top burger, sushi, pizza près de chez toi. Sors avec tes potes : DishRank vote et choisit l'adresse.",
     "titleWithCategory": "{bestCategory} 2026 — Top classement & avis | DishRank",
     "titleWithCityCategory": "{bestCategory} à {city} 2026 — Top 10 & avis | DishRank",
     "titleWithCity": "Où manger à {city} 2026 — Meilleurs plats notés | DishRank",
     "descWithCategory": "Top {category} 2026 : classement par avis communautaires. Adresses, prix, photos et notes pour trouver {bestCategory} près de chez toi.",
-    "descWithCity": "Découvre les meilleurs plats à {city} en 2026 : burger, sushi, pizza et plus. Classement par plat avec notes, photos et avis vérifiés de la communauté.",
-    "descWithCityCategory": "{bestCategory} de {city} en 2026 : classement Top 10 par avis communautaires. Adresses, prix, photos et notes vérifiées sur DishRank.",
+    "descWithCity": "Les meilleurs plats à {city} en 2026 : burger, sushi, pizza et plus. Classement par plat avec photos, notes et avis vérifiés.",
+    "descWithCityCategory": "{bestCategory} de {city} en 2026 : classement Top 10 par avis communautaires, avec adresses, prix, photos et notes vérifiées.",
     "siteTagline": "Note les plats, pas les restos.",
     "appDescription": "Note les plats, pas les restos. Trouve le meilleur burger, sushi, pizza de ta ville grâce aux avis vérifiés de la communauté DishRank. Crée un groupe avec tes potes, votez pour le lieu de sortie, DishRank propose l'adresse pile au milieu de tout le monde."
   },
