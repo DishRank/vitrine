@@ -1,6 +1,11 @@
 import { MetadataRoute } from 'next';
-import { fetchCategories, fetchCities, fetchCityCategoryPairs } from '@/lib/supabase';
-import { citySlug } from '@/lib/slug';
+import {
+  fetchCategories,
+  fetchCities,
+  fetchCityCategoryPairs,
+  fetchRestaurantsWithDishes,
+} from '@/lib/supabase';
+import { citySlug, restaurantSlug } from '@/lib/slug';
 
 // Force dynamic rendering (rebuilt on each request — cheap because data is cached)
 export const dynamic = 'force-dynamic';
@@ -76,15 +81,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let dbCategorySlugs = new Set<string>();
   let dbCityNames = new Set<string>();
   let dbCityCategoryPairs: { city: string; category_slug: string; dish_count: number }[] = [];
+  let dbRestaurants: Awaited<ReturnType<typeof fetchRestaurantsWithDishes>> = [];
   try {
-    const [categories, cities, pairs] = await Promise.all([
+    const [categories, cities, pairs, restos] = await Promise.all([
       fetchCategories(),
       fetchCities(),
       fetchCityCategoryPairs(),
+      fetchRestaurantsWithDishes(),
     ]);
     dbCategorySlugs = new Set(categories.map((c) => c.slug));
     dbCityNames = new Set(cities);
     dbCityCategoryPairs = pairs;
+    dbRestaurants = restos;
   } catch (e) {
     console.error('sitemap: failed to fetch data', e);
   }
@@ -177,6 +185,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...withAlternates(`/${citySlug(city)}/${slug}`, {
           changeFrequency: 'daily',
           priority: 0.8,
+        })
+      );
+    }
+  }
+
+  // 4. Restaurant pages : /<city-slug>/r/<restaurant-slug>
+  // Driven by the DB : tout restaurant qui a au moins 1 plat noté (review
+  // modérée) est listé. Capture les recherches brandées type "{nom} {ville}
+  // avis" / "{nom} menu" qu'on ne couvrait pas avant.
+  //
+  // Dedup : si plusieurs restos d'une même ville produisent le même slug
+  // (rare mais possible — ex. 2 "Le Bistrot" à Lyon), on garde celui avec le
+  // plus de plats notés. Les autres ne sont pas listés pour éviter les URLs
+  // dupliquées (ils restent fetchables via la query mais Google ne les voit
+  // pas via sitemap → pas d'index, pas de signal négatif).
+  const restaurantPathByCity = new Map<string, Map<string, { slug: string; dishCount: number }>>();
+  for (const r of dbRestaurants) {
+    const cSlug = citySlug(r.city);
+    if (!cSlug) continue;
+    const rSlug = restaurantSlug(r.name);
+    if (!rSlug) continue;
+    const cityMap = restaurantPathByCity.get(cSlug) || new Map();
+    const existing = cityMap.get(rSlug);
+    if (!existing || r.dish_count > existing.dishCount) {
+      cityMap.set(rSlug, { slug: rSlug, dishCount: r.dish_count });
+    }
+    restaurantPathByCity.set(cSlug, cityMap);
+  }
+  for (const [cSlug, cityMap] of restaurantPathByCity) {
+    for (const { slug: rSlug, dishCount } of cityMap.values()) {
+      // Priority graduée par nombre de plats : plus un resto a de plats notés,
+      // plus la page est riche en contenu → plus elle mérite de crawl budget.
+      const priority = Math.min(0.7, 0.4 + Math.min(dishCount, 6) * 0.05);
+      urls.push(
+        ...withAlternates(`/${cSlug}/r/${rSlug}`, {
+          changeFrequency: 'weekly',
+          priority,
         })
       );
     }

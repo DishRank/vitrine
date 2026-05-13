@@ -36,3 +36,43 @@ export function cityFromSlug(slug: string, knownCities: string[]): string | null
   }
   return null;
 }
+
+/**
+ * Slugify a restaurant name for URL usage.
+ * Same normalization as citySlug, plus length cap to keep URLs reasonable.
+ *
+ * Uniqueness is enforced WITHIN a city (since restaurants live under
+ * /[city]/r/[slug]). If two restaurants in the same city share the same
+ * slug, callers must disambiguate by appending a short suffix from the
+ * restaurant ID (cf. `restaurantSlugWithId`).
+ *
+ * "Le Bistrot du Coin"           → "le-bistrot-du-coin"
+ * "Big Fernand — Bellecour"      → "big-fernand-bellecour"
+ * "Sushi Shop (Part-Dieu)"       → "sushi-shop-part-dieu"
+ */
+export function restaurantSlug(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
+/**
+ * Restaurant slug with the first 6 chars of its UUID appended for guaranteed
+ * uniqueness within a city. Used for restaurants that collide on the base
+ * slug (rare but possible — e.g. two "Le Bistrot" in Lyon).
+ *
+ * "Le Bistrot du Coin" + id "a3f2e1c0-..." → "le-bistrot-du-coin-a3f2e1"
+ */
+export function restaurantSlugWithId(name: string, id: string): string {
+  const base = restaurantSlug(name);
+  const idFragment = id.replace(/-/g, '').slice(0, 6);
+  return `${base}-${idFragment}`;
+}

@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { expandCategorySlug } from './categoryHierarchy';
+import { restaurantSlug } from './slug';
 
 // Server-only: lazy init to avoid build-time errors
 let _supabase: SupabaseClient | null = null;
@@ -328,6 +329,134 @@ export function fetchRecentReviews(limit = 12): Promise<RecentReviewRow[]> {
         user_id: r.user_id || null,
         display_name: r.profiles?.display_name || null,
       }));
+  });
+}
+
+// ── Restaurant pages ──
+
+export interface RestaurantRow {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string;
+  lat: number | null;
+  lng: number | null;
+}
+
+/**
+ * Find a restaurant by its URL slug within a given city. Uses the same
+ * `restaurantSlug()` function used at sitemap generation time so a URL
+ * roundtrip is guaranteed lossless.
+ *
+ * Returns the first match if multiple restaurants in the same city share
+ * the same slug (collisions are rare given the slug includes the full
+ * normalized name). For production, consider adding a generated `slug`
+ * column to `restaurants` and a unique index on `(city, slug)`.
+ */
+export function fetchRestaurantBySlug(
+  cityName: string,
+  restoSlug: string,
+): Promise<RestaurantRow | null> {
+  const cacheKey = `restaurant:${cityName.toLowerCase()}:${restoSlug}`;
+  return cached(cacheKey, FIVE_MIN, async () => {
+    const { data, error } = await getSupabase()
+      .from('restaurants')
+      .select('id, name, address, city, lat, lng')
+      .ilike('city', cityName);
+    if (error) throw error;
+    for (const r of (data || []) as RestaurantRow[]) {
+      if (restaurantSlug(r.name) === restoSlug) return r;
+    }
+    return null;
+  });
+}
+
+/**
+ * Fetch all moderated dishes for a single restaurant, sorted by rating.
+ *
+ * Implementation note : on s'appuie sur la RPC `get_feed_dishes` existante
+ * pour profiter de l'agrégation (review_count, avg_rating, latest_price)
+ * déjà calculée côté DB, puis on filtre par `restaurant_id` côté Node.
+ * Acceptable tant que l'inventaire de plats par resto reste faible
+ * (< 30 plats pour 99% des restos). Quand la base grossit, ajouter
+ * une RPC dédiée `get_dishes_by_restaurant(restaurant_id)` qui filtre
+ * côté SQL.
+ */
+export function fetchDishesForRestaurant(restaurantId: string): Promise<DishRow[]> {
+  const cacheKey = `restaurant-dishes:${restaurantId}`;
+  return cached(cacheKey, FIVE_MIN, async () => {
+    const { data, error } = await getSupabase().rpc('get_feed_dishes', {
+      user_lat: null,
+      user_lng: null,
+      radius_km: 50,
+      p_category_slug: null,
+      p_sort: 'rating',
+      p_limit: 500,
+    });
+    if (error) throw error;
+    return ((data || []) as DishRow[])
+      .filter((d) => d.restaurant_id === restaurantId && d.cover_photo_url);
+  });
+}
+
+export interface RestaurantSitemapRow {
+  id: string;
+  name: string;
+  city: string;
+  dish_count: number;
+}
+
+/**
+ * Liste tous les restaurants ayant au moins 1 plat noté (review modérée).
+ * Utilisé par le sitemap pour générer les URLs `/[city]/r/[slug]` —
+ * seuls les restos avec contenu sont indexés (évite les soft-404).
+ */
+export function fetchRestaurantsWithDishes(): Promise<RestaurantSitemapRow[]> {
+  return cached('restaurants:with-dishes', THIRTY_MIN, async () => {
+    const supabase = getSupabase();
+    const [reviewsRes, restosRes] = await Promise.all([
+      supabase
+        .from('reviews')
+        .select('restaurant_id, dish_name')
+        .not('pending_moderation', 'is', true),
+      supabase
+        .from('restaurants')
+        .select('id, name, city')
+        .not('city', 'is', null)
+        .not('name', 'is', null),
+    ]);
+    if (reviewsRes.error) throw reviewsRes.error;
+    if (restosRes.error) throw restosRes.error;
+
+    // Compter les plats DISTINCTS par resto (un plat = même nom normalisé)
+    const dishesByResto = new Map<string, Set<string>>();
+    for (const rv of (reviewsRes.data || []) as Array<{
+      restaurant_id: string;
+      dish_name: string;
+    }>) {
+      const key = (rv.dish_name || '').toLowerCase().trim();
+      if (!key) continue;
+      const set = dishesByResto.get(rv.restaurant_id) || new Set<string>();
+      set.add(key);
+      dishesByResto.set(rv.restaurant_id, set);
+    }
+
+    const result: RestaurantSitemapRow[] = [];
+    for (const r of (restosRes.data || []) as Array<{
+      id: string;
+      name: string;
+      city: string;
+    }>) {
+      const dishes = dishesByResto.get(r.id);
+      if (!dishes || dishes.size === 0) continue;
+      result.push({
+        id: r.id,
+        name: r.name,
+        city: r.city,
+        dish_count: dishes.size,
+      });
+    }
+    return result;
   });
 }
 
