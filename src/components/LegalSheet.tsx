@@ -164,6 +164,34 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
   }, [open]);
 
   const close = useCallback(() => {
+    // On pilote le slide-out via la Web Animation API plutôt que par
+    // classe CSS ou transition inline. Raison : avec une transition CSS
+    // inline, le browser ne déclenche pas la transition quand on change
+    // `transform` ET qu'on retire la classe d'animation au même commit
+    // React → la sheet passe directement à `translateY(100%)` sans
+    // interpolation visible (donc "disparaît" au lieu de slider).
+    //
+    // WAAPI bypass le cascade CSS : on définit explicitement le `from`
+    // (position courante, qui peut être translateY(dragY) si le close
+    // vient d'un drag-to-close) et le `to` (translateY(100%)). Animation
+    // garantie quelle que soit l'origine du close.
+    const sheet = sheetRef.current;
+    if (sheet) {
+      // Cancel toute animation WAAPI précédente sur l'élément (ex.
+      // spam-click backdrop) avant d'en lancer une nouvelle.
+      sheet.getAnimations().forEach((a) => a.cancel());
+      sheet.animate(
+        [
+          { transform: `translateY(${dragY}px)`, opacity: 1 },
+          { transform: 'translateY(100%)', opacity: 0.4 },
+        ],
+        {
+          duration: 280,
+          easing: 'cubic-bezier(0.4, 0, 0.7, 0.2)',
+          fill: 'forwards',
+        },
+      );
+    }
     setClosing(true);
     setTimeout(() => {
       setOpen(false);
@@ -174,7 +202,7 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
       const qs = params.toString();
       window.history.replaceState(null, '', qs ? '?' + qs : window.location.pathname);
     }, 300);
-  }, []);
+  }, [dragY]);
 
   // Swipe-down to close : gestionnaire touch sur la zone du header (handle + tabs)
   // Pas sur le corps pour ne pas interferer avec le scroll du contenu.
@@ -239,11 +267,12 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
           const base: React.CSSProperties = {};
           if (sheetHeight !== null) base.height = `${sheetHeight}px`;
           if (closing) {
-            base.transform = 'translateY(100%)';
-            base.opacity = 0.4;
-            base.transition = 'transform 280ms cubic-bezier(0.4, 0, 0.7, 0.2), opacity 240ms cubic-bezier(0.4, 0, 0.7, 0.2)';
-            // Will-change pour hint le compositor — slide-out fluide même
-            // sur device modeste (la sheet a un backdrop-blur derrière).
+            // Le slide-out (transform + opacity) est piloté par WAAPI dans
+            // close() — on ne pose RIEN inline sur transform/opacity ici
+            // (sinon React écraserait l'animation impérative à chaque
+            // re-render qui surviendrait pendant la fermeture).
+            // Hint compositor pour la fluidité (backdrop-blur derrière =
+            // composer GPU coûteux, willChange aide).
             base.willChange = 'transform, opacity';
           } else if (dragY > 0) {
             base.transform = `translateY(${dragY}px)`;
