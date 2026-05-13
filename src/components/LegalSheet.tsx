@@ -220,11 +220,17 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="legal-title"
-        className={`bg-[var(--surface)] rounded-t-3xl w-full max-w-[680px] max-h-[85vh] flex flex-col ${closing ? 'sheet-down' : 'sheet-up'}`}
+        className={`bg-[var(--surface)] rounded-t-3xl w-full max-w-[680px] max-h-[85vh] flex flex-col ${closing ? '' : 'sheet-up'}`}
         style={(() => {
           // Construit l'inline style en 1 passe pour éviter les overrides
           // accidentels de `transition` (TypeScript rejette les doublons).
           // Priorités :
+          //   • closing → slide-out géré INLINE via transition CSS (pas la
+          //     classe .sheet-down) pour démarrer depuis la position
+          //     courante du sheet. Sans ça, drag-to-close faisait snap le
+          //     sheet à translateY(0) avant de slider (keyframe sheetDown
+          //     part de 0% donc visible jump-back du doigt vers le haut
+          //     avant la descente).
           //   • dragY actif → transform inline + transition coupée (suivi
           //     instantané du doigt)
           //   • releasing (relâche post-drag) → transform 0 + spring back
@@ -232,7 +238,14 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
           //   • Repos → height pinned si présente, transition height seule
           const base: React.CSSProperties = {};
           if (sheetHeight !== null) base.height = `${sheetHeight}px`;
-          if (dragY > 0) {
+          if (closing) {
+            base.transform = 'translateY(100%)';
+            base.opacity = 0.4;
+            base.transition = 'transform 280ms cubic-bezier(0.4, 0, 0.7, 0.2), opacity 240ms cubic-bezier(0.4, 0, 0.7, 0.2)';
+            // Will-change pour hint le compositor — slide-out fluide même
+            // sur device modeste (la sheet a un backdrop-blur derrière).
+            base.willChange = 'transform, opacity';
+          } else if (dragY > 0) {
             base.transform = `translateY(${dragY}px)`;
             base.transition = 'none';
           } else if (releasing) {
