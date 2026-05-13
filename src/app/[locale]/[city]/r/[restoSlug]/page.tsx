@@ -131,6 +131,14 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
   // review modérée affichable.
   if (dishes.length === 0) notFound();
 
+  // Address + geo viennent de la RPC `get_feed_dishes` (déjà jointe côté DB)
+  // plutôt que d'un SELECT direct sur `restaurants` — on évite de supposer
+  // des colonnes qui pourraient ne pas exister. Tous les dishes d'un même
+  // resto partagent les mêmes valeurs ici, donc on prend dishes[0].
+  const restaurantAddress = dishes[0]?.restaurant_address || null;
+  const restaurantLat = dishes[0]?.restaurant_lat ?? null;
+  const restaurantLng = dishes[0]?.restaurant_lng ?? null;
+
   const nonce = (await headers()).get('x-nonce') || undefined;
 
   const tMeta = await getTranslations({ locale, namespace: 'meta' });
@@ -209,14 +217,14 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
     image: dishes[0]?.cover_photo_url || `${SITE}/img/play_store_feature_graphic.webp`,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: restaurant.address || undefined,
+      streetAddress: restaurantAddress || undefined,
       addressLocality: cityName,
       addressCountry: 'FR',
     },
-    geo: restaurant.lat && restaurant.lng ? {
+    geo: restaurantLat && restaurantLng ? {
       '@type': 'GeoCoordinates',
-      latitude: restaurant.lat,
-      longitude: restaurant.lng,
+      latitude: restaurantLat,
+      longitude: restaurantLng,
     } : undefined,
     aggregateRating: {
       '@type': 'AggregateRating',
@@ -315,7 +323,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
             </h1>
 
             <p className="text-sm sm:text-base text-[var(--text2)] mb-5">
-              {restaurant.address ? `${restaurant.address} · ` : ''}{cityName}
+              {restaurantAddress ? `${restaurantAddress} · ` : ''}{cityName}
             </p>
 
             {/* Stats inline : note moyenne + nb de plats + nb d'avis */}

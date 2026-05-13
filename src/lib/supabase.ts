@@ -359,13 +359,20 @@ export function fetchRestaurantBySlug(
 ): Promise<RestaurantRow | null> {
   const cacheKey = `restaurant:${cityName.toLowerCase()}:${restoSlug}`;
   return cached(cacheKey, FIVE_MIN, async () => {
+    // On ne SELECT que les colonnes confirmées sur la table `restaurants`
+    // (id, name, city). L'adresse + lat/lng vivent côté reviews-aggregat
+    // (RPC `get_feed_dishes`) où elles sont déjà jointes en
+    // `restaurant_address`, `restaurant_lat`, `restaurant_lng` — la page
+    // resto les pull depuis dishes[0] pour le JSON-LD geo.
     const { data, error } = await getSupabase()
       .from('restaurants')
-      .select('id, name, address, city, lat, lng')
+      .select('id, name, city')
       .ilike('city', cityName);
     if (error) throw error;
-    for (const r of (data || []) as RestaurantRow[]) {
-      if (restaurantSlug(r.name) === restoSlug) return r;
+    for (const r of (data || []) as { id: string; name: string; city: string }[]) {
+      if (restaurantSlug(r.name) === restoSlug) {
+        return { id: r.id, name: r.name, city: r.city, address: null, lat: null, lng: null };
+      }
     }
     return null;
   });
