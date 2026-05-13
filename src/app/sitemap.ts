@@ -14,6 +14,20 @@ const BASE = 'https://dishrank.fr';
 const LOCALES = ['fr', 'en', 'es', 'de', 'it'];
 
 /**
+ * BCP-47 hreflang codes pour les alternates du sitemap.
+ * DOIT matcher `HREFLANG_BY_LOCALE` dans `seoMetadata.ts` — sinon Google
+ * voit des codes incohérents entre le sitemap (`fr`) et les balises HTML
+ * (`fr-FR`), ce qui invalide les signaux hreflang.
+ */
+const HREFLANG_BY_LOCALE: Record<string, string> = {
+  fr: 'fr-FR',
+  en: 'en-US',
+  es: 'es-ES',
+  de: 'de-DE',
+  it: 'it-IT',
+};
+
+/**
  * Top categories (~30) — these are the only ones included in the sitemap
  * to avoid diluting the crawl budget. The 200+ niche categories are still
  * accessible (and indexable) via internal linking from category pages.
@@ -70,7 +84,7 @@ function withAlternates(
     url: pathFor(locale, path),
     lastModified: new Date(),
     alternates: {
-      languages: Object.fromEntries(LOCALES.map((l) => [l, pathFor(l, path)])),
+      languages: Object.fromEntries(LOCALES.map((l) => [HREFLANG_BY_LOCALE[l], pathFor(l, path)])),
     },
     ...extra,
   }));
