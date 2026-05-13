@@ -59,7 +59,18 @@ export default async function LocaleLayout({
   const nonce = (await headers()).get('x-nonce') || undefined;
 
   return (
-    <html lang={locale} className={outfit.variable} suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={outfit.variable}
+      // Indique à Next.js que `scroll-behavior: smooth` est appliqué sur
+      // <html> (cf. globals.css) — il peut donc désactiver temporairement
+      // le smooth scroll pendant les transitions de route (sinon Next 16
+      // log un warning et l'animation "smooth scroll to top" rend la nav
+      // saccadée).
+      // Ref : https://nextjs.org/docs/messages/missing-data-scroll-behavior
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <head>
         {/* Tags non-couverts par l'API metadata de Next.js (charset/viewport
             sont auto-générés ; on garde uniquement les tags qui sortent du
