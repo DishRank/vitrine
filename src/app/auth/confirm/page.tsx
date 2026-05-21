@@ -50,13 +50,25 @@ function ConfirmContent() {
     }
 
     let cancelled = false;
+    // Safety net : never let the page hang on the spinner. If the request
+    // doesn't come back in time (flaky network, in-app webview blocking the
+    // fetch…), surface a clear error instead of an infinite "Vérification en
+    // cours…".
+    const watchdog = setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setStatus('error');
+      setErrorMsg('La vérification a pris trop de temps. Ouvre ce lien dans Safari ou Chrome, ou réessaie depuis l\'app.');
+    }, 8000);
+
     const apiUrl =
       `/api/auth/confirm-email?token_hash=${encodeURIComponent(tokenValue)}` +
       `&type=${encodeURIComponent(type)}`;
-    fetch(apiUrl)
+    fetch(apiUrl, { cache: 'no-store' })
       .then(async (res) => {
         const body = await res.json().catch(() => ({}));
         if (cancelled) return;
+        clearTimeout(watchdog);
         if (res.ok && body?.ok) {
           setStatus('success');
           // Best-effort : opens the app on mobile, harmless no-op on desktop.
@@ -68,10 +80,11 @@ function ConfirmContent() {
       })
       .catch(() => {
         if (cancelled) return;
+        clearTimeout(watchdog);
         setStatus('error');
         setErrorMsg('Connexion impossible. Réessaie dans un instant.');
       });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; clearTimeout(watchdog); };
   }, [searchParams]);
 
   return (
