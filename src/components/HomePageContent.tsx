@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import { getTranslations } from 'next-intl/server';
 import { fetchDishes, fetchCategories, fetchRecentReviews } from '@/lib/supabase';
 import { localizedCategory } from '@/lib/categoryLabels';
-import { citySlug, cityFromSlug } from '@/lib/slug';
+import { citySlug, cityFromSlug, restaurantSlug } from '@/lib/slug';
 import { buildFilterPath, buildFilterUrl, buildBestCategoryFragment, buildTopDishesTitle } from '@/lib/seoMetadata';
 import Nav from './Nav';
 import Hero from './Hero';
@@ -228,16 +228,27 @@ export default async function HomePageContent({
               .filter(Boolean)
               .join(' ');
 
+            // URL unique par plat — pointe vers la page resto avec un
+            // fragment sur le slug du nom du plat. Important :
+            //   • Le fragment DOIT être unique par dish (avant on utilisait
+            //     `#dish-${restaurant_id}` → URLs dupliquées quand un resto
+            //     avait plusieurs plats au Top, ce qui violait la règle
+            //     schema.org "Product.url must be unique per item").
+            //   • Cibler la page resto (et pas la home) augmente la valeur
+            //     SEO du lien : Google découvre la page fiche resto via le
+            //     ItemList, et le fragment plat sert d'ancre logique.
+            const localePref = locale === 'fr' ? '' : `/${locale}`;
+            const dishUrl = d.restaurant_city
+              ? `https://dishrank.fr${localePref}/${citySlug(d.restaurant_city)}/r/${restaurantSlug(d.restaurant_name)}#${restaurantSlug(d.dish_name)}`
+              : `${pageUrl}#${restaurantSlug(d.dish_name)}-${d.restaurant_id.slice(0, 8)}`;
+
             return {
               '@type': 'ListItem',
               position: i + 1,
               item: {
                 '@type': 'Product',
                 name: d.dish_name,
-                // url : pointe vers la page de liste avec un fragment qui isole
-                // le plat. Pas de pages individuelles publiques pour les plats,
-                // mais le fragment aide Google à naviguer vers la bonne section.
-                url: `${pageUrl}#dish-${d.restaurant_id}`,
+                url: dishUrl,
                 description,
                 image: d.cover_photo_url,
                 aggregateRating: {

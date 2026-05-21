@@ -1,12 +1,18 @@
 'use client';
 import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import type { DishRow } from '@/lib/supabase';
+import { citySlug, restaurantSlug } from '@/lib/slug';
 import DownloadButtons from './DownloadButtons';
 
 export default function DishModal() {
   const t = useTranslations('modal');
   const tf = useTranslations('feed');
+  const routeParams = useParams<{ locale?: string }>();
+  const locale = routeParams?.locale || 'fr';
+  const localePrefix = locale === 'fr' ? '' : `/${locale}`;
   const [dish, setDish] = useState<DishRow | null>(null);
   const [closing, setClosing] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -82,11 +88,30 @@ export default function DishModal() {
             </span>
           </div>
 
-          {/* Restaurant */}
-          <div className="group/resto flex items-center gap-1.5 text-sm text-[var(--text2)] mb-2 hover:text-[var(--text)] transition-colors duration-200">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)" aria-hidden="true" className="shrink-0 group-hover/resto:scale-125 transition-transform duration-200"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-            {dish.restaurant_name}
-            {dish.restaurant_address && ` — ${dish.restaurant_address}`}
+          {/* Restaurant — name clickable to /[city]/r/[slug] (page fiche resto).
+              On ferme le modal au clic pour ne pas le laisser monté pendant la
+              navigation client-side (sinon il reste visible 250ms après la
+              transition). */}
+          <div className="flex items-center gap-1.5 text-sm text-[var(--text2)] mb-2 flex-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)" aria-hidden="true" className="shrink-0"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+            {dish.restaurant_city ? (
+              <Link
+                href={`${localePrefix}/${citySlug(dish.restaurant_city)}/r/${restaurantSlug(dish.restaurant_name)}`}
+                onClick={() => setDish(null)}
+                className="font-semibold text-[var(--text)] hover:text-[var(--primary)] hover:underline transition-colors duration-200 inline-flex items-center gap-1"
+                aria-label={`Voir tous les plats de ${dish.restaurant_name}`}
+              >
+                {dish.restaurant_name}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="opacity-60">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </Link>
+            ) : (
+              <span>{dish.restaurant_name}</span>
+            )}
+            {dish.restaurant_address && (
+              <span className="text-[var(--text3)]">— {dish.restaurant_address}</span>
+            )}
           </div>
 
           {/* Price */}

@@ -1,9 +1,10 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import type { DishRow } from '@/lib/supabase';
+import { citySlug, restaurantSlug } from '@/lib/slug';
 import DownloadButtons from './DownloadButtons';
 import M3Spinner from './M3Spinner';
 
@@ -17,6 +18,9 @@ export default function DishGrid({
 }) {
   const t = useTranslations('feed');
   const sp = useSearchParams();
+  const routeParams = useParams<{ locale?: string }>();
+  const locale = routeParams?.locale || 'fr';
+  const localePrefix = locale === 'fr' ? '' : `/${locale}`;
   const q = sp.get('q') || '';
   const [loading, setLoading] = useState(false);
 
@@ -142,7 +146,26 @@ export default function DishGrid({
               </div>
               <div className="p-3">
                 <h3 className="text-sm font-bold truncate group-hover:text-[var(--primary)] transition-colors duration-300">{d.dish_name}</h3>
-                <p className="text-xs text-[var(--text2)] truncate mt-0.5 group-hover:text-[var(--text)] transition-colors duration-300">{d.restaurant_name}</p>
+                {/* Nom du resto cliquable → page resto. stopPropagation pour ne
+                    pas déclencher l'ouverture du DishModal de la card parent.
+                    Hyperlien `<a>` SSR-friendly pour que Google suive le
+                    maillage interne (vs onClick router.push qui ne génère pas
+                    d'href dans le HTML). */}
+                {d.restaurant_city ? (
+                  <a
+                    href={`${localePrefix}/${citySlug(d.restaurant_city)}/r/${restaurantSlug(d.restaurant_name)}`}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="block text-xs text-[var(--text2)] truncate mt-0.5 hover:text-[var(--primary)] hover:underline transition-colors duration-300"
+                    aria-label={`Voir tous les plats de ${d.restaurant_name}`}
+                  >
+                    {d.restaurant_name}
+                  </a>
+                ) : (
+                  <p className="text-xs text-[var(--text2)] truncate mt-0.5 group-hover:text-[var(--text)] transition-colors duration-300">
+                    {d.restaurant_name}
+                  </p>
+                )}
                 {d.latest_price && (
                   <span className="inline-block mt-1 text-xs font-bold text-[var(--primary)] bg-[var(--primary-container)] px-2 py-0.5 rounded-md group-hover:bg-[var(--primary)] group-hover:text-white transition-colors duration-300">
                     {Number(d.latest_price).toFixed(2)} {d.currency || 'EUR'}
