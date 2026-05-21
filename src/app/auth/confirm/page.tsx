@@ -53,9 +53,19 @@ function ConfirmContent() {
     // browsers, freezing the page on "Vérification en cours…").
     // Supabase verifies server-side and 302-redirects back to RETURN_URL
     // (?done=1) on success, or appends ?error=… on failure.
-    const tokenHash = searchParams.get('token_hash') || searchParams.get('token');
+    // Forward the token under its ORIGINAL param name. GoTrue's verify GET
+    // endpoint accepts both `token_hash` (hashed link) and `token` (raw OTP).
+    // Forwarding a raw `token` as `token_hash` makes verification fail, so we
+    // must preserve whichever name the email template emitted.
+    const tokenHash = searchParams.get('token_hash');
+    const token = searchParams.get('token');
     const type = searchParams.get('type') || 'signup';
-    if (!tokenHash) {
+    const tokenParam = tokenHash
+      ? `token_hash=${encodeURIComponent(tokenHash)}`
+      : token
+        ? `token=${encodeURIComponent(token)}`
+        : null;
+    if (!tokenParam) {
       setStatus('error');
       setErrorMsg('Lien invalide ou expiré.');
       return;
@@ -63,7 +73,7 @@ function ConfirmContent() {
     const verifyUrl =
       `${SUPABASE_URL}/auth/v1/verify` +
       `?type=${encodeURIComponent(type)}` +
-      `&token_hash=${encodeURIComponent(tokenHash)}` +
+      `&${tokenParam}` +
       `&redirect_to=${encodeURIComponent(RETURN_URL)}`;
     window.location.replace(verifyUrl);
   }, [searchParams]);
