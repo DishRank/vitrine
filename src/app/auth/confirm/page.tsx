@@ -4,6 +4,10 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 const SUPABASE_URL = 'https://yztbhdvrvgozhyaujtjz.supabase.co';
+const APP_DEEP_LINK = 'dishrank://';
+// Where Supabase bounces back to once the token is verified. Must be on
+// the SiteURL domain (dishrank.fr) so it's an allowed redirect target.
+const RETURN_URL = 'https://dishrank.fr/auth/confirm?done=1';
 
 function ConfirmContent() {
   const searchParams = useSearchParams();
@@ -11,32 +15,57 @@ function ConfirmContent() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
+    // Supabase reports verification failures in the URL **hash**
+    // (#error=...&error_code=...&error_description=...) on the implicit
+    // flow, and sometimes in the query string. Parse both.
+    const hash = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
+    const hashParams = new URLSearchParams(hash);
+    const errorCode =
+      searchParams.get('error_code') || searchParams.get('error') ||
+      hashParams.get('error_code') || hashParams.get('error');
+    const errorDesc =
+      searchParams.get('error_description') || hashParams.get('error_description');
+
+    if (errorCode) {
+      setStatus('error');
+      const human = (errorDesc || '').replace(/\+/g, ' ');
+      setErrorMsg(
+        /expired|otp_expired/i.test(errorCode + ' ' + human)
+          ? 'Le lien a expiré. Reconnecte-toi dans l\'app pour recevoir un nouveau lien.'
+          : (human || 'Lien invalide ou expiré.'),
+      );
+      return;
+    }
+
+    // Second hop : Supabase already verified the token and redirected us
+    // back here with ?done=1. Show success + try the deep link.
+    if (searchParams.get('done') === '1') {
+      setStatus('success');
+      // Best-effort : opens the app on mobile, harmless no-op on desktop.
+      const tid = setTimeout(() => { window.location.href = APP_DEEP_LINK; }, 400);
+      return () => clearTimeout(tid);
+    }
+
+    // First hop : a fresh confirmation link. Hand the token off to
+    // Supabase's verify endpoint via a TOP-LEVEL navigation (not a
+    // cross-origin fetch — that was the bug : `fetch(..., {redirect:
+    // 'manual'})` could leave the promise pending forever on some
+    // browsers, freezing the page on "Vérification en cours…").
+    // Supabase verifies server-side and 302-redirects back to RETURN_URL
+    // (?done=1) on success, or appends ?error=… on failure.
     const tokenHash = searchParams.get('token_hash') || searchParams.get('token');
     const type = searchParams.get('type') || 'signup';
-
     if (!tokenHash) {
       setStatus('error');
       setErrorMsg('Lien invalide ou expiré.');
       return;
     }
-
-    fetch(`${SUPABASE_URL}/auth/v1/verify?type=${type}&token_hash=${tokenHash}&redirect_to=dishrank://`, {
-      method: 'GET',
-      redirect: 'manual',
-    })
-      .then((res) => {
-        if (res.type === 'opaqueredirect' || res.status === 303 || res.status === 302 || res.ok) {
-          setStatus('success');
-          window.location.href = 'dishrank://';
-        } else {
-          setStatus('error');
-          setErrorMsg('Le lien a expiré. Reconnecte-toi dans l\'app pour recevoir un nouveau lien.');
-        }
-      })
-      .catch(() => {
-        setStatus('success');
-        window.location.href = `${SUPABASE_URL}/auth/v1/verify?type=${type}&token_hash=${tokenHash}&redirect_to=dishrank://`;
-      });
+    const verifyUrl =
+      `${SUPABASE_URL}/auth/v1/verify` +
+      `?type=${encodeURIComponent(type)}` +
+      `&token_hash=${encodeURIComponent(tokenHash)}` +
+      `&redirect_to=${encodeURIComponent(RETURN_URL)}`;
+    window.location.replace(verifyUrl);
   }, [searchParams]);
 
   return (
@@ -60,7 +89,7 @@ function ConfirmContent() {
             Ton compte DishRank est activé. Ouvre l&apos;app pour commencer.
           </p>
           <a
-            href="dishrank://"
+            href={APP_DEEP_LINK}
             style={{
               display: 'inline-block', background: '#6C5CE7', color: '#fff',
               fontSize: 16, fontWeight: 700, textDecoration: 'none',
