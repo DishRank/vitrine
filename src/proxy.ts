@@ -71,6 +71,31 @@ function generateNonce(): string {
  * `object-src 'none'`, `base-uri 'self'` ferment les vecteurs d'attaque
  * principaux qu'un attaquant pourrait exploiter via XSS de style.
  */
+/**
+ * CSP pour les pages **statiques prérendues + cachées par le CDN** (`/dish`,
+ * `/auth/confirm`). Ces pages ont leur HTML figé au build : on ne peut pas y
+ * injecter un nonce par requête. On N'UTILISE DONC PAS `'strict-dynamic'`
+ * (qui invaliderait `'self'`/`'unsafe-inline'` et bloquerait les chunks
+ * statiques `/_next/...` → page jamais hydratée). À la place, `'self'`
+ * autorise les chunks même-origine et `'unsafe-inline'` les scripts inline
+ * RSC (`self.__next_f.push(...)`). Surface XSS réduite par `object-src
+ * 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`.
+ */
+function buildStaticCsp(isDev: boolean): string {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
+    "img-src 'self' https: data:",
+    "connect-src 'self' https://yztbhdvrvgozhyaujtjz.supabase.co",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join('; ');
+}
+
 function buildCsp(nonce: string, isDev: boolean): string {
   const scriptSrc = [
     "'self'",
@@ -150,22 +175,22 @@ export default function proxy(req: NextRequest) {
   // params → surface XSS minimale.
   if (pathname === '/dish' || pathname.startsWith('/dish/')) {
     const response = NextResponse.next();
-    const dishCsp = [
-      "default-src 'self'",
-      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' https: data:",
-      "connect-src 'self' https://yztbhdvrvgozhyaujtjz.supabase.co",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "object-src 'none'",
-    ].join('; ');
-    response.headers.set('Content-Security-Policy', dishCsp);
+    response.headers.set('Content-Security-Policy', buildStaticCsp(isDev));
     return response;
   }
 
-  // /auth/* et /join/* — pages dynamiques avec scripts inline (deeplinks
+  // /auth/confirm — page CLIENT ('use client') sans données serveur, donc
+  // **prérendue en statique** par Next + cachée CDN. Comme /dish, son HTML est
+  // figé : un nonce par requête ne matcherait pas ses <script> → strict-dynamic
+  // bloquerait les chunks → React ne s'hydraterait jamais (spinner infini de
+  // "Vérification en cours"). On lui sert donc la CSP statique sans nonce.
+  if (pathname === '/auth/confirm') {
+    const response = NextResponse.next();
+    response.headers.set('Content-Security-Policy', buildStaticCsp(isDev));
+    return response;
+  }
+
+  // Autres /auth/* et /join/* — pages dynamiques avec scripts inline (deeplinks
   // contextuels). Nonce CSP propagé pour autoriser leurs scripts inline
   // tout en restant strict.
   if (pathname.startsWith('/auth/') || pathname.startsWith('/join/')) {
