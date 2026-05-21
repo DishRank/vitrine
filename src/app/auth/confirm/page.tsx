@@ -3,11 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-const SUPABASE_URL = 'https://yztbhdvrvgozhyaujtjz.supabase.co';
 const APP_DEEP_LINK = 'dishrank://';
-// Where Supabase bounces back to once the token is verified. Must be on
-// the SiteURL domain (dishrank.fr) so it's an allowed redirect target.
-const RETURN_URL = 'https://dishrank.fr/auth/confirm?done=1';
 
 function ConfirmContent() {
   const searchParams = useSearchParams();
@@ -15,9 +11,10 @@ function ConfirmContent() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    // Supabase reports verification failures in the URL **hash**
-    // (#error=...&error_code=...&error_description=...) on the implicit
-    // flow, and sometimes in the query string. Parse both.
+    // Supabase sometimes reports verification failures directly in the URL
+    // **hash** (#error=...&error_code=...) on the implicit flow, and sometimes
+    // in the query string. Catch those first so we never call the API for a
+    // link Supabase already rejected.
     const hash = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
     const hashParams = new URLSearchParams(hash);
     const errorCode =
@@ -37,45 +34,44 @@ function ConfirmContent() {
       return;
     }
 
-    // Second hop : Supabase already verified the token and redirected us
-    // back here with ?done=1. Show success + try the deep link.
-    if (searchParams.get('done') === '1') {
-      setStatus('success');
-      // Best-effort : opens the app on mobile, harmless no-op on desktop.
-      const tid = setTimeout(() => { window.location.href = APP_DEEP_LINK; }, 400);
-      return () => clearTimeout(tid);
-    }
-
-    // First hop : a fresh confirmation link. Hand the token off to
-    // Supabase's verify endpoint via a TOP-LEVEL navigation (not a
-    // cross-origin fetch — that was the bug : `fetch(..., {redirect:
-    // 'manual'})` could leave the promise pending forever on some
-    // browsers, freezing the page on "Vérification en cours…").
-    // Supabase verifies server-side and 302-redirects back to RETURN_URL
-    // (?done=1) on success, or appends ?error=… on failure.
-    // Forward the token under its ORIGINAL param name. GoTrue's verify GET
-    // endpoint accepts both `token_hash` (hashed link) and `token` (raw OTP).
-    // Forwarding a raw `token` as `token_hash` makes verification fail, so we
-    // must preserve whichever name the email template emitted.
+    // The link carries `token_hash` (standard Supabase template) or, on legacy
+    // setups, `token`. We hand it to our server route which calls
+    // `verifyOtp` — a normal POST that ALWAYS resolves. This avoids the old bug
+    // where a top-level navigation to GoTrue's GET /verify dead-ended on a 400
+    // for `token_hash` (no redirect to follow → page frozen forever).
     const tokenHash = searchParams.get('token_hash');
     const token = searchParams.get('token');
     const type = searchParams.get('type') || 'signup';
-    const tokenParam = tokenHash
-      ? `token_hash=${encodeURIComponent(tokenHash)}`
-      : token
-        ? `token=${encodeURIComponent(token)}`
-        : null;
-    if (!tokenParam) {
+    const tokenValue = tokenHash || token;
+    if (!tokenValue) {
       setStatus('error');
       setErrorMsg('Lien invalide ou expiré.');
       return;
     }
-    const verifyUrl =
-      `${SUPABASE_URL}/auth/v1/verify` +
-      `?type=${encodeURIComponent(type)}` +
-      `&${tokenParam}` +
-      `&redirect_to=${encodeURIComponent(RETURN_URL)}`;
-    window.location.replace(verifyUrl);
+
+    let cancelled = false;
+    const apiUrl =
+      `/api/auth/confirm-email?token_hash=${encodeURIComponent(tokenValue)}` +
+      `&type=${encodeURIComponent(type)}`;
+    fetch(apiUrl)
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (res.ok && body?.ok) {
+          setStatus('success');
+          // Best-effort : opens the app on mobile, harmless no-op on desktop.
+          setTimeout(() => { window.location.href = APP_DEEP_LINK; }, 400);
+        } else {
+          setStatus('error');
+          setErrorMsg(body?.message || 'Lien invalide ou expiré.');
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStatus('error');
+        setErrorMsg('Connexion impossible. Réessaie dans un instant.');
+      });
+    return () => { cancelled = true; };
   }, [searchParams]);
 
   return (
