@@ -15,6 +15,12 @@ function getSupabase() {
   return _supabase;
 }
 
+/** Service-role client for API routes that need to bypass RLS (OSM cache
+ *  reads/writes, photo cache, etc.). Same singleton as the SSR readers above. */
+export function getSupabaseServiceClient(): SupabaseClient {
+  return getSupabase();
+}
+
 // ── Types ──
 
 export interface DishRow {
