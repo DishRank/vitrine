@@ -10,9 +10,9 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUserId } from '@/lib/verifyAuth';
+import { getAuthenticatedContext } from '@/lib/verifyAuth';
 import { getCorsHeaders } from '@/lib/cors';
-import { getSupabaseServiceClient } from '@/lib/supabase';
+import { getSupabaseServiceClientFor } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -122,8 +122,8 @@ export async function OPTIONS(request: Request) {
 
 export async function POST(request: Request) {
   const cors = getCorsHeaders(request);
-  const userId = await getAuthenticatedUserId(request);
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: cors });
+  const auth = await getAuthenticatedContext(request);
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: cors });
 
   type Item = { osm_id: number; website?: string | null };
   let body: { items?: Item[] };
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
   const items = (body.items || []).filter((it) => typeof it?.osm_id === 'number').slice(0, MAX_ITEMS);
   if (items.length === 0) return NextResponse.json({ photos: {} }, { headers: cors });
 
-  const supabase = getSupabaseServiceClient();
+  const supabase = getSupabaseServiceClientFor(auth.supabaseUrl, auth.serviceRoleKey);
   const cutoff = Date.now() - CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
   const ids = items.map((it) => it.osm_id);
   const { data: cached } = await supabase.from('place_photos').select('osm_id, url, fetched_at').in('osm_id', ids);

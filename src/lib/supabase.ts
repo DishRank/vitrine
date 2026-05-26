@@ -21,6 +21,18 @@ export function getSupabaseServiceClient(): SupabaseClient {
   return getSupabase();
 }
 
+// One singleton per (url, key) combo. The dev-vs-prod selection happens via
+// `getAuthenticatedContext` in verifyAuth.ts : it derives the project from
+// the JWT iss, then routes call us with that project's url + key.
+const _clientsByUrl = new Map<string, SupabaseClient>();
+export function getSupabaseServiceClientFor(supabaseUrl: string, serviceRoleKey: string): SupabaseClient {
+  const cached = _clientsByUrl.get(supabaseUrl);
+  if (cached) return cached;
+  const client = createClient(supabaseUrl, serviceRoleKey);
+  _clientsByUrl.set(supabaseUrl, client);
+  return client;
+}
+
 // ── Types ──
 
 export interface DishRow {
