@@ -149,6 +149,12 @@ function featuresFromTags(tags: Record<string, string>): Record<string, unknown>
   for (const k of ['brand', 'wikipedia', 'wikidata', 'stars']) {
     const v = t(k); if (v) out[k] = v;
   }
+  // brand:wikidata is the QID of the chain (Starbucks, McDo…). Used as a
+  // logo fallback by the photo enrichment route when the venue itself has
+  // neither website nor wikidata. Different field name so renderers can
+  // tell "real venue image" apart from "branded logo".
+  const brandWikidata = t('brand:wikidata');
+  if (brandWikidata) out.brand_wikidata = brandWikidata;
   return out;
 }
 
