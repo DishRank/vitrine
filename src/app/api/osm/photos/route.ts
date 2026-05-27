@@ -32,6 +32,35 @@ const MAX_HTML_BYTES = 250_000;
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
 const WIKIDATA_UA = 'DishRank/1.0 (contact: hello@dishrank.fr)';
 
+/**
+ * Strip address-like noise from a `city` value before sending it to
+ * search engines. Some venues in our restaurants table have a
+ * concatenated `<street>, <city>, <postal>, <country>` string in the
+ * `city` column (data-quality issue from a buggy OSM ingest). When that
+ * polluted string lands in our Bing query, the resulting URL is too
+ * long and noisy for Bing to rank anything useful — image search
+ * returns 0 results. This heuristic drops the street/postal/country
+ * parts and keeps the cleanest remaining segment.
+ */
+function cleanCity(city: string | null | undefined): string | null {
+  if (!city) return null;
+  const trimmed = city.trim();
+  if (!trimmed) return null;
+  if (!trimmed.includes(',')) return trimmed;
+  const parts = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+  const candidates = parts.filter((p) =>
+    !/^\d{4,6}$/.test(p) &&                  // not a postal code (4-6 digits)
+    !/^france$/i.test(p) &&                  // not "France"
+    !/^\d+\s/.test(p) &&                     // not a street line ("10 Rue …")
+    !/(rue|avenue|av\.?|boulevard|bd\.?|place|impasse|chemin|allée|allee|route)\b/i.test(p) &&
+    p.length > 1
+  );
+  if (candidates.length === 0) return null;
+  // City is usually the last non-address segment (after the street, before
+  // the postal code and country).
+  return candidates[candidates.length - 1];
+}
+
 function normalizeUrl(raw: string): string | null {
   let u = (raw || '').trim();
   if (!u) return null;
@@ -290,28 +319,51 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
     if (!res.ok) { console.warn('[bingImg] HTTP', res.status, query); return null; }
     const html = (await res.text()).slice(0, MAX_HTML_BYTES);
 
-    // Bing Image search wraps each thumbnail in :
-    //   <a class="iusc" m='{"murl":"https://...","turl":"...",...}'>
-    // The `m` attribute is single-quoted (so its JSON can use double quotes
-    // freely). We match the m payload by using a backreference on the
-    // quote char — anything else (eg [^'"]) breaks because the JSON inside
-    // contains literal " characters when the attribute is single-quoted.
-    // HTML entities (&quot; &amp;) may appear when special chars sneak in.
-    const re = /<a\b[^>]*\bclass=["'][^"']*\biusc\b[^"']*["'][^>]*\sm=(['"])(.*?)\1/gi;
-    let m: RegExpExecArray | null;
-    let attempts = 0;
-    while ((m = re.exec(html)) !== null) {
-      attempts++;
-      const raw = m[2].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
-      try {
-        const parsed = JSON.parse(raw);
-        const murl = parsed?.murl;
-        if (typeof murl === 'string' && /^https?:\/\//i.test(murl)) {
-          return murl;
+    // Try several known Bing Image markup variants. Bing renders both a
+    // server-side variant with `<a class="iusc" m='{...json...}'>` and an
+    // SPA-ish variant where the same JSON sits in `data-m='...'` on a
+    // different element. We try them in order and stop at the first
+    // matching JSON containing a `murl` field.
+    const patterns: Array<{ name: string; re: RegExp }> = [
+      // Classic : <a class="iusc" m='{"murl":"..."}'>
+      { name: 'iusc-m', re: /<a\b[^>]*\bclass=["'][^"']*\biusc\b[^"']*["'][^>]*\sm=(['"])(.*?)\1/gi },
+      // Variant : same m= attribute but on a different tag (no iusc class)
+      { name: 'any-m', re: /\bm=(['"])(\{(?:[^\\'"]|\\.)*?"murl"[^}]*\})\1/gi },
+      // Old `imgurl` query param sometimes embedded in result anchors
+      { name: 'imgurl', re: /\bimgurl=(?:&quot;|"|')?([^"'&]+\.(?:jpg|jpeg|png|webp)[^"'&]*)/gi },
+    ];
+
+    for (const { name, re } of patterns) {
+      let m: RegExpExecArray | null;
+      let attempts = 0;
+      while ((m = re.exec(html)) !== null) {
+        attempts++;
+        const captured = m[2] || m[1];
+        if (!captured) continue;
+        // Pattern `imgurl` already gives us a URL directly — no JSON parse.
+        if (name === 'imgurl') {
+          const decoded = decodeURIComponent(captured);
+          if (/^https?:\/\//i.test(decoded)) return decoded;
+          continue;
         }
-      } catch { continue; }
+        // Other patterns capture a JSON-in-attribute string with HTML
+        // entities for inner quotes. Decode then JSON.parse → read `murl`.
+        const raw = captured.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
+        try {
+          const parsed = JSON.parse(raw);
+          const murl = parsed?.murl;
+          if (typeof murl === 'string' && /^https?:\/\//i.test(murl)) {
+            return murl;
+          }
+        } catch { continue; }
+      }
+      if (attempts > 0) {
+        console.warn('[bingImg]', name, 'matched', attempts, 'cards but no murl extracted for', query);
+      }
     }
-    console.warn('[bingImg] no image found for', query, 'attempts=', attempts);
+    // Surface the HTML head so we can see what shape Bing actually returned.
+    const head = html.slice(0, 600).replace(/\s+/g, ' ').slice(0, 600);
+    console.warn('[bingImg] no image found for', query, 'htmlHead=', head);
     return null;
   } catch (e) { console.warn('[bingImg] exception', (e as Error).message); return null; }
   finally { clearTimeout(timer); }
@@ -422,8 +474,12 @@ export async function POST(request: Request) {
     // heritage / curated spots ; the Bing search step catches everyday
     // venues referenced on Uber Eats / Deliveroo / Just Eat / Tripadvisor /
     // their own site.
+    // Cleaned city — some venues have a polluted `city` field carrying a
+    // full street address. Strip the noise once before reusing for the
+    // three search-based fallbacks (Wikidata SPARQL, Bing web, Bing img).
+    const cityForSearch = cleanCity(it.city);
     if (!url && it.name) {
-      url = await wikidataSearchByName(it.name, it.city ?? null);
+      url = await wikidataSearchByName(it.name, cityForSearch);
       if (url) source = 'wikidata_search';
     }
     // Generic web fallback : finds the venue on Uber Eats, Deliveroo,
@@ -431,7 +487,7 @@ export async function POST(request: Request) {
     // Last in the cascade because we trust structured sources more than
     // "whatever a search engine ranked first".
     if (!url && it.name) {
-      url = await bingSearchByName(it.name, it.city ?? null);
+      url = await bingSearchByName(it.name, cityForSearch);
       if (url) source = 'web_search';
     }
     // Absolute-last-resort : Bing Image Search returns the first image
@@ -440,7 +496,7 @@ export async function POST(request: Request) {
     // 403'd our og:image extraction. Quality varies (logo / food shot /
     // map thumbnail) but always beats the emoji placeholder.
     if (!url && it.name) {
-      url = await bingImageSearchByName(it.name, it.city ?? null);
+      url = await bingImageSearchByName(it.name, cityForSearch);
       if (url) source = 'image_search';
     }
     photos[it.osm_id] = url;
