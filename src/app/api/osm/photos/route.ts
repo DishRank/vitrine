@@ -487,19 +487,26 @@ export async function POST(request: Request) {
     // structured signals (wikidata QID / brand / website) gives the same
     // coverage in a fraction of the time, with much higher hit-rate.
     let bingImgTried = false;
+    const diagBefore = bingImgDiag.length;
     if (!url && it.name) {
       bingImgTried = true;
       url = await bingImageSearchByName(it.name, cityForSearch, bingImgDiag);
       if (url) source = 'image_search';
     }
     photos[it.osm_id] = url;
-    // For null URLs, encode in `source` which step was last attempted so
-    // we can debug coverage holes via SQL without inspecting Vercel logs.
-    // Remove once cascade is stable.
+    // For null URLs, encode in `source` which step was last attempted +
+    // what bing image's diag said (occ = #mediaurl in body, http = http
+    // status). Helps us tell rate-limiting (occ=0) from regex/parse bugs
+    // (occ>0 but null returned). Strip after cascade is stable.
+    const lastDiag = bingImgTried ? bingImgDiag[diagBefore] : null;
     const debugSource = url
       ? source
       : bingImgTried
-        ? '_null_after_img'
+        ? (lastDiag && typeof lastDiag.occ === 'number'
+            ? `_null_img_occ${lastDiag.occ}_b${lastDiag.bytes}`
+            : lastDiag && typeof lastDiag.http === 'number'
+              ? `_null_img_http${lastDiag.http}`
+              : '_null_img_abort')
         : it.name
           ? '_null_no_name'
           : '_null_no_signal';
