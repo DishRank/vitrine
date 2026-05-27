@@ -308,11 +308,12 @@ async function bingImageSearchByName(
   const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
   if (query.length < 2) return null;
   const ctrl = new AbortController();
-  // 8 s : Bing Image Search is our last-and-best fallback. Under burst
-  // load (20 parallel venues) the page can take 3-5 s to return, vs
-  // ~700 ms in isolation. We give it more room than the other steps
-  // because if it succeeds we win, if it timeouts we have nothing.
-  const timer = setTimeout(() => ctrl.abort(), 8000);
+  // 12 s : Bing Image Search is our last-and-best fallback. Under burst
+  // load (20 parallel venues) the page can take 3-10 s to return, vs
+  // ~700 ms in isolation. At 8 s we saw ~50 % of calls time out. Bumped
+  // to 12 s — still leaves ~16 s of headroom under maxDuration 30 s for
+  // the rest of the cascade.
+  const timer = setTimeout(() => ctrl.abort(), 12000);
   try {
     const searchUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
     const res = await fetch(searchUrl, {
