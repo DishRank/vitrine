@@ -180,29 +180,27 @@ async function wikidataSearchByName(name: string, city: string | null): Promise<
 }
 
 /**
- * Generic web-search fallback via DuckDuckGo's HTML endpoint. Catches any
- * venue with an online presence : Uber Eats / Deliveroo / Just Eat /
- * Tripadvisor / restaurant's own site / etc. We don't write a dedicated
- * scraper per aggregator because each has its own anti-bot setup
- * (Cloudflare, JS challenges, evolving HTML) — a generic web search
- * route lets DuckDuckGo do the heavy lifting and we just consume the
- * first result.
+ * Generic web-search fallback via Bing HTML. Catches any venue with an
+ * online presence : Uber Eats / Deliveroo / Just Eat / Tripadvisor /
+ * the resto's own site / etc.
  *
- * DDG HTML is intentionally simple HTML for accessibility ; their `lite`
- * endpoint is even more lightweight. Best-effort : if DDG rate-limits
- * from the Vercel IP we return null and let the next fallback run.
+ * We previously hit `lite.duckduckgo.com/lite/` but DDG anti-bot returns
+ * 403 systematically from Vercel cloud IPs. Bing's regular HTML SERP is
+ * far more tolerant — it's still a server-rendered page (no JS challenge)
+ * and they're less aggressive about cloud-IP detection. Zero setup : no
+ * key, no quota, no registration.
+ *
+ * We walk the top 3 results and use the first one that yields an og:image.
+ * Best-effort : if Bing rate-limits us, we return null and let the venue
+ * fall back to the emoji placeholder.
  */
-async function webSearchByName(name: string, city: string | null): Promise<string | null> {
+async function bingSearchByName(name: string, city: string | null): Promise<string | null> {
   const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
   if (query.length < 2) return null;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 6000);
   try {
-    // DDG's `lite` endpoint serves the simplest possible HTML (designed
-    // for terminal browsers) and is far less aggressive on anti-bot than
-    // the regular html endpoint when hit from cloud IPs. Falls back to
-    // the regular endpoint if lite returns nothing.
-    const searchUrl = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`;
+    const searchUrl = `https://www.bing.com/search?q=${encodeURIComponent(query)}&cc=fr&setlang=fr`;
     const res = await fetch(searchUrl, {
       headers: {
         'User-Agent': USER_AGENT,
@@ -212,49 +210,47 @@ async function webSearchByName(name: string, city: string | null): Promise<strin
       signal: ctrl.signal,
       redirect: 'follow',
     });
-    if (!res.ok) { console.warn('[webSearch] DDG lite HTTP', res.status, query); return null; }
+    if (!res.ok) { console.warn('[bingSearch] HTTP', res.status, query); return null; }
     const html = (await res.text()).slice(0, MAX_HTML_BYTES);
 
-    // The `lite` HTML lists results as simple links inside the body. The
-    // first real result is the first `<a href="https://..."` that's NOT
-    // a duckduckgo / lite-ui link. Skip uddg-wrapped variants which
-    // appear on the regular html endpoint.
-    const linkRe = /<a\b[^>]*href=["']([^"']+)["'][^>]*>/gi;
+    // Bing wraps each result in <li class="b_algo">…<h2><a href="…">. The
+    // regex tolerates extra classes on the <li> and arbitrary inner markup
+    // between the wrapper and the <a> tag.
+    const resultRe = /<li[^>]*class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>[\s\S]*?<h2[^>]*>[\s\S]*?<a[^>]*href=["']([^"']+)["']/gi;
+    const urls: string[] = [];
     let m: RegExpExecArray | null;
-    let firstUrl: string | null = null;
-    while ((m = linkRe.exec(html)) !== null) {
-      let href = m[1];
-      if (!href) continue;
-      // Normalize uddg wrapper if present.
-      if (href.startsWith('//')) href = 'https:' + href;
+    while ((m = resultRe.exec(html)) !== null && urls.length < 3) {
+      const href = m[1];
       try {
         const u = new URL(href);
-        if (u.hostname.endsWith('duckduckgo.com')) {
-          const uddg = u.searchParams.get('uddg');
-          if (uddg) { firstUrl = decodeURIComponent(uddg); break; }
-          continue;
-        }
-        if (/^https?:/.test(u.protocol) && !/duckduckgo/.test(u.hostname)) {
-          firstUrl = href;
-          break;
-        }
+        if (!/^https?:/.test(u.protocol)) continue;
+        if (/(?:^|\.)bing\.com$/i.test(u.hostname)) continue;
+        if (/(?:^|\.)microsoft\.com$/i.test(u.hostname)) continue;
+        urls.push(href);
       } catch { continue; }
     }
-    if (!firstUrl) { console.warn('[webSearch] no result link for', query); return null; }
+    if (urls.length === 0) { console.warn('[bingSearch] no result for', query); return null; }
 
-    const venueRes = await fetch(firstUrl, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
-      signal: ctrl.signal,
-      redirect: 'follow',
-    });
-    if (!venueRes.ok) { console.warn('[webSearch] venue fetch HTTP', venueRes.status, firstUrl); return null; }
-    const ct = venueRes.headers.get('content-type') || '';
-    if (!ct.includes('text/html')) return null;
-    const venueHtml = (await venueRes.text()).slice(0, MAX_HTML_BYTES);
-    const img = extractCascade(venueHtml, venueRes.url || firstUrl);
-    if (!img) console.warn('[webSearch] no og:image at', firstUrl);
-    return img;
-  } catch (e) { console.warn('[webSearch] exception', (e as Error).message); return null; }
+    // Walk the top results until one returns a usable og:image. At most
+    // 3 HTML fetches, each <head>-only. Skips sites that 403 our UA.
+    for (const target of urls) {
+      try {
+        const venueRes = await fetch(target, {
+          headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+          signal: ctrl.signal,
+          redirect: 'follow',
+        });
+        if (!venueRes.ok) continue;
+        const ct = venueRes.headers.get('content-type') || '';
+        if (!ct.includes('text/html')) continue;
+        const venueHtml = (await venueRes.text()).slice(0, MAX_HTML_BYTES);
+        const img = extractCascade(venueHtml, venueRes.url || target);
+        if (img) return img;
+      } catch { continue; }
+    }
+    console.warn('[bingSearch] no og:image across top results for', query);
+    return null;
+  } catch (e) { console.warn('[bingSearch] exception', (e as Error).message); return null; }
   finally { clearTimeout(timer); }
 }
 
@@ -305,8 +301,8 @@ export async function POST(request: Request) {
   type Item = {
     osm_id: number;
     /** Venue display name — used as the last-resort search key for
-     *  name-based fallbacks (Wikidata SPARQL, DDG-lite web search) when
-     *  the venue has no website/wikidata in OSM. */
+     *  name-based fallbacks (Wikidata SPARQL, Brave Search) when the
+     *  venue has no website/wikidata in OSM. */
     name?: string | null;
     /** Venue city — disambiguates name-based searches (a "Le 131" in
      *  Paris vs one in Lyon). */
@@ -360,19 +356,19 @@ export async function POST(request: Request) {
     }
     // Name-based fallbacks for venues with no OSM web-presence signal
     // (small local restaurants like "Le 131"). Wikidata SPARQL catches
-    // heritage / curated spots ; the generic web search (DDG-lite)
-    // catches everyday venues referenced on Uber Eats / Deliveroo /
-    // Just Eat / Tripadvisor / their own site.
+    // heritage / curated spots ; the Bing search step catches everyday
+    // venues referenced on Uber Eats / Deliveroo / Just Eat / Tripadvisor /
+    // their own site.
     if (!url && it.name) {
       url = await wikidataSearchByName(it.name, it.city ?? null);
       if (url) source = 'wikidata_search';
     }
     // Generic web fallback : finds the venue on Uber Eats, Deliveroo,
-    // Just Eat, Tripadvisor, the resto's own site, etc. via the first
-    // DuckDuckGo result. Last in the cascade because we trust structured
-    // sources more than "whatever google ranked first".
+    // Just Eat, Tripadvisor, the resto's own site, etc. via Bing HTML.
+    // Last in the cascade because we trust structured sources more than
+    // "whatever a search engine ranked first".
     if (!url && it.name) {
-      url = await webSearchByName(it.name, it.city ?? null);
+      url = await bingSearchByName(it.name, it.city ?? null);
       if (url) source = 'web_search';
     }
     photos[it.osm_id] = url;
