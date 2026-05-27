@@ -327,6 +327,15 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
     // We just look for `mediaurl=` literally (it's specific enough that
     // false positives don't happen) and URL-decode whatever follows up to
     // the next param separator / quote / whitespace.
+    // Quick presence-check before regex. If mediaurl= doesn't appear at
+    // all in the body Bing served us a degraded page (challenge / empty /
+    // shorter SPA shell) — surface it explicitly so we can tell apart
+    // "regex bug" from "Bing didn't return the cards".
+    const occCount = (html.match(/mediaurl=/gi) || []).length;
+    if (occCount === 0) {
+      console.warn('[bingImg v4] no mediaurl in body, htmlBytes=', html.length, 'for', query);
+      return null;
+    }
     const re = /\bmediaurl=([^"'&\s]+)/gi;
     let m: RegExpExecArray | null;
     let attempts = 0;
@@ -334,17 +343,13 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
       attempts++;
       try {
         const decoded = decodeURIComponent(m[1]);
-        if (/^https?:\/\//i.test(decoded)) return decoded;
+        if (/^https?:\/\//i.test(decoded)) {
+          console.log('[bingImg v4] FOUND', decoded.slice(0, 80), 'for', query);
+          return decoded;
+        }
       } catch { continue; }
     }
-    if (attempts === 0) {
-      // Surface a head sample so we can see if Bing served a degraded
-      // page (challenge, empty results, etc.). Capped at 400 chars.
-      const head = html.slice(0, 400).replace(/\s+/g, ' ');
-      console.warn('[bingImg] no mediaurl found for', query, 'htmlHead=', head);
-    } else {
-      console.warn('[bingImg]', attempts, 'mediaurl matches but none parsed for', query);
-    }
+    console.warn('[bingImg v4] occCount=', occCount, 'attempts=', attempts, 'for', query);
     return null;
   } catch (e) { console.warn('[bingImg] exception', (e as Error).message); return null; }
   finally { clearTimeout(timer); }
@@ -493,5 +498,8 @@ export async function POST(request: Request) {
     } catch {}
   }
 
-  return NextResponse.json({ photos }, { headers: cors });
+  return NextResponse.json(
+    { photos },
+    { headers: { ...cors, 'X-Photos-Cascade-Version': 'v4-mediaurl' } },
+  );
 }
