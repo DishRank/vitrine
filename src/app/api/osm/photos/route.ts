@@ -293,13 +293,16 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
     // Bing Image search wraps each thumbnail in :
     //   <a class="iusc" m='{"murl":"https://...","turl":"...",...}'>
     // The `m` attribute is single-quoted (so its JSON can use double quotes
-    // freely). HTML entities (&quot; &amp;) appear when quotes are inside
-    // the JSON values. We grab the `m` payload, decode entities, parse JSON,
-    // read `murl` (= original image URL, not the Bing CDN thumbnail).
-    const re = /<a\b[^>]*\bclass=["'][^"']*\biusc\b[^"']*["'][^>]*\sm=['"]([^'"]+)['"]/gi;
+    // freely). We match the m payload by using a backreference on the
+    // quote char — anything else (eg [^'"]) breaks because the JSON inside
+    // contains literal " characters when the attribute is single-quoted.
+    // HTML entities (&quot; &amp;) may appear when special chars sneak in.
+    const re = /<a\b[^>]*\bclass=["'][^"']*\biusc\b[^"']*["'][^>]*\sm=(['"])(.*?)\1/gi;
     let m: RegExpExecArray | null;
+    let attempts = 0;
     while ((m = re.exec(html)) !== null) {
-      const raw = m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      attempts++;
+      const raw = m[2].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
       try {
         const parsed = JSON.parse(raw);
         const murl = parsed?.murl;
@@ -308,7 +311,7 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
         }
       } catch { continue; }
     }
-    console.warn('[bingImg] no image found for', query);
+    console.warn('[bingImg] no image found for', query, 'attempts=', attempts);
     return null;
   } catch (e) { console.warn('[bingImg] exception', (e as Error).message); return null; }
   finally { clearTimeout(timer); }
