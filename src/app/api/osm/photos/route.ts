@@ -194,96 +194,6 @@ async function wikidataSearchByName(name: string, city: string | null): Promise<
  * Best-effort : if Bing rate-limits us, we return null and let the venue
  * fall back to the emoji placeholder.
  */
-/**
- * Foursquare Places API fallback : structured place lookup that returns
- * real venue photos (user-uploaded), not og:image scrapes. Way better
- * quality than a search-engine fallback when the venue is registered on
- * FSQ — works for most chains and many independents in major cities.
- *
- * Free tier : 100 000 calls / month, no card required (just an email
- * signup at https://docs.foursquare.com/). Opt-in via the
- * `FOURSQUARE_API_KEY` env on Vercel — silently skipped if unset.
- *
- * Uses the current "Places API" endpoint at `places-api.foursquare.com`
- * (NOT the legacy `api.foursquare.com/v3/...` which is deprecated and
- * returns 401 for new keys). Required headers : `Authorization: Bearer
- * <SERVICE_KEY>` + `X-Places-Api-Version: <YYYY-MM-DD>`.
- *
- * Two-step : search by name+coords (500m radius) → fetch first photo.
- */
-const FSQ_API_VERSION = '2025-06-17';
-const FSQ_COOLDOWN_MS = 10 * 60 * 1000;
-// Module-level cooldown timestamp. On the FSQ free tier, the per-second
-// rate limit is low enough that firing 20 parallel /places/search calls
-// (one per visible OSM candidate) systematically yields 429s on the
-// burst. When we get one 429, we stop calling FSQ for 10 min — the
-// cascade falls through to Wikidata SPARQL / Bing without wasting time
-// on calls that we know will 429. The cooldown is per-instance (no
-// shared state across Vercel regions), but each region recovers on its
-// own after 10 min — good enough for our throughput.
-let fsqCooldownUntil = 0;
-
-async function foursquareSearchByName(
-  name: string,
-  city: string | null,
-  lat: number | null,
-  lng: number | null,
-): Promise<string | null> {
-  const apiKey = process.env.FOURSQUARE_API_KEY;
-  if (!apiKey) return null;
-  if (Date.now() < fsqCooldownUntil) return null;
-  if (!name.trim()) return null;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 6000);
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${apiKey}`,
-    Accept: 'application/json',
-    'X-Places-Api-Version': FSQ_API_VERSION,
-  };
-  try {
-    // Ask FSQ to inline the photos array in the search response via the
-    // `fields` param. Single API call instead of two — and crucially the
-    // standalone `/places/{id}/photos` endpoint is rate-limited (429) on
-    // the free tier, while photos inlined via `fields` are not. Cuts our
-    // FSQ budget in half AND avoids the 429 dead-end.
-    const params = new URLSearchParams({
-      query: name.trim(),
-      limit: '1',
-      fields: 'fsq_place_id,name,photos',
-    });
-    // Prefer lat/lng — OSM venue's exact position, 500m radius rules out
-    // same-name venues in neighbouring cities. Falls back to `near=<city>`
-    // for venues with no coords (shouldn't happen — OSM features always
-    // have geometry — but defensive).
-    if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
-      params.set('ll', `${lat},${lng}`);
-      params.set('radius', '500');
-    } else if (city) {
-      params.set('near', city);
-    } else {
-      return null;
-    }
-    const searchUrl = `https://places-api.foursquare.com/places/search?${params.toString()}`;
-    const searchRes = await fetch(searchUrl, { headers, signal: ctrl.signal });
-    if (searchRes.status === 429) {
-      fsqCooldownUntil = Date.now() + FSQ_COOLDOWN_MS;
-      console.warn('[fsq] 429 — entering 10min cooldown');
-      return null;
-    }
-    if (!searchRes.ok) { console.warn('[fsq] search HTTP', searchRes.status, name); return null; }
-    const searchData = await searchRes.json();
-    const result = searchData?.results?.[0];
-    if (!result) return null;
-    const photos = Array.isArray(result.photos) ? result.photos : [];
-    const first = photos[0];
-    if (!first?.prefix || !first?.suffix) return null;
-    // FSQ photo URL format : `{prefix}<size>{suffix}`. 600x600 matches our
-    // list/grid card sizes — full-res ("original") would waste bandwidth.
-    return `${first.prefix}600x600${first.suffix}`;
-  } catch (e) { console.warn('[fsq] exception', (e as Error).message); return null; }
-  finally { clearTimeout(timer); }
-}
-
 async function bingSearchByName(name: string, city: string | null): Promise<string | null> {
   const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
   if (query.length < 2) return null;
@@ -341,6 +251,66 @@ async function bingSearchByName(name: string, city: string | null): Promise<stri
     console.warn('[bingSearch] no og:image across top results for', query);
     return null;
   } catch (e) { console.warn('[bingSearch] exception', (e as Error).message); return null; }
+  finally { clearTimeout(timer); }
+}
+
+/**
+ * Final fallback : Bing Image Search. Instead of finding a page that
+ * might have an og:image (web search), we ask Bing directly for images
+ * matching the query and grab the first one's URL.
+ *
+ * Why this catches what bingSearchByName misses : aggregator pages
+ * (Tripadvisor, Uber Eats, jimdosite, etc.) often 403 our UA when we
+ * try to scrape their og:image. Bing Image Search has already indexed
+ * those images and serves us the source URL directly — no scraping
+ * needed, no anti-bot dance.
+ *
+ * Quality caveat : the returned image may be a logo, a food shot, a
+ * Google Maps thumbnail, or sometimes a tangentially-related image.
+ * It's always relevant enough to beat the emoji placeholder, but it's
+ * not as accurate as a venue's own og:image. That's why it's the LAST
+ * step — only used when nothing structured worked.
+ */
+async function bingImageSearchByName(name: string, city: string | null): Promise<string | null> {
+  const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
+  if (query.length < 2) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const searchUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
+    const res = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml',
+        'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+      },
+      signal: ctrl.signal,
+      redirect: 'follow',
+    });
+    if (!res.ok) { console.warn('[bingImg] HTTP', res.status, query); return null; }
+    const html = (await res.text()).slice(0, MAX_HTML_BYTES);
+
+    // Bing Image search wraps each thumbnail in :
+    //   <a class="iusc" m='{"murl":"https://...","turl":"...",...}'>
+    // The `m` attribute is single-quoted (so its JSON can use double quotes
+    // freely). HTML entities (&quot; &amp;) appear when quotes are inside
+    // the JSON values. We grab the `m` payload, decode entities, parse JSON,
+    // read `murl` (= original image URL, not the Bing CDN thumbnail).
+    const re = /<a\b[^>]*\bclass=["'][^"']*\biusc\b[^"']*["'][^>]*\sm=['"]([^'"]+)['"]/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) {
+      const raw = m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+      try {
+        const parsed = JSON.parse(raw);
+        const murl = parsed?.murl;
+        if (typeof murl === 'string' && /^https?:\/\//i.test(murl)) {
+          return murl;
+        }
+      } catch { continue; }
+    }
+    console.warn('[bingImg] no image found for', query);
+    return null;
+  } catch (e) { console.warn('[bingImg] exception', (e as Error).message); return null; }
   finally { clearTimeout(timer); }
 }
 
@@ -403,10 +373,6 @@ export async function POST(request: Request) {
     wikidata?: string | null;
     /** Wikidata QID for the brand/chain. Resolves to P154 logo. */
     brand_wikidata?: string | null;
-    /** Venue coordinates — used by the Foursquare fallback to scope a
-     *  same-name search to a 500m radius around the OSM feature. */
-    lat?: number | null;
-    lng?: number | null;
   };
   let body: { items?: Item[] };
   try { body = await request.json(); }
@@ -448,14 +414,6 @@ export async function POST(request: Request) {
       url = await websitePhoto(it.website);
       if (url) source = 'website';
     }
-    // Foursquare : structured place lookup that returns user-uploaded
-    // venue photos. Much higher quality than og:image scraping when the
-    // venue is registered on FSQ. Free tier 100k/mo, opt-in via
-    // FOURSQUARE_API_KEY env. Skipped silently if unset.
-    if (!url && it.name) {
-      url = await foursquareSearchByName(it.name, it.city ?? null, it.lat ?? null, it.lng ?? null);
-      if (url) source = 'foursquare';
-    }
     // Name-based fallbacks for venues with no OSM web-presence signal
     // (small local restaurants like "Le 131"). Wikidata SPARQL catches
     // heritage / curated spots ; the Bing search step catches everyday
@@ -472,6 +430,15 @@ export async function POST(request: Request) {
     if (!url && it.name) {
       url = await bingSearchByName(it.name, it.city ?? null);
       if (url) source = 'web_search';
+    }
+    // Absolute-last-resort : Bing Image Search returns the first image
+    // matching the query, no scraping needed. Catches the 30 % of venues
+    // whose Bing web result was a Tripadvisor / aggregator page that
+    // 403'd our og:image extraction. Quality varies (logo / food shot /
+    // map thumbnail) but always beats the emoji placeholder.
+    if (!url && it.name) {
+      url = await bingImageSearchByName(it.name, it.city ?? null);
+      if (url) source = 'image_search';
     }
     photos[it.osm_id] = url;
     toUpsert.push({ osm_id: it.osm_id, url, source });
