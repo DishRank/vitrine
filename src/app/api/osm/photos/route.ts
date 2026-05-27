@@ -300,7 +300,11 @@ async function bingSearchByName(name: string, city: string | null): Promise<stri
  * not as accurate as a venue's own og:image. That's why it's the LAST
  * step — only used when nothing structured worked.
  */
-async function bingImageSearchByName(name: string, city: string | null): Promise<string | null> {
+async function bingImageSearchByName(
+  name: string,
+  city: string | null,
+  diag?: Array<Record<string, unknown>>,
+): Promise<string | null> {
   const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
   if (query.length < 2) return null;
   const ctrl = new AbortController();
@@ -316,7 +320,11 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
       signal: ctrl.signal,
       redirect: 'follow',
     });
-    if (!res.ok) { console.warn('[bingImg] HTTP', res.status, query); return null; }
+    if (!res.ok) {
+      diag?.push({ q: query, http: res.status });
+      console.warn('[bingImg] HTTP', res.status, query);
+      return null;
+    }
     const html = (await res.text()).slice(0, MAX_HTML_BYTES);
 
     // Bing Image search current markup (verified Q2 2026) embeds each
@@ -327,11 +335,8 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
     // We just look for `mediaurl=` literally (it's specific enough that
     // false positives don't happen) and URL-decode whatever follows up to
     // the next param separator / quote / whitespace.
-    // Quick presence-check before regex. If mediaurl= doesn't appear at
-    // all in the body Bing served us a degraded page (challenge / empty /
-    // shorter SPA shell) — surface it explicitly so we can tell apart
-    // "regex bug" from "Bing didn't return the cards".
     const occCount = (html.match(/mediaurl=/gi) || []).length;
+    diag?.push({ q: query, bytes: html.length, occ: occCount });
     if (occCount === 0) {
       console.warn('[bingImg v4] no mediaurl in body, htmlBytes=', html.length, 'for', query);
       return null;
@@ -434,6 +439,7 @@ export async function POST(request: Request) {
 
   const photos: Record<string, string | null> = {};
   const toUpsert: { osm_id: number; url: string | null; source: string | null }[] = [];
+  const bingImgDiag: Array<Record<string, unknown>> = [];
   await Promise.all(items.map(async (it) => {
     const c = cacheMap.get(it.osm_id);
     if (c && c.fresh) { photos[it.osm_id] = c.url; return; }
@@ -482,7 +488,7 @@ export async function POST(request: Request) {
     // 403'd our og:image extraction. Quality varies (logo / food shot /
     // map thumbnail) but always beats the emoji placeholder.
     if (!url && it.name) {
-      url = await bingImageSearchByName(it.name, cityForSearch);
+      url = await bingImageSearchByName(it.name, cityForSearch, bingImgDiag);
       if (url) source = 'image_search';
     }
     photos[it.osm_id] = url;
@@ -499,7 +505,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(
-    { photos },
+    { photos, _diag: { bingImg: bingImgDiag } },
     { headers: { ...cors, 'X-Photos-Cascade-Version': 'v4-mediaurl' } },
   );
 }
