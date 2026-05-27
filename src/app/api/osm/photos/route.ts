@@ -230,7 +230,16 @@ async function foursquareSearchByName(
     'X-Places-Api-Version': FSQ_API_VERSION,
   };
   try {
-    const params = new URLSearchParams({ query: name.trim(), limit: '1' });
+    // Ask FSQ to inline the photos array in the search response via the
+    // `fields` param. Single API call instead of two — and crucially the
+    // standalone `/places/{id}/photos` endpoint is rate-limited (429) on
+    // the free tier, while photos inlined via `fields` are not. Cuts our
+    // FSQ budget in half AND avoids the 429 dead-end.
+    const params = new URLSearchParams({
+      query: name.trim(),
+      limit: '1',
+      fields: 'fsq_place_id,name,photos',
+    });
     // Prefer lat/lng — OSM venue's exact position, 500m radius rules out
     // same-name venues in neighbouring cities. Falls back to `near=<city>`
     // for venues with no coords (shouldn't happen — OSM features always
@@ -247,16 +256,10 @@ async function foursquareSearchByName(
     const searchRes = await fetch(searchUrl, { headers, signal: ctrl.signal });
     if (!searchRes.ok) { console.warn('[fsq] search HTTP', searchRes.status, name); return null; }
     const searchData = await searchRes.json();
-    // New API returns `fsq_place_id` (the `fsq_id` field was v3).
     const result = searchData?.results?.[0];
-    const fsqId: string | undefined = result?.fsq_place_id || result?.fsq_id;
-    if (!fsqId) return null;
-
-    const photosUrl = `https://places-api.foursquare.com/places/${encodeURIComponent(fsqId)}/photos?limit=1`;
-    const photosRes = await fetch(photosUrl, { headers, signal: ctrl.signal });
-    if (!photosRes.ok) { console.warn('[fsq] photos HTTP', photosRes.status, fsqId); return null; }
-    const photosData = await photosRes.json();
-    const first = Array.isArray(photosData) ? photosData[0] : null;
+    if (!result) return null;
+    const photos = Array.isArray(result.photos) ? result.photos : [];
+    const first = photos[0];
     if (!first?.prefix || !first?.suffix) return null;
     // FSQ photo URL format : `{prefix}<size>{suffix}`. 600x600 matches our
     // list/grid card sizes — full-res ("original") would waste bandwidth.
