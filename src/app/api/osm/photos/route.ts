@@ -212,6 +212,16 @@ async function wikidataSearchByName(name: string, city: string | null): Promise<
  * Two-step : search by name+coords (500m radius) → fetch first photo.
  */
 const FSQ_API_VERSION = '2025-06-17';
+const FSQ_COOLDOWN_MS = 10 * 60 * 1000;
+// Module-level cooldown timestamp. On the FSQ free tier, the per-second
+// rate limit is low enough that firing 20 parallel /places/search calls
+// (one per visible OSM candidate) systematically yields 429s on the
+// burst. When we get one 429, we stop calling FSQ for 10 min — the
+// cascade falls through to Wikidata SPARQL / Bing without wasting time
+// on calls that we know will 429. The cooldown is per-instance (no
+// shared state across Vercel regions), but each region recovers on its
+// own after 10 min — good enough for our throughput.
+let fsqCooldownUntil = 0;
 
 async function foursquareSearchByName(
   name: string,
@@ -221,6 +231,7 @@ async function foursquareSearchByName(
 ): Promise<string | null> {
   const apiKey = process.env.FOURSQUARE_API_KEY;
   if (!apiKey) return null;
+  if (Date.now() < fsqCooldownUntil) return null;
   if (!name.trim()) return null;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 6000);
@@ -254,6 +265,11 @@ async function foursquareSearchByName(
     }
     const searchUrl = `https://places-api.foursquare.com/places/search?${params.toString()}`;
     const searchRes = await fetch(searchUrl, { headers, signal: ctrl.signal });
+    if (searchRes.status === 429) {
+      fsqCooldownUntil = Date.now() + FSQ_COOLDOWN_MS;
+      console.warn('[fsq] 429 — entering 10min cooldown');
+      return null;
+    }
     if (!searchRes.ok) { console.warn('[fsq] search HTTP', searchRes.status, name); return null; }
     const searchData = await searchRes.json();
     const result = searchData?.results?.[0];
