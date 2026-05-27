@@ -194,6 +194,70 @@ async function wikidataSearchByName(name: string, city: string | null): Promise<
  * Best-effort : if Bing rate-limits us, we return null and let the venue
  * fall back to the emoji placeholder.
  */
+/**
+ * Foursquare Places API fallback : structured place lookup that returns
+ * real venue photos (user-uploaded), not og:image scrapes. Way better
+ * quality than a search-engine fallback when the venue is registered on
+ * FSQ — works for most chains and many independents in major cities.
+ *
+ * Free tier : 100 000 calls / month, no card required (just an email
+ * signup at https://foursquare.com/developers/). Opt-in via the
+ * `FOURSQUARE_API_KEY` env on Vercel — silently skipped if unset.
+ *
+ * Two-step : search by name+coords (500m radius) → fetch first photo.
+ * Each call counts as 1 API hit, so we pay 2 hits per resolved venue.
+ */
+async function foursquareSearchByName(
+  name: string,
+  city: string | null,
+  lat: number | null,
+  lng: number | null,
+): Promise<string | null> {
+  const apiKey = process.env.FOURSQUARE_API_KEY;
+  if (!apiKey) return null;
+  if (!name.trim()) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const params = new URLSearchParams({ query: name.trim(), limit: '1' });
+    // Prefer lat/lng — OSM venue's exact position, 500m radius rules out
+    // same-name venues in neighbouring cities. Falls back to `near=<city>`
+    // for venues with no coords (shouldn't happen — OSM features always
+    // have geometry — but defensive).
+    if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+      params.set('ll', `${lat},${lng}`);
+      params.set('radius', '500');
+    } else if (city) {
+      params.set('near', city);
+    } else {
+      return null;
+    }
+    const searchUrl = `https://api.foursquare.com/v3/places/search?${params.toString()}`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { Authorization: apiKey, Accept: 'application/json' },
+      signal: ctrl.signal,
+    });
+    if (!searchRes.ok) { console.warn('[fsq] search HTTP', searchRes.status, name); return null; }
+    const searchData = await searchRes.json();
+    const fsqId: string | undefined = searchData?.results?.[0]?.fsq_id;
+    if (!fsqId) return null;
+
+    const photosUrl = `https://api.foursquare.com/v3/places/${encodeURIComponent(fsqId)}/photos?limit=1`;
+    const photosRes = await fetch(photosUrl, {
+      headers: { Authorization: apiKey, Accept: 'application/json' },
+      signal: ctrl.signal,
+    });
+    if (!photosRes.ok) { console.warn('[fsq] photos HTTP', photosRes.status, fsqId); return null; }
+    const photosData = await photosRes.json();
+    const first = Array.isArray(photosData) ? photosData[0] : null;
+    if (!first?.prefix || !first?.suffix) return null;
+    // FSQ photo URL format : `{prefix}<size>{suffix}`. 600x600 matches our
+    // list/grid card sizes — full-res ("original") would waste bandwidth.
+    return `${first.prefix}600x600${first.suffix}`;
+  } catch (e) { console.warn('[fsq] exception', (e as Error).message); return null; }
+  finally { clearTimeout(timer); }
+}
+
 async function bingSearchByName(name: string, city: string | null): Promise<string | null> {
   const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
   if (query.length < 2) return null;
@@ -313,6 +377,10 @@ export async function POST(request: Request) {
     wikidata?: string | null;
     /** Wikidata QID for the brand/chain. Resolves to P154 logo. */
     brand_wikidata?: string | null;
+    /** Venue coordinates — used by the Foursquare fallback to scope a
+     *  same-name search to a 500m radius around the OSM feature. */
+    lat?: number | null;
+    lng?: number | null;
   };
   let body: { items?: Item[] };
   try { body = await request.json(); }
@@ -353,6 +421,14 @@ export async function POST(request: Request) {
     if (!url && it.website) {
       url = await websitePhoto(it.website);
       if (url) source = 'website';
+    }
+    // Foursquare : structured place lookup that returns user-uploaded
+    // venue photos. Much higher quality than og:image scraping when the
+    // venue is registered on FSQ. Free tier 100k/mo, opt-in via
+    // FOURSQUARE_API_KEY env. Skipped silently if unset.
+    if (!url && it.name) {
+      url = await foursquareSearchByName(it.name, it.city ?? null, it.lat ?? null, it.lng ?? null);
+      if (url) source = 'foursquare';
     }
     // Name-based fallbacks for venues with no OSM web-presence signal
     // (small local restaurants like "Le 131"). Wikidata SPARQL catches
