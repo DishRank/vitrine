@@ -14,22 +14,17 @@ export const maxDuration = 30;
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
 
 const TEST_QUERIES = [
+  // Same names as the 6 venues currently NULL in DB. Notice city is
+  // sometimes null (Le 131, L'Avenue) which matches the post-rescroll
+  // state — testing both with and without city.
   'Big M Lyon restaurant',
-  'Tacos Time Lyon restaurant',
-  'Le 131 Vénissieux restaurant',
-  'Mis Kebab Vénissieux restaurant',
+  'Big M restaurant',                           // no city, like in cascade
   'Nokyo Vénissieux restaurant',
-  'L\'Avenue Vénissieux restaurant',
-  'Mis Tacos Vénissieux restaurant',
-  'Chez Bouj Vénissieux restaurant',
-  'La Marsa Vénissieux restaurant',
-  'Lachii World Kitchen Vénissieux restaurant',
-  'Milano Vénissieux restaurant',
-  'Kebab Braise Vénissieux restaurant',
-  'J\'aime chaud Vénissieux restaurant',
-  'Le Why Not Vénissieux restaurant',
-  'Authentic Burger Tacos Vénissieux restaurant',
-  'Mis P&P Lyon restaurant',
+  'Nokyo restaurant',
+  'Le 131 restaurant',                          // city null in DB now
+  'L\'Avenue restaurant',                       // city null in DB now
+  'Le Lyon de l\'Atlas restaurant',
+  'Café du XXe siècle restaurant',
 ];
 
 async function fetchOne(query: string) {
