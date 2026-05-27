@@ -46,12 +46,14 @@ function toAbs(src: string, baseUrl: string): string | null {
   } catch { return null; }
 }
 
-function faviconFallback(anyUrl: string): string | null {
-  try {
-    const host = new URL(anyUrl).hostname;
-    if (!host) return null;
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
-  } catch { return null; }
+// Previously we returned a `https://www.google.com/s2/favicons?...` URL as
+// a guaranteed visual fallback. In practice the 16-32 px favicon stretched
+// to a 68 px tile looked worse than no image at all (blurry, washed out),
+// so the client now shows a category-emoji placeholder when the cascade
+// turns up nothing. Keeping the function as a stub returning null in case
+// any caller still imports it.
+function faviconFallback(_anyUrl: string): string | null {
+  return null;
 }
 
 function extractCascade(html: string, baseUrl: string): string | null {
@@ -89,7 +91,7 @@ function extractCascade(html: string, baseUrl: string): string | null {
     const abs = toAbs(src, baseUrl);
     if (abs) return abs;
   }
-  return faviconFallback(baseUrl);
+  return null;
 }
 
 /**
