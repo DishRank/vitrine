@@ -21,7 +21,13 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 const CACHE_TTL_DAYS = 30;
-const MAX_ITEMS = 20;
+// 50 : the cascade is fast enough (2-3 s for 20 venues) that 50 still
+// fits comfortably under maxDuration 30 s and the Vercel memory ceiling
+// (~75 MB peak HTML buffers at MAX_HTML_BYTES * 50). Bumped from 20
+// because the client-side slice(0, MAX_ITEMS) was capping enrichment at
+// the first 20 visible venues — users scrolling past saw placeholders
+// for all later items even though the cascade could handle them.
+const MAX_ITEMS = 50;
 // 250 KB used to be enough for restaurant-website <head>s but Bing
 // Image Search pages start with ~300 KB of inline JS/metadata BEFORE
 // the first result card — truncating at 250 KB meant zero mediaurl=
