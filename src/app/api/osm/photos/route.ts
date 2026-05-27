@@ -319,15 +319,15 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
     if (!res.ok) { console.warn('[bingImg] HTTP', res.status, query); return null; }
     const html = (await res.text()).slice(0, MAX_HTML_BYTES);
 
-    // Bing Image search current markup (verified Q2 2026) wraps each
-    // result in an anchor whose href carries the original image URL in a
-    // `mediaurl=` query parameter (URL-encoded). The legacy
-    // `<a class="iusc" m='{json}'>` structure with `murl` JSON is gone.
-    // Example href : `/images/search?view=detailV2&ccid=...&mediaurl=
-    //                  https%3a%2f%2fexample.com%2fimg.jpg&...`
-    // We walk the matches in document order — Bing renders the most
-    // relevant result first, so the first valid http(s) URL wins.
-    const re = /href=["'][^"']*[?&]mediaurl=([^"'&]+)/gi;
+    // Bing Image search current markup (verified Q2 2026) embeds each
+    // result's source image URL in a `mediaurl=` query parameter inside
+    // the result anchor's href. The href uses HTML-encoded ampersands
+    // (`&amp;`), so the byte immediately before `mediaurl=` is `;` rather
+    // than `&` — which means a `[?&]mediaurl=` regex misses everything.
+    // We just look for `mediaurl=` literally (it's specific enough that
+    // false positives don't happen) and URL-decode whatever follows up to
+    // the next param separator / quote / whitespace.
+    const re = /\bmediaurl=([^"'&\s]+)/gi;
     let m: RegExpExecArray | null;
     let attempts = 0;
     while ((m = re.exec(html)) !== null) {
