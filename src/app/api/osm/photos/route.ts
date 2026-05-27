@@ -130,6 +130,162 @@ async function wikidataImage(qid: string, properties: string[] = ['P18', 'P154']
   finally { clearTimeout(timer); }
 }
 
+/**
+ * Search Wikidata for an entity matching `<name>` near `<city>` and return
+ * its P18 image if any. Covers notable venues that don't have a `wikidata`
+ * tag in OSM but DO have a Wikidata entry (heritage spots, Michelin-rated,
+ * famous chains). Free, no rate limit beyond Wikimedia's fair-use policy
+ * (User-Agent identifies us). Returns null for small local restaurants
+ * (no Wikidata entry) — that's expected.
+ */
+async function wikidataSearchByName(name: string, city: string | null): Promise<string | null> {
+  const trimmed = name.trim();
+  if (trimmed.length < 2) return null;
+  // SPARQL : look for items with the given label whose admin-division
+  // chain reaches the city. Restricted to instance-of restaurant / cafe /
+  // bar / hotel to avoid matching unrelated entities (people, books, etc.)
+  // sharing the venue's name. LIMIT 1 — first match wins.
+  const cityClause = city
+    ? `?item wdt:P131* / rdfs:label "${city.replace(/["\\]/g, '')}"@fr .`
+    : '';
+  const sparql = `
+    SELECT ?item ?image WHERE {
+      ?item rdfs:label "${trimmed.replace(/["\\]/g, '')}"@fr .
+      ?item wdt:P18 ?image .
+      ${cityClause}
+      VALUES ?type { wd:Q11707 wd:Q30022 wd:Q1131017 wd:Q187456 wd:Q27686 wd:Q189445 } .
+      ?item wdt:P31/wdt:P279* ?type .
+    } LIMIT 1
+  `;
+  const url = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': WIKIDATA_UA, Accept: 'application/sparql-results+json' },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const bindings = json?.results?.bindings || [];
+    for (const b of bindings) {
+      const imageUrl = b?.image?.value;
+      if (typeof imageUrl === 'string' && /^https?:\/\//.test(imageUrl)) {
+        return imageUrl;
+      }
+    }
+    return null;
+  } catch { return null; }
+  finally { clearTimeout(timer); }
+}
+
+/**
+ * Last-resort name-based search via eat-list.fr (a French restaurant
+ * aggregator). Their search returns a list page ; the first matching
+ * card's link goes to the venue page where we can extract og:image.
+ *
+ * Best-effort : eat-list's HTML can change, requests can rate-limit. We
+ * cap the time budget at 6s and return null on any failure — the client
+ * already has a category-emoji placeholder for the no-photo case.
+ */
+async function eatListSearchByName(name: string, city: string | null): Promise<string | null> {
+  const query = [name, city].filter(Boolean).join(' ').trim();
+  if (query.length < 2) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const searchUrl = `https://www.eat-list.fr/?s=${encodeURIComponent(query)}`;
+    const res = await fetch(searchUrl, {
+      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      signal: ctrl.signal,
+      redirect: 'follow',
+    });
+    if (!res.ok) return null;
+    const html = (await res.text()).slice(0, MAX_HTML_BYTES);
+    // First result : an <a> pointing to a /<city>/<category>/<slug-id> page.
+    // The URL convention is consistent across the site.
+    const linkMatch = html.match(/<a[^>]+href=["'](https?:\/\/www\.eat-list\.fr\/[^"'\s]+-\d+)["']/i);
+    const venueUrl = linkMatch?.[1];
+    if (!venueUrl) return null;
+    // Now fetch the venue page and grab its og:image.
+    const v = await fetch(venueUrl, {
+      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      signal: ctrl.signal,
+      redirect: 'follow',
+    });
+    if (!v.ok) return null;
+    const venueHtml = (await v.text()).slice(0, MAX_HTML_BYTES);
+    return extractCascade(venueHtml, v.url || venueUrl);
+  } catch { return null; }
+  finally { clearTimeout(timer); }
+}
+
+/**
+ * Generic web-search fallback via DuckDuckGo's HTML endpoint. Catches any
+ * venue with an online presence : Uber Eats / Deliveroo / Just Eat /
+ * Tripadvisor / restaurant's own site / etc. We don't write a dedicated
+ * scraper per aggregator because each has its own anti-bot setup
+ * (Cloudflare, JS challenges, evolving HTML) — a generic web search
+ * route lets DuckDuckGo do the heavy lifting and we just consume the
+ * first result.
+ *
+ * DDG HTML is intentionally simple HTML for accessibility ; their `lite`
+ * endpoint is even more lightweight. Best-effort : if DDG rate-limits
+ * from the Vercel IP we return null and let the next fallback run.
+ */
+async function webSearchByName(name: string, city: string | null): Promise<string | null> {
+  const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
+  if (query.length < 2) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const res = await fetch(searchUrl, {
+      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      signal: ctrl.signal,
+      redirect: 'follow',
+    });
+    if (!res.ok) return null;
+    const html = (await res.text()).slice(0, MAX_HTML_BYTES);
+
+    // DDG HTML wraps each result URL in a redirect : <a class="result__a"
+    // href="//duckduckgo.com/l/?uddg=<encoded-target-url>&...">. Extract
+    // the first result, decode uddg, then fetch THAT URL and run the
+    // og:image cascade on it.
+    const linkRe = /<a[^>]+class=["'][^"']*result__a[^"']*["'][^>]+href=["']([^"']+)["']/i;
+    const m = html.match(linkRe);
+    let firstUrl = m?.[1] || null;
+    if (!firstUrl) return null;
+    // Some DDG variants emit absolute https URLs, others a //-prefixed one
+    // pointing at duckduckgo.com/l/?uddg=... Normalize + extract.
+    if (firstUrl.startsWith('//')) firstUrl = 'https:' + firstUrl;
+    try {
+      const u = new URL(firstUrl);
+      if (u.hostname.endsWith('duckduckgo.com') && u.pathname === '/l/') {
+        const uddg = u.searchParams.get('uddg');
+        if (uddg) firstUrl = decodeURIComponent(uddg);
+      }
+    } catch { return null; }
+
+    // Avoid recursive DDG loops (a result pointing back to ddg) + skip
+    // obvious image-search aggregators that would just deep-link to other
+    // DDG pages.
+    if (!/^https?:\/\//.test(firstUrl) || /duckduckgo\.com/.test(firstUrl)) return null;
+
+    const venueRes = await fetch(firstUrl, {
+      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      signal: ctrl.signal,
+      redirect: 'follow',
+    });
+    if (!venueRes.ok) return null;
+    const ct = venueRes.headers.get('content-type') || '';
+    if (!ct.includes('text/html')) return null;
+    const venueHtml = (await venueRes.text()).slice(0, MAX_HTML_BYTES);
+    return extractCascade(venueHtml, venueRes.url || firstUrl);
+  } catch { return null; }
+  finally { clearTimeout(timer); }
+}
+
 async function websitePhoto(website: string): Promise<string | null> {
   const url = normalizeUrl(website);
   if (!url) return null;
@@ -176,6 +332,13 @@ export async function POST(request: Request) {
 
   type Item = {
     osm_id: number;
+    /** Venue display name — used as the last-resort search key for
+     *  name-based fallbacks (Wikidata SPARQL, eat-list.fr) when the
+     *  venue has no website/wikidata in OSM. */
+    name?: string | null;
+    /** Venue city — disambiguates name-based searches (a "Le 131" in
+     *  Paris vs one in Lyon). */
+    city?: string | null;
     website?: string | null;
     /** Wikidata QID for the venue itself (e.g. famous restaurants /
      *  heritage spots). Resolves to a P18 image when set. */
@@ -207,7 +370,10 @@ export async function POST(request: Request) {
     if (c && c.fresh) { photos[it.osm_id] = c.url; return; }
     let url: string | null = null;
     let source: string | null = null;
-    // Cascade : free + accurate sources first, then website scraping.
+    // Cascade : structured sources (Wikidata QID) first, then website
+    // scraping, then last-resort name-based searches. Each step is gated
+    // on having the right signal so we don't burn time on impossible
+    // lookups (eg. no Wikidata SPARQL for a venue without a name).
     if (!url && it.wikidata) {
       url = await wikidataImage(it.wikidata, ['P18', 'P154']);
       if (url) source = 'wikidata';
@@ -219,6 +385,26 @@ export async function POST(request: Request) {
     if (!url && it.website) {
       url = await websitePhoto(it.website);
       if (url) source = 'website';
+    }
+    // Name-based fallbacks for venues with no OSM web-presence signal
+    // (small local restaurants like "Le 131"). Wikidata SPARQL catches
+    // heritage / curated spots ; eat-list.fr catches everyday venues
+    // referenced by the FR aggregator.
+    if (!url && it.name) {
+      url = await wikidataSearchByName(it.name, it.city ?? null);
+      if (url) source = 'wikidata_search';
+    }
+    if (!url && it.name) {
+      url = await eatListSearchByName(it.name, it.city ?? null);
+      if (url) source = 'eatlist';
+    }
+    // Generic web fallback : finds the venue on Uber Eats, Deliveroo,
+    // Just Eat, Tripadvisor, the resto's own site, etc. via the first
+    // DuckDuckGo result. Last in the cascade because we trust structured
+    // sources more than "whatever google ranked first".
+    if (!url && it.name) {
+      url = await webSearchByName(it.name, it.city ?? null);
+      if (url) source = 'web_search';
     }
     photos[it.osm_id] = url;
     toUpsert.push({ osm_id: it.osm_id, url, source });
