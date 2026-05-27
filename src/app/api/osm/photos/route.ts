@@ -180,47 +180,6 @@ async function wikidataSearchByName(name: string, city: string | null): Promise<
 }
 
 /**
- * Last-resort name-based search via eat-list.fr (a French restaurant
- * aggregator). Their search returns a list page ; the first matching
- * card's link goes to the venue page where we can extract og:image.
- *
- * Best-effort : eat-list's HTML can change, requests can rate-limit. We
- * cap the time budget at 6s and return null on any failure — the client
- * already has a category-emoji placeholder for the no-photo case.
- */
-async function eatListSearchByName(name: string, city: string | null): Promise<string | null> {
-  const query = [name, city].filter(Boolean).join(' ').trim();
-  if (query.length < 2) return null;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 6000);
-  try {
-    const searchUrl = `https://www.eat-list.fr/?s=${encodeURIComponent(query)}`;
-    const res = await fetch(searchUrl, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
-      signal: ctrl.signal,
-      redirect: 'follow',
-    });
-    if (!res.ok) return null;
-    const html = (await res.text()).slice(0, MAX_HTML_BYTES);
-    // First result : an <a> pointing to a /<city>/<category>/<slug-id> page.
-    // The URL convention is consistent across the site.
-    const linkMatch = html.match(/<a[^>]+href=["'](https?:\/\/www\.eat-list\.fr\/[^"'\s]+-\d+)["']/i);
-    const venueUrl = linkMatch?.[1];
-    if (!venueUrl) return null;
-    // Now fetch the venue page and grab its og:image.
-    const v = await fetch(venueUrl, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
-      signal: ctrl.signal,
-      redirect: 'follow',
-    });
-    if (!v.ok) return null;
-    const venueHtml = (await v.text()).slice(0, MAX_HTML_BYTES);
-    return extractCascade(venueHtml, v.url || venueUrl);
-  } catch { return null; }
-  finally { clearTimeout(timer); }
-}
-
-/**
  * Generic web-search fallback via DuckDuckGo's HTML endpoint. Catches any
  * venue with an online presence : Uber Eats / Deliveroo / Just Eat /
  * Tripadvisor / restaurant's own site / etc. We don't write a dedicated
@@ -239,50 +198,63 @@ async function webSearchByName(name: string, city: string | null): Promise<strin
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 6000);
   try {
-    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    // DDG's `lite` endpoint serves the simplest possible HTML (designed
+    // for terminal browsers) and is far less aggressive on anti-bot than
+    // the regular html endpoint when hit from cloud IPs. Falls back to
+    // the regular endpoint if lite returns nothing.
+    const searchUrl = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`;
     const res = await fetch(searchUrl, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml',
+        'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+      },
       signal: ctrl.signal,
       redirect: 'follow',
     });
-    if (!res.ok) return null;
+    if (!res.ok) { console.warn('[webSearch] DDG lite HTTP', res.status, query); return null; }
     const html = (await res.text()).slice(0, MAX_HTML_BYTES);
 
-    // DDG HTML wraps each result URL in a redirect : <a class="result__a"
-    // href="//duckduckgo.com/l/?uddg=<encoded-target-url>&...">. Extract
-    // the first result, decode uddg, then fetch THAT URL and run the
-    // og:image cascade on it.
-    const linkRe = /<a[^>]+class=["'][^"']*result__a[^"']*["'][^>]+href=["']([^"']+)["']/i;
-    const m = html.match(linkRe);
-    let firstUrl = m?.[1] || null;
-    if (!firstUrl) return null;
-    // Some DDG variants emit absolute https URLs, others a //-prefixed one
-    // pointing at duckduckgo.com/l/?uddg=... Normalize + extract.
-    if (firstUrl.startsWith('//')) firstUrl = 'https:' + firstUrl;
-    try {
-      const u = new URL(firstUrl);
-      if (u.hostname.endsWith('duckduckgo.com') && u.pathname === '/l/') {
-        const uddg = u.searchParams.get('uddg');
-        if (uddg) firstUrl = decodeURIComponent(uddg);
-      }
-    } catch { return null; }
-
-    // Avoid recursive DDG loops (a result pointing back to ddg) + skip
-    // obvious image-search aggregators that would just deep-link to other
-    // DDG pages.
-    if (!/^https?:\/\//.test(firstUrl) || /duckduckgo\.com/.test(firstUrl)) return null;
+    // The `lite` HTML lists results as simple links inside the body. The
+    // first real result is the first `<a href="https://..."` that's NOT
+    // a duckduckgo / lite-ui link. Skip uddg-wrapped variants which
+    // appear on the regular html endpoint.
+    const linkRe = /<a\b[^>]*href=["']([^"']+)["'][^>]*>/gi;
+    let m: RegExpExecArray | null;
+    let firstUrl: string | null = null;
+    while ((m = linkRe.exec(html)) !== null) {
+      let href = m[1];
+      if (!href) continue;
+      // Normalize uddg wrapper if present.
+      if (href.startsWith('//')) href = 'https:' + href;
+      try {
+        const u = new URL(href);
+        if (u.hostname.endsWith('duckduckgo.com')) {
+          const uddg = u.searchParams.get('uddg');
+          if (uddg) { firstUrl = decodeURIComponent(uddg); break; }
+          continue;
+        }
+        if (/^https?:/.test(u.protocol) && !/duckduckgo/.test(u.hostname)) {
+          firstUrl = href;
+          break;
+        }
+      } catch { continue; }
+    }
+    if (!firstUrl) { console.warn('[webSearch] no result link for', query); return null; }
 
     const venueRes = await fetch(firstUrl, {
       headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
       signal: ctrl.signal,
       redirect: 'follow',
     });
-    if (!venueRes.ok) return null;
+    if (!venueRes.ok) { console.warn('[webSearch] venue fetch HTTP', venueRes.status, firstUrl); return null; }
     const ct = venueRes.headers.get('content-type') || '';
     if (!ct.includes('text/html')) return null;
     const venueHtml = (await venueRes.text()).slice(0, MAX_HTML_BYTES);
-    return extractCascade(venueHtml, venueRes.url || firstUrl);
-  } catch { return null; }
+    const img = extractCascade(venueHtml, venueRes.url || firstUrl);
+    if (!img) console.warn('[webSearch] no og:image at', firstUrl);
+    return img;
+  } catch (e) { console.warn('[webSearch] exception', (e as Error).message); return null; }
   finally { clearTimeout(timer); }
 }
 
@@ -333,8 +305,8 @@ export async function POST(request: Request) {
   type Item = {
     osm_id: number;
     /** Venue display name — used as the last-resort search key for
-     *  name-based fallbacks (Wikidata SPARQL, eat-list.fr) when the
-     *  venue has no website/wikidata in OSM. */
+     *  name-based fallbacks (Wikidata SPARQL, DDG-lite web search) when
+     *  the venue has no website/wikidata in OSM. */
     name?: string | null;
     /** Venue city — disambiguates name-based searches (a "Le 131" in
      *  Paris vs one in Lyon). */
@@ -388,15 +360,12 @@ export async function POST(request: Request) {
     }
     // Name-based fallbacks for venues with no OSM web-presence signal
     // (small local restaurants like "Le 131"). Wikidata SPARQL catches
-    // heritage / curated spots ; eat-list.fr catches everyday venues
-    // referenced by the FR aggregator.
+    // heritage / curated spots ; the generic web search (DDG-lite)
+    // catches everyday venues referenced on Uber Eats / Deliveroo /
+    // Just Eat / Tripadvisor / their own site.
     if (!url && it.name) {
       url = await wikidataSearchByName(it.name, it.city ?? null);
       if (url) source = 'wikidata_search';
-    }
-    if (!url && it.name) {
-      url = await eatListSearchByName(it.name, it.city ?? null);
-      if (url) source = 'eatlist';
     }
     // Generic web fallback : finds the venue on Uber Eats, Deliveroo,
     // Just Eat, Tripadvisor, the resto's own site, etc. via the first
