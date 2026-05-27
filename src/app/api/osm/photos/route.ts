@@ -201,12 +201,18 @@ async function wikidataSearchByName(name: string, city: string | null): Promise<
  * FSQ — works for most chains and many independents in major cities.
  *
  * Free tier : 100 000 calls / month, no card required (just an email
- * signup at https://foursquare.com/developers/). Opt-in via the
+ * signup at https://docs.foursquare.com/). Opt-in via the
  * `FOURSQUARE_API_KEY` env on Vercel — silently skipped if unset.
  *
+ * Uses the current "Places API" endpoint at `places-api.foursquare.com`
+ * (NOT the legacy `api.foursquare.com/v3/...` which is deprecated and
+ * returns 401 for new keys). Required headers : `Authorization: Bearer
+ * <SERVICE_KEY>` + `X-Places-Api-Version: <YYYY-MM-DD>`.
+ *
  * Two-step : search by name+coords (500m radius) → fetch first photo.
- * Each call counts as 1 API hit, so we pay 2 hits per resolved venue.
  */
+const FSQ_API_VERSION = '2025-06-17';
+
 async function foursquareSearchByName(
   name: string,
   city: string | null,
@@ -218,6 +224,11 @@ async function foursquareSearchByName(
   if (!name.trim()) return null;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 6000);
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    Accept: 'application/json',
+    'X-Places-Api-Version': FSQ_API_VERSION,
+  };
   try {
     const params = new URLSearchParams({ query: name.trim(), limit: '1' });
     // Prefer lat/lng — OSM venue's exact position, 500m radius rules out
@@ -232,21 +243,17 @@ async function foursquareSearchByName(
     } else {
       return null;
     }
-    const searchUrl = `https://api.foursquare.com/v3/places/search?${params.toString()}`;
-    const searchRes = await fetch(searchUrl, {
-      headers: { Authorization: apiKey, Accept: 'application/json' },
-      signal: ctrl.signal,
-    });
+    const searchUrl = `https://places-api.foursquare.com/places/search?${params.toString()}`;
+    const searchRes = await fetch(searchUrl, { headers, signal: ctrl.signal });
     if (!searchRes.ok) { console.warn('[fsq] search HTTP', searchRes.status, name); return null; }
     const searchData = await searchRes.json();
-    const fsqId: string | undefined = searchData?.results?.[0]?.fsq_id;
+    // New API returns `fsq_place_id` (the `fsq_id` field was v3).
+    const result = searchData?.results?.[0];
+    const fsqId: string | undefined = result?.fsq_place_id || result?.fsq_id;
     if (!fsqId) return null;
 
-    const photosUrl = `https://api.foursquare.com/v3/places/${encodeURIComponent(fsqId)}/photos?limit=1`;
-    const photosRes = await fetch(photosUrl, {
-      headers: { Authorization: apiKey, Accept: 'application/json' },
-      signal: ctrl.signal,
-    });
+    const photosUrl = `https://places-api.foursquare.com/places/${encodeURIComponent(fsqId)}/photos?limit=1`;
+    const photosRes = await fetch(photosUrl, { headers, signal: ctrl.signal });
     if (!photosRes.ok) { console.warn('[fsq] photos HTTP', photosRes.status, fsqId); return null; }
     const photosData = await photosRes.json();
     const first = Array.isArray(photosData) ? photosData[0] : null;
