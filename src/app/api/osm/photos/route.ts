@@ -319,51 +319,32 @@ async function bingImageSearchByName(name: string, city: string | null): Promise
     if (!res.ok) { console.warn('[bingImg] HTTP', res.status, query); return null; }
     const html = (await res.text()).slice(0, MAX_HTML_BYTES);
 
-    // Try several known Bing Image markup variants. Bing renders both a
-    // server-side variant with `<a class="iusc" m='{...json...}'>` and an
-    // SPA-ish variant where the same JSON sits in `data-m='...'` on a
-    // different element. We try them in order and stop at the first
-    // matching JSON containing a `murl` field.
-    const patterns: Array<{ name: string; re: RegExp }> = [
-      // Classic : <a class="iusc" m='{"murl":"..."}'>
-      { name: 'iusc-m', re: /<a\b[^>]*\bclass=["'][^"']*\biusc\b[^"']*["'][^>]*\sm=(['"])(.*?)\1/gi },
-      // Variant : same m= attribute but on a different tag (no iusc class)
-      { name: 'any-m', re: /\bm=(['"])(\{(?:[^\\'"]|\\.)*?"murl"[^}]*\})\1/gi },
-      // Old `imgurl` query param sometimes embedded in result anchors
-      { name: 'imgurl', re: /\bimgurl=(?:&quot;|"|')?([^"'&]+\.(?:jpg|jpeg|png|webp)[^"'&]*)/gi },
-    ];
-
-    for (const { name, re } of patterns) {
-      let m: RegExpExecArray | null;
-      let attempts = 0;
-      while ((m = re.exec(html)) !== null) {
-        attempts++;
-        const captured = m[2] || m[1];
-        if (!captured) continue;
-        // Pattern `imgurl` already gives us a URL directly — no JSON parse.
-        if (name === 'imgurl') {
-          const decoded = decodeURIComponent(captured);
-          if (/^https?:\/\//i.test(decoded)) return decoded;
-          continue;
-        }
-        // Other patterns capture a JSON-in-attribute string with HTML
-        // entities for inner quotes. Decode then JSON.parse → read `murl`.
-        const raw = captured.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'");
-        try {
-          const parsed = JSON.parse(raw);
-          const murl = parsed?.murl;
-          if (typeof murl === 'string' && /^https?:\/\//i.test(murl)) {
-            return murl;
-          }
-        } catch { continue; }
-      }
-      if (attempts > 0) {
-        console.warn('[bingImg]', name, 'matched', attempts, 'cards but no murl extracted for', query);
-      }
+    // Bing Image search current markup (verified Q2 2026) wraps each
+    // result in an anchor whose href carries the original image URL in a
+    // `mediaurl=` query parameter (URL-encoded). The legacy
+    // `<a class="iusc" m='{json}'>` structure with `murl` JSON is gone.
+    // Example href : `/images/search?view=detailV2&ccid=...&mediaurl=
+    //                  https%3a%2f%2fexample.com%2fimg.jpg&...`
+    // We walk the matches in document order — Bing renders the most
+    // relevant result first, so the first valid http(s) URL wins.
+    const re = /href=["'][^"']*[?&]mediaurl=([^"'&]+)/gi;
+    let m: RegExpExecArray | null;
+    let attempts = 0;
+    while ((m = re.exec(html)) !== null) {
+      attempts++;
+      try {
+        const decoded = decodeURIComponent(m[1]);
+        if (/^https?:\/\//i.test(decoded)) return decoded;
+      } catch { continue; }
     }
-    // Surface the HTML head so we can see what shape Bing actually returned.
-    const head = html.slice(0, 600).replace(/\s+/g, ' ').slice(0, 600);
-    console.warn('[bingImg] no image found for', query, 'htmlHead=', head);
+    if (attempts === 0) {
+      // Surface a head sample so we can see if Bing served a degraded
+      // page (challenge, empty results, etc.). Capped at 400 chars.
+      const head = html.slice(0, 400).replace(/\s+/g, ' ');
+      console.warn('[bingImg] no mediaurl found for', query, 'htmlHead=', head);
+    } else {
+      console.warn('[bingImg]', attempts, 'mediaurl matches but none parsed for', query);
+    }
     return null;
   } catch (e) { console.warn('[bingImg] exception', (e as Error).message); return null; }
   finally { clearTimeout(timer); }

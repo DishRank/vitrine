@@ -52,6 +52,37 @@ function amenitiesForPlaceTypes(placeTypes: string[]): string[] {
   return [...out];
 }
 
+/**
+ * Defensive city sanitizer (same logic as the `cleanCity()` helper in
+ * `osm/photos/route.ts`). The mobile client falls back to the outing's
+ * `center_label` for the `city` field, but that label can be a full
+ * geocoded address ("10 Rue Jean-Baptiste Lully, Vénissieux, 69200,
+ * France"). When OSM venues are missing `addr:city`, this string would
+ * land verbatim in `restaurants.city` and break every downstream
+ * consumer that filters / searches / displays by city.
+ *
+ * Strips street/postal/country segments and keeps the last surviving
+ * non-address part. Returns null when nothing usable remains, so the
+ * row gets a NULL city instead of garbage — the app layer re-derives
+ * via reverseGeocode at render time when needed.
+ */
+function cleanCity(city: string | null | undefined): string | null {
+  if (!city) return null;
+  const trimmed = city.trim();
+  if (!trimmed) return null;
+  if (!trimmed.includes(',')) return trimmed;
+  const parts = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+  const candidates = parts.filter((p) =>
+    !/^\d{4,6}$/.test(p) &&
+    !/^france$/i.test(p) &&
+    !/^\d+\s/.test(p) &&
+    !/(rue|avenue|av\.?|boulevard|bd\.?|place|impasse|chemin|all[ée]e|route)\b/i.test(p) &&
+    p.length > 1
+  );
+  if (candidates.length === 0) return null;
+  return candidates[candidates.length - 1];
+}
+
 function buildBbox(lat: number, lng: number, radiusKm: number): Bbox {
   const latDelta = radiusKm / 111;
   const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
@@ -245,7 +276,11 @@ export async function POST(request: Request) {
   try { body = await request.json(); }
   catch { return NextResponse.json({ error: 'bad json' }, { status: 400, headers: cors }); }
 
-  const city = body.city ?? null;
+  // Sanitize upstream — the mobile app sometimes passes a full address as
+  // `city` (it copies `outingLocation.label` verbatim). Without this guard
+  // that address ends up in `restaurants.city` whenever an OSM venue is
+  // missing `addr:city`, polluting every city-based query.
+  const city = cleanCity(body.city);
   const force = !!body.force;
   const wantPlaceTypes = (body.category && CATEGORY_PLACE_TYPES[body.category]) ? CATEGORY_PLACE_TYPES[body.category] : ALL_PLACE_TYPES;
   const amenities = amenitiesForPlaceTypes(wantPlaceTypes);
