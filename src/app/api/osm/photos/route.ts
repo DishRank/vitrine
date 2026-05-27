@@ -22,7 +22,13 @@ export const maxDuration = 30;
 
 const CACHE_TTL_DAYS = 30;
 const MAX_ITEMS = 20;
-const MAX_HTML_BYTES = 250_000;
+// 250 KB used to be enough for restaurant-website <head>s but Bing
+// Image Search pages start with ~300 KB of inline JS/metadata BEFORE
+// the first result card — truncating at 250 KB meant zero mediaurl=
+// matches and 0 % image_search coverage. Bing pages cap around 1 MB.
+// Peak memory under burst (20 venues × 1.5 MB) is still well within
+// the Vercel function memory ceiling.
+const MAX_HTML_BYTES = 1_500_000;
 
 // Real Chrome UA — many restaurant sites sit behind Cloudflare/Sucuri which
 // reject anything that looks like a bot (403). The legacy "DishRankBot/1.0"
