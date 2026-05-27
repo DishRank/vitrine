@@ -487,12 +487,24 @@ export async function POST(request: Request) {
     // whose Bing web result was a Tripadvisor / aggregator page that
     // 403'd our og:image extraction. Quality varies (logo / food shot /
     // map thumbnail) but always beats the emoji placeholder.
+    let bingImgTried = false;
     if (!url && it.name) {
+      bingImgTried = true;
       url = await bingImageSearchByName(it.name, cityForSearch, bingImgDiag);
       if (url) source = 'image_search';
     }
     photos[it.osm_id] = url;
-    toUpsert.push({ osm_id: it.osm_id, url, source });
+    // For null URLs, encode in `source` which step was last attempted so
+    // we can debug coverage holes via SQL without inspecting Vercel logs.
+    // Remove once cascade is stable.
+    const debugSource = url
+      ? source
+      : bingImgTried
+        ? '_null_after_img'
+        : it.name
+          ? '_null_no_name'
+          : '_null_no_signal';
+    toUpsert.push({ osm_id: it.osm_id, url, source: debugSource });
   }));
 
   if (toUpsert.length > 0) {
