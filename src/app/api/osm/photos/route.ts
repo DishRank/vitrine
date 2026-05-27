@@ -308,7 +308,11 @@ async function bingImageSearchByName(
   const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
   if (query.length < 2) return null;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 6000);
+  // 8 s : Bing Image Search is our last-and-best fallback. Under burst
+  // load (20 parallel venues) the page can take 3-5 s to return, vs
+  // ~700 ms in isolation. We give it more room than the other steps
+  // because if it succeeds we win, if it timeouts we have nothing.
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
     const searchUrl = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
     const res = await fetch(searchUrl, {
@@ -364,7 +368,10 @@ async function websitePhoto(website: string): Promise<string | null> {
   const url = normalizeUrl(website);
   if (!url) return null;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 7000);
+  // 4 s : if a venue's own site doesn't respond fast it's probably down
+  // (jimdosite, custom CMS, etc.). Was 7 s but with 20 venues × cascade
+  // running in parallel that ate too much time budget.
+  const timer = setTimeout(() => ctrl.abort(), 4000);
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
@@ -467,26 +474,17 @@ export async function POST(request: Request) {
     // venues referenced on Uber Eats / Deliveroo / Just Eat / Tripadvisor /
     // their own site.
     // Cleaned city — some venues have a polluted `city` field carrying a
-    // full street address. Strip the noise once before reusing for the
-    // three search-based fallbacks (Wikidata SPARQL, Bing web, Bing img).
+    // full street address. Strip the noise once before reusing for Bing.
     const cityForSearch = cleanCity(it.city);
-    if (!url && it.name) {
-      url = await wikidataSearchByName(it.name, cityForSearch);
-      if (url) source = 'wikidata_search';
-    }
-    // Generic web fallback : finds the venue on Uber Eats, Deliveroo,
-    // Just Eat, Tripadvisor, the resto's own site, etc. via Bing HTML.
-    // Last in the cascade because we trust structured sources more than
-    // "whatever a search engine ranked first".
-    if (!url && it.name) {
-      url = await bingSearchByName(it.name, cityForSearch);
-      if (url) source = 'web_search';
-    }
-    // Absolute-last-resort : Bing Image Search returns the first image
-    // matching the query, no scraping needed. Catches the 30 % of venues
-    // whose Bing web result was a Tripadvisor / aggregator page that
-    // 403'd our og:image extraction. Quality varies (logo / food shot /
-    // map thumbnail) but always beats the emoji placeholder.
+    // Bing Image Search : the workhorse fallback. We used to chain
+    // wikidata_search (SPARQL) + bing web search before it, but those two
+    // steps timed out at 6s for ~80 % of venues without ever yielding a
+    // photo — and they ate so much time-budget that bing_image itself
+    // timed out for the venues that needed it most (Promise.all of 20
+    // venues × multiple slow steps = function near maxDuration, late
+    // steps abort). Skipping straight to image search after the
+    // structured signals (wikidata QID / brand / website) gives the same
+    // coverage in a fraction of the time, with much higher hit-rate.
     let bingImgTried = false;
     if (!url && it.name) {
       bingImgTried = true;
