@@ -316,8 +316,19 @@ async function bingImageSearchByName(
   name: string,
   city: string | null,
   diag?: Array<Record<string, unknown>>,
+  /** When set, skip any candidate `mediaurl=` already claimed by another
+   *  venue in the same batch. Lets the dedup pass in the POST handler ask
+   *  for the *next* image when two venues' SERPs returned the same first
+   *  result (typical on aggregator-dominated queries — Tripadvisor's "Bars
+   *  in Lyon" page shows up as the top image for several nearby bars). */
+  excludeUrls?: Set<string>,
+  /** Place type drives the trailing keyword in the query : "bar", "café"
+   *  or "restaurant". Defaults to "restaurant" for backwards compat. The
+   *  more specific the term, the higher the chance Bing serves the venue's
+   *  own image rather than a generic neighborhood listing. */
+  placeKeyword: string = 'restaurant',
 ): Promise<string | null> {
-  const query = [name, city, 'restaurant'].filter(Boolean).join(' ').trim();
+  const query = [name, city, placeKeyword].filter(Boolean).join(' ').trim();
   if (query.length < 2) return null;
   const ctrl = new AbortController();
   // 12 s : Bing Image Search is our last-and-best fallback. Under burst
@@ -365,10 +376,15 @@ async function bingImageSearchByName(
       attempts++;
       try {
         const decoded = decodeURIComponent(m[1]);
-        if (/^https?:\/\//i.test(decoded)) {
-          console.log('[bingImg v4] FOUND', decoded.slice(0, 80), 'for', query);
-          return decoded;
-        }
+        if (!/^https?:\/\//i.test(decoded)) continue;
+        // Dedup pass : if another venue in the same batch already claimed
+        // this URL, walk to the next candidate instead of returning a
+        // duplicate. This is the fix for "3 bars in Lyon all show the
+        // same Tripadvisor hero image" — Bing's first result is often
+        // shared across queries that hit the same aggregator listing.
+        if (excludeUrls && excludeUrls.has(decoded)) continue;
+        console.log('[bingImg v4] FOUND', decoded.slice(0, 80), 'for', query);
+        return decoded;
       } catch { continue; }
     }
     console.warn('[bingImg v4] occCount=', occCount, 'attempts=', attempts, 'for', query);
@@ -439,6 +455,10 @@ export async function POST(request: Request) {
     wikidata?: string | null;
     /** Wikidata QID for the brand/chain. Resolves to P154 logo. */
     brand_wikidata?: string | null;
+    /** Venue type — drives the Bing query keyword so a "bar" doesn't get
+     *  searched as "restaurant" (Bing then prefers food shots over
+     *  bar/lounge images). Optional ; defaults to "restaurant". */
+    place_type?: 'restaurant' | 'bar' | 'cafe' | null;
   };
   let body: { items?: Item[] };
   try { body = await request.json(); }
@@ -460,6 +480,27 @@ export async function POST(request: Request) {
   const photos: Record<string, string | null> = {};
   const toUpsert: { osm_id: number; url: string | null; source: string | null }[] = [];
   const bingImgDiag: Array<Record<string, unknown>> = [];
+
+  // Per-item result row tracked across the two-pass run. We need this
+  // after Promise.all so the dedup pass can re-fetch image_search hits
+  // that turned out duplicates without re-running the (expensive)
+  // structured steps.
+  type ItemResult = {
+    url: string | null;
+    source: string | null;
+    bingImgTried: boolean;
+    diagIdx: number;
+    cityForSearch: string | null;
+    placeKeyword: string;
+  };
+  const results = new Map<number, ItemResult>();
+
+  function placeKeywordFor(pt: Item['place_type']): string {
+    if (pt === 'bar') return 'bar';
+    if (pt === 'cafe') return 'café';
+    return 'restaurant';
+  }
+
   await Promise.all(items.map(async (it) => {
     const c = cacheMap.get(it.osm_id);
     if (c && c.fresh) { photos[it.osm_id] = c.url; return; }
@@ -489,6 +530,7 @@ export async function POST(request: Request) {
     // Cleaned city — some venues have a polluted `city` field carrying a
     // full street address. Strip the noise once before reusing for Bing.
     const cityForSearch = cleanCity(it.city);
+    const placeKeyword = placeKeywordFor(it.place_type);
     // Bing Image Search : the workhorse fallback. We used to chain
     // wikidata_search (SPARQL) + bing web search before it, but those two
     // steps timed out at 6s for ~80 % of venues without ever yielding a
@@ -502,18 +544,62 @@ export async function POST(request: Request) {
     const diagBefore = bingImgDiag.length;
     if (!url && it.name) {
       bingImgTried = true;
-      url = await bingImageSearchByName(it.name, cityForSearch, bingImgDiag);
+      url = await bingImageSearchByName(it.name, cityForSearch, bingImgDiag, undefined, placeKeyword);
       if (url) source = 'image_search';
     }
-    photos[it.osm_id] = url;
-    // For null URLs, encode in `source` which step was last attempted +
-    // what bing image's diag said (occ = #mediaurl in body, http = http
-    // status). Helps us tell rate-limiting (occ=0) from regex/parse bugs
-    // (occ>0 but null returned). Strip after cascade is stable.
-    const lastDiag = bingImgTried ? bingImgDiag[diagBefore] : null;
-    const debugSource = url
-      ? source
-      : bingImgTried
+    results.set(it.osm_id, {
+      url, source,
+      bingImgTried, diagIdx: diagBefore,
+      cityForSearch, placeKeyword,
+    });
+  }));
+
+  // ── Dedup pass ──────────────────────────────────────────────────────
+  // Bing Image Search sometimes returns the same first `mediaurl=` for
+  // unrelated queries that share an aggregator listing page (Tripadvisor
+  // "Bars in Lyon", Yelp neighborhood pages…). Without this pass, three
+  // distinct bars end up rendering the same photo. We walk the results,
+  // keep the first occurrence of each image_search URL, and re-run
+  // bingImageSearchByName for the duplicates with the already-claimed
+  // URLs in an exclude set so they pick the *next* candidate.
+  const claimedUrls = new Set<string>();
+  const duplicateIds: number[] = [];
+  for (const it of items) {
+    const r = results.get(it.osm_id);
+    if (!r || !r.url) continue;
+    // Only image_search results can collide on aggregator pages —
+    // wikidata/website hits are venue-specific and a true duplicate
+    // there means the data really is shared (chain brand, etc.).
+    if (r.source !== 'image_search') { claimedUrls.add(r.url); continue; }
+    if (claimedUrls.has(r.url)) duplicateIds.push(it.osm_id);
+    else claimedUrls.add(r.url);
+  }
+  if (duplicateIds.length > 0) {
+    // Sequential, not parallel : each duplicate's exclude set must
+    // include URLs claimed by earlier duplicates too, or we'd shuffle
+    // the same 2 URLs forever.
+    for (const osmId of duplicateIds) {
+      const r = results.get(osmId);
+      if (!r) continue;
+      const it = items.find((x) => x.osm_id === osmId);
+      if (!it?.name) { r.url = null; r.source = '_null_dup_no_name'; continue; }
+      const next = await bingImageSearchByName(
+        it.name, r.cityForSearch, bingImgDiag, claimedUrls, r.placeKeyword,
+      );
+      if (next) { r.url = next; claimedUrls.add(next); }
+      else { r.url = null; r.source = '_null_dup_no_alt'; }
+    }
+  }
+
+  // Finalise photos + toUpsert from the post-dedup results.
+  for (const it of items) {
+    const r = results.get(it.osm_id);
+    if (!r) continue;
+    photos[it.osm_id] = r.url;
+    const lastDiag = r.bingImgTried ? bingImgDiag[r.diagIdx] : null;
+    const debugSource = r.url
+      ? r.source
+      : r.bingImgTried
         ? (lastDiag && typeof lastDiag.occ === 'number'
             ? `_null_img_occ${lastDiag.occ}_b${lastDiag.bytes}`
             : lastDiag && typeof lastDiag.http === 'number'
@@ -522,8 +608,8 @@ export async function POST(request: Request) {
         : it.name
           ? '_null_no_name'
           : '_null_no_signal';
-    toUpsert.push({ osm_id: it.osm_id, url, source: debugSource });
-  }));
+    toUpsert.push({ osm_id: it.osm_id, url: r.url, source: debugSource });
+  }
 
   if (toUpsert.length > 0) {
     try {
@@ -532,6 +618,11 @@ export async function POST(request: Request) {
         { onConflict: 'osm_id' },
       );
     } catch {}
+    // Telemetry — counts photo-enrichment fetches in the admin dashboard.
+    // One row per request (not per item) so the count reflects the actual
+    // outbound load on Bing / Wikidata / website scrapers, not the number
+    // of OSM venues we asked about.
+    try { await supabase.from('api_usage').insert({ provider: 'photos', endpoint: 'enrich' }); } catch {}
   }
 
   return NextResponse.json(
