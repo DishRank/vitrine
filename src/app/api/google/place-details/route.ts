@@ -16,16 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: cors });
   }
 
-  // Pick the Google key matching the calling platform — each key is
-  // IP-restricted to our server origins (Vercel + Supabase edge) but
-  // tracked separately in GCP so we can rotate/revoke either without
-  // breaking the other platform. Falls back to the generic key when a
-  // platform-specific one isn't configured yet (smooth migration).
-  const platform = (request.headers.get('x-client-platform') || '').toLowerCase();
-  const apiKey =
-    (platform === 'android' ? process.env.GOOGLE_PLACES_API_KEY_ANDROID : null)
-    || (platform === 'ios' ? process.env.GOOGLE_PLACES_API_KEY_IOS : null)
-    || process.env.GOOGLE_PLACES_API_KEY;
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'GOOGLE_PLACES_API_KEY not set' }, { status: 500, headers: cors });
   }
