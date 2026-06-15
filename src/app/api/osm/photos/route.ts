@@ -73,11 +73,42 @@ function cleanCity(city: string | null | undefined): string | null {
   return candidates[candidates.length - 1];
 }
 
+// SSRF guard. The `website` values arrive in the request body (the mobile
+// client forwards an OSM `website` tag), so a caller could point us at
+// internal hosts — cloud metadata (169.254.169.254), loopback, RFC-1918,
+// CGNAT, or a bare "localhost". We only ever want PUBLIC venue sites, so
+// reject everything else before fetching. Not airtight against DNS rebinding
+// (a public name resolving to a private IP) — websitePhoto re-checks the
+// host after redirects to cover the obvious 30x-to-internal case.
+function isBlockedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, ''); // strip IPv6 brackets
+  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.internal') || h.endsWith('.local')) {
+    return true;
+  }
+  if (h === '::1' || h.startsWith('fe80:') || h.startsWith('fc') || h.startsWith('fd')) return true;
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const a = Number(m[1]); const b = Number(m[2]);
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 169 && b === 254) return true;            // link-local + cloud metadata
+    if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16/12
+    if (a === 192 && b === 168) return true;            // 192.168/16
+    if (a === 100 && b >= 64 && b <= 127) return true;  // CGNAT 100.64/10
+    if (a >= 224) return true;                          // multicast / reserved
+  }
+  return false;
+}
+
 function normalizeUrl(raw: string): string | null {
   let u = (raw || '').trim();
   if (!u) return null;
   if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
-  try { return new URL(u).toString(); } catch { return null; }
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    if (isBlockedHost(parsed.hostname)) return null;
+    return parsed.toString();
+  } catch { return null; }
 }
 
 function toAbs(src: string, baseUrl: string): string | null {
@@ -407,6 +438,9 @@ async function websitePhoto(website: string): Promise<string | null> {
       signal: ctrl.signal,
       redirect: 'follow',
     });
+    // A public URL can 30x-redirect to an internal one ; re-check the host
+    // we actually landed on before reading the body.
+    try { if (isBlockedHost(new URL(res.url).hostname)) return null; } catch { return null; }
     if (!res.ok) return faviconFallback(res.url || url);
     const ct = res.headers.get('content-type') || '';
     if (!ct.includes('text/html')) return faviconFallback(res.url || url);
