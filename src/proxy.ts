@@ -190,10 +190,15 @@ export default function proxy(req: NextRequest) {
     return response;
   }
 
-  // Autres /auth/* et /join/* — pages dynamiques avec scripts inline (deeplinks
-  // contextuels). Nonce CSP propagé pour autoriser leurs scripts inline
-  // tout en restant strict.
-  if (pathname.startsWith('/auth/') || pathname.startsWith('/join/')) {
+  // Autres /auth/*, /join/* et /restaurant/* — pages dynamiques avec scripts
+  // inline (deeplinks contextuels : bridge vers le schéma dishrank://). Nonce
+  // CSP propagé pour autoriser leurs scripts inline tout en restant strict.
+  // /restaurant/<id> est l'atterrissage du QR kit (table-tents) hors [locale].
+  if (
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/join/') ||
+    pathname.startsWith('/restaurant/')
+  ) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-nonce', nonce);
     const response = NextResponse.next({ request: { headers: requestHeaders } });
