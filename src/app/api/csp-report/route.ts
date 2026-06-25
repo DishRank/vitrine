@@ -66,6 +66,13 @@ interface CspReportLevel3Entry {
 }
 
 export async function POST(request: Request) {
+  // Body-size guard — CSP reports are tiny (<4 KB in practice). Reject
+  // oversized payloads to avoid log-amplification / memory DoS on this
+  // unauthenticated endpoint.
+  const declaredLen = Number(request.headers.get('content-length') || '0');
+  if (declaredLen > 16 * 1024) {
+    return NextResponse.json({ ok: false }, { status: 413 });
+  }
   let payload: unknown;
   try {
     payload = await request.json();

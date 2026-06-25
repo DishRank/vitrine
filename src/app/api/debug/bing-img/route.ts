@@ -17,6 +17,10 @@ export const runtime = 'nodejs';
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
 
 export async function GET(request: Request) {
+  // Diagnostic-only endpoint — never serve it in production.
+  if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
   const url = new URL(request.url);
   const q = url.searchParams.get('q') || 'tacos time lyon restaurant';
   const target = `https://www.bing.com/images/search?q=${encodeURIComponent(q)}&form=HDRSC2&first=1`;

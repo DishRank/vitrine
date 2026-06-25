@@ -103,7 +103,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'SMTP not configured' }, { status: 500, headers: cors });
   }
 
-  const subject = `[Support] ${CATEGORY_LABEL[ticket.category] || ticket.category} — ${authorName}`;
+  // Strip CR/LF from values interpolated into the Subject header as a
+  // defense-in-depth measure against SMTP header injection (nodemailer also
+  // encodes headers, but never trust a single layer).
+  const oneLine = (s: string) => String(s ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 200);
+  const subject = `[Support] ${oneLine(CATEGORY_LABEL[ticket.category] || ticket.category)} — ${oneLine(authorName)}`;
   const device = (ticket.device_info as { platform?: string; version?: string | number } | null) || {};
 
   const text = [

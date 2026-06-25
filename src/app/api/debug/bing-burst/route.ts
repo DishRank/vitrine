@@ -65,6 +65,11 @@ async function fetchOne(query: string) {
 }
 
 export async function GET(request: Request) {
+  // Diagnostic-only endpoint — never serve it in production (it fires
+  // server-side fetches from the Vercel IP and could be abused / burn quota).
+  if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
   const url = new URL(request.url);
   const n = Math.min(parseInt(url.searchParams.get('n') || '5', 10), TEST_QUERIES.length);
   const queries = TEST_QUERIES.slice(0, n);
