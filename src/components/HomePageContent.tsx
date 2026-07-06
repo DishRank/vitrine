@@ -378,7 +378,7 @@ export default async function HomePageContent({
           type="application/ld+json"
           nonce={nonce}
           suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(dishListJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(dishListJsonLd).replace(/</g, '\\u003c') }}
         />
       )}
       {localBusinessJsonLd && (
@@ -386,7 +386,7 @@ export default async function HomePageContent({
           type="application/ld+json"
           nonce={nonce}
           suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') }}
         />
       )}
       <Nav />

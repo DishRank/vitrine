@@ -307,11 +307,17 @@ async function bingSearchByName(name: string, city: string | null): Promise<stri
     // 3 HTML fetches, each <head>-only. Skips sites that 403 our UA.
     for (const target of urls) {
       try {
-        const venueRes = await fetch(target, {
+        // SSRF guard: reject private/internal hosts up front, and re-check the
+        // host AFTER redirects (a public URL can 30x into an internal address).
+        // Mirrors the websitePhoto() guard.
+        const safeTarget = normalizeUrl(target);
+        if (!safeTarget) continue;
+        const venueRes = await fetch(safeTarget, {
           headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
           signal: ctrl.signal,
           redirect: 'follow',
         });
+        try { if (isBlockedHost(new URL(venueRes.url).hostname)) continue; } catch { continue; }
         if (!venueRes.ok) continue;
         const ct = venueRes.headers.get('content-type') || '';
         if (!ct.includes('text/html')) continue;
