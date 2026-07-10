@@ -785,12 +785,9 @@ p {
        (rotate + small translate) and damps out.
    Classes are applied to the <g> wrappers inside AnimatedLogo.tsx.
 
-   IMPORTANT — sign convention:
-     The SVG wraps its paths in `translate(0 2048) scale(0.1 -0.1)` (potrace
-     flips Y). CSS transforms on nested <g> therefore operate in the FLIPPED
-     frame: positive translateY in CSS = UP on screen. So "fork from below"
-     means starting at NEGATIVE translateY, and "crown kicks upward" means
-     the impulse adds POSITIVE translateY. */
+   Sign convention: the brand vector is a normal Y-down SVG (no flip), so
+   positive translateY in CSS = DOWN on screen. "Fork from below" starts at
+   POSITIVE translateY; "crown kicks upward" is a NEGATIVE impulse. */
 
 .dr-logo-fork {
   transform-box: fill-box;
@@ -804,20 +801,20 @@ p {
 }
 
 @keyframes dr-logo-fork-fly {
-  0%   { transform: translateY(-160%); }  /* start well below the rest position (on-screen bottom) */
-  38%  { transform: translateY(9%); }     /* overshoot slightly past the crown */
-  55%  { transform: translateY(-4%); }
-  72%  { transform: translateY(1.5%); }
-  88%  { transform: translateY(-0.5%); }
+  0%   { transform: translateY(160%); }   /* start well below the rest position (on-screen bottom) */
+  38%  { transform: translateY(-9%); }    /* overshoot slightly past the crown */
+  55%  { transform: translateY(4%); }
+  72%  { transform: translateY(-1.5%); }
+  88%  { transform: translateY(0.5%); }
   100% { transform: translateY(0); }
 }
 
 @keyframes dr-logo-crown-react {
   0%, 36% { transform: rotate(0deg) translate(0, 0); }       /* still until fork hits */
-  42%     { transform: rotate(-4deg) translate(0, 3%); }     /* kicked upward by the impact */
-  54%     { transform: rotate(3deg) translate(0, -2%); }
-  66%     { transform: rotate(-1.5deg) translate(0, 1%); }
-  78%     { transform: rotate(0.5deg) translate(0, -0.5%); }
+  42%     { transform: rotate(4deg) translate(0, -3%); }     /* kicked upward by the impact */
+  54%     { transform: rotate(-3deg) translate(0, 2%); }
+  66%     { transform: rotate(1.5deg) translate(0, -1%); }
+  78%     { transform: rotate(-0.5deg) translate(0, 0.5%); }
   100%    { transform: rotate(0deg) translate(0, 0); }
 }
 

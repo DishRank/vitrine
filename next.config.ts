@@ -32,6 +32,15 @@ const nextConfig: NextConfig = {
         hostname: '*.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      // Hôtes d'images de DÉMO (données de seed DEV : loremflickr / unsplash),
+      // autorisés UNIQUEMENT en dev local. En prod les photos viennent
+      // toujours du storage Supabase → on garde l'allowlist prod minimale.
+      ...(process.env.NODE_ENV === 'production'
+        ? []
+        : [
+            { protocol: 'https' as const, hostname: 'loremflickr.com' },
+            { protocol: 'https' as const, hostname: 'images.unsplash.com' },
+          ]),
     ],
   },
 

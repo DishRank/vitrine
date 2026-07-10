@@ -120,10 +120,11 @@ const THIRTY_MIN = 30 * 60 * 1000;
  * Fetch top dishes. When the slug has children in `categoryHierarchy`, fires
  * one RPC per descendant slug in parallel, then merges + dedupes + re-sorts.
  *
- * Why parallel calls (and not a single `slug = ANY(...)` call): the prod RPC
- * still has the scalar signature `p_category_slug TEXT`. The array signature
- * exists only on the dev DB so far — when prod migrates we'll collapse this
- * back into a single call.
+ * `get_feed_dishes` takes the array param `p_category_slugs text[]` on BOTH
+ * prod and dev now (the scalar `p_category_slug` signature is gone) — each
+ * fan-out call passes a 1-element array. Could be collapsed into a single
+ * `p_category_slugs: expandCategorySlug(slug)` call ; kept as a fan-out for now
+ * to preserve the existing merge/dedupe/re-sort semantics.
  */
 export async function fetchDishes(categorySlug?: string, limit = 10): Promise<DishRow[]> {
   const slugs = categorySlug ? expandCategorySlug(categorySlug) : [undefined];
@@ -162,7 +163,7 @@ function fetchDishesForSlug(categorySlug: string | undefined, limit: number): Pr
       user_lat: null,
       user_lng: null,
       radius_km: 50,
-      p_category_slug: categorySlug || null,
+      p_category_slugs: categorySlug ? [categorySlug] : null,
       p_sort: 'rating',
       p_limit: limit,
     });
@@ -359,6 +360,10 @@ export interface RestaurantRow {
   city: string;
   lat: number | null;
   lng: number | null;
+  cuisines: string[] | null;
+  phone: string | null;
+  // Per-service opening windows : { d: 0=Mon…6=Sun, s: start min, e: end min }.
+  opening_intervals: { d: number; s: number; e: number }[] | null;
 }
 
 /**
@@ -377,19 +382,34 @@ export function fetchRestaurantBySlug(
 ): Promise<RestaurantRow | null> {
   const cacheKey = `restaurant:${cityName.toLowerCase()}:${restoSlug}`;
   return cached(cacheKey, FIVE_MIN, async () => {
-    // On ne SELECT que les colonnes confirmées sur la table `restaurants`
-    // (id, name, city). L'adresse + lat/lng vivent côté reviews-aggregat
-    // (RPC `get_feed_dishes`) où elles sont déjà jointes en
-    // `restaurant_address`, `restaurant_lat`, `restaurant_lng` — la page
-    // resto les pull depuis dishes[0] pour le JSON-LD geo.
+    // Colonnes confirmées sur `restaurants` (+ cuisines/phone/opening_intervals
+    // pour enrichir le JSON-LD Restaurant — servesCuisine/telephone/horaires).
+    // L'adresse + lat/lng viennent de la RPC `get_feed_dishes` (dishes[0]).
     const { data, error } = await getSupabase()
       .from('restaurants')
-      .select('id, name, city')
+      .select('id, name, city, cuisines, phone, opening_intervals')
       .ilike('city', cityName);
     if (error) throw error;
-    for (const r of (data || []) as { id: string; name: string; city: string }[]) {
+    for (const r of (data || []) as {
+      id: string;
+      name: string;
+      city: string;
+      cuisines: string[] | null;
+      phone: string | null;
+      opening_intervals: { d: number; s: number; e: number }[] | null;
+    }[]) {
       if (restaurantSlug(r.name) === restoSlug) {
-        return { id: r.id, name: r.name, city: r.city, address: null, lat: null, lng: null };
+        return {
+          id: r.id,
+          name: r.name,
+          city: r.city,
+          address: null,
+          lat: null,
+          lng: null,
+          cuisines: r.cuisines ?? null,
+          phone: r.phone ?? null,
+          opening_intervals: r.opening_intervals ?? null,
+        };
       }
     }
     return null;
@@ -414,7 +434,7 @@ export function fetchDishesForRestaurant(restaurantId: string): Promise<DishRow[
       user_lat: null,
       user_lng: null,
       radius_km: 50,
-      p_category_slug: null,
+      p_category_slugs: null,
       p_sort: 'rating',
       p_limit: 500,
     });
@@ -498,5 +518,29 @@ export function fetchReviews(restaurantId: string, dishName: string): Promise<Re
       .limit(10);
     if (error) throw error;
     return ((data || []) as unknown as ReviewRow[]).filter((r) => r.photo_url);
+  });
+}
+
+/**
+ * Recent moderated reviews *with a written comment* across the whole
+ * restaurant — feeds the `Review[]` array of the Restaurant JSON-LD so AI
+ * answer engines can quote real, attributed opinions. Unlike `fetchReviews`,
+ * a photo is not required (we want the text), and results span every dish.
+ */
+export function fetchReviewsForRestaurant(restaurantId: string, limit = 8): Promise<ReviewRow[]> {
+  const cacheKey = `restaurant-reviews:${restaurantId}`;
+  return cached(cacheKey, FIVE_MIN, async () => {
+    const { data, error } = await getSupabase()
+      .from('reviews')
+      .select('id, dish_name, rating, comment, price, currency, photo_url, created_at, profiles:user_id(avatar_url, display_name)')
+      .eq('restaurant_id', restaurantId)
+      .not('pending_moderation', 'is', true)
+      .not('comment', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return ((data || []) as unknown as ReviewRow[]).filter(
+      (r) => (r.comment || '').trim().length > 0,
+    );
   });
 }

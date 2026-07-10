@@ -7,6 +7,7 @@ import {
   fetchCities,
   fetchRestaurantBySlug,
   fetchDishesForRestaurant,
+  fetchReviewsForRestaurant,
 } from '@/lib/supabase';
 import { cityFromSlug, citySlug, restaurantSlug } from '@/lib/slug';
 import Nav from '@/components/Nav';
@@ -36,6 +37,100 @@ function localePrefix(locale: string): string {
 
 function buildRestaurantUrl(locale: string, cityName: string, slug: string): string {
   return `${SITE}${localePrefix(locale)}/${citySlug(cityName)}/r/${slug}`;
+}
+
+// schema.org attend le jour en anglais ; nos `opening_intervals` sont
+// 0-indexés lundi→dimanche.
+const SCHEMA_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function minutesToHHMM(min: number): string {
+  const clamped = Math.min(Math.max(min, 0), 1439); // 1440 (=24:00) → 23:59 (ISO time)
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** `opening_intervals` ({ d:0=lun…6=dim, s, e minutes }) → schema.org
+ *  OpeningHoursSpecification (une entrée par créneau de service ; les
+ *  services de nuit sont déjà scindés côté app). */
+function openingHoursSpec(
+  intervals: { d: number; s: number; e: number }[] | null,
+) {
+  if (!intervals || !intervals.length) return undefined;
+  const specs = intervals
+    .filter((iv) => SCHEMA_DAYS[iv.d] && iv.e > iv.s)
+    .map((iv) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: `https://schema.org/${SCHEMA_DAYS[iv.d]}`,
+      opens: minutesToHHMM(iv.s),
+      closes: minutesToHHMM(iv.e),
+    }));
+  return specs.length ? specs : undefined;
+}
+
+/** Slug de cuisine ('coffee_shop') → libellé lisible ('Coffee Shop') pour
+ *  `servesCuisine` (schema.org attend du texte, pas des slugs). */
+function prettyCuisine(slug: string): string {
+  return slug
+    .split('_')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/** Q/R localisées pour le FAQPage JSON-LD — cible les réponses directes des
+ *  moteurs IA (« quels sont les meilleurs plats », « quelle note », « où »). */
+function buildRestaurantFaq(
+  locale: string,
+  d: {
+    name: string;
+    cityName: string;
+    address: string | null;
+    avg: number;
+    count: number;
+    top: { dish_name: string; avg_rating: number }[];
+  },
+) {
+  const dishesList = d.top
+    .slice(0, 3)
+    .map((x) => `${x.dish_name} (${Number(x.avg_rating).toFixed(1)}/5)`)
+    .join(', ');
+  const loc = d.address ? `${d.address}, ${d.cityName}` : d.cityName;
+
+  type QA = { q: string; a: string };
+  const byLocale: Record<string, QA[]> = {
+    fr: [
+      { q: `Quels sont les meilleurs plats chez ${d.name} ?`, a: `Sur DishRank, les plats les mieux notés chez ${d.name} sont : ${dishesList}.` },
+      { q: `Quelle est la note de ${d.name} sur DishRank ?`, a: `${d.name} a une note moyenne de ${d.avg}/5 basée sur ${d.count} avis vérifiés de la communauté DishRank.` },
+      { q: `Où se trouve ${d.name} ?`, a: `${d.name} se situe à ${loc}.` },
+    ],
+    en: [
+      { q: `What are the best dishes at ${d.name}?`, a: `On DishRank, the top-rated dishes at ${d.name} are: ${dishesList}.` },
+      { q: `What is ${d.name}'s rating on DishRank?`, a: `${d.name} has an average rating of ${d.avg}/5 based on ${d.count} verified reviews from the DishRank community.` },
+      { q: `Where is ${d.name} located?`, a: `${d.name} is located in ${loc}.` },
+    ],
+    es: [
+      { q: `¿Cuáles son los mejores platos de ${d.name}?`, a: `En DishRank, los platos mejor valorados de ${d.name} son: ${dishesList}.` },
+      { q: `¿Qué valoración tiene ${d.name} en DishRank?`, a: `${d.name} tiene una valoración media de ${d.avg}/5 basada en ${d.count} reseñas verificadas de la comunidad DishRank.` },
+      { q: `¿Dónde está ${d.name}?`, a: `${d.name} se encuentra en ${loc}.` },
+    ],
+    de: [
+      { q: `Was sind die besten Gerichte bei ${d.name}?`, a: `Auf DishRank sind die bestbewerteten Gerichte bei ${d.name}: ${dishesList}.` },
+      { q: `Wie ist die Bewertung von ${d.name} auf DishRank?`, a: `${d.name} hat eine Durchschnittsbewertung von ${d.avg}/5 auf Basis von ${d.count} verifizierten Bewertungen der DishRank-Community.` },
+      { q: `Wo befindet sich ${d.name}?`, a: `${d.name} befindet sich in ${loc}.` },
+    ],
+    it: [
+      { q: `Quali sono i piatti migliori da ${d.name}?`, a: `Su DishRank, i piatti più votati da ${d.name} sono: ${dishesList}.` },
+      { q: `Qual è la valutazione di ${d.name} su DishRank?`, a: `${d.name} ha una valutazione media di ${d.avg}/5 basata su ${d.count} recensioni verificate della community DishRank.` },
+      { q: `Dove si trova ${d.name}?`, a: `${d.name} si trova a ${loc}.` },
+    ],
+  };
+  const list = byLocale[locale] || byLocale.fr;
+  return list.map((x) => ({
+    '@type': 'Question',
+    name: x.q,
+    acceptedAnswer: { '@type': 'Answer', text: x.a },
+  }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -130,6 +225,9 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
   // Empêche les soft-404 sur des restos qui existent en DB mais n'ont aucune
   // review modérée affichable.
   if (dishes.length === 0) notFound();
+
+  // Avis récents avec commentaire (tous plats confondus) → Review[] du JSON-LD.
+  const reviews = await fetchReviewsForRestaurant(restaurant.id).catch(() => []);
 
   // Address + geo viennent de la RPC `get_feed_dishes` (déjà jointe côté DB)
   // plutôt que d'un SELECT direct sur `restaurants` — on évite de supposer
@@ -234,6 +332,28 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
       worstRating: 1,
     },
     priceRange: '€€',
+    telephone: restaurant.phone || undefined,
+    servesCuisine:
+      restaurant.cuisines && restaurant.cuisines.length
+        ? restaurant.cuisines.map(prettyCuisine)
+        : undefined,
+    menu: canonical,
+    openingHoursSpecification: openingHoursSpec(restaurant.opening_intervals),
+    review: reviews.length
+      ? reviews.map((rv) => ({
+          '@type': 'Review',
+          author: { '@type': 'Person', name: rv.profiles?.display_name || 'DishRank' },
+          datePublished: rv.created_at,
+          reviewRating: {
+            '@type': 'Rating',
+            ratingValue: Number(rv.rating),
+            bestRating: 5,
+            worstRating: 1,
+          },
+          name: rv.dish_name,
+          reviewBody: rv.comment,
+        }))
+      : undefined,
     hasMenu: {
       '@type': 'Menu',
       hasMenuSection: {
@@ -260,6 +380,23 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
     },
   };
 
+  // FAQPage — questions/réponses localisées adossées aux données réelles du
+  // resto. Cible les « featured snippets » et surtout les réponses directes
+  // des moteurs IA (ChatGPT, Perplexity, Google AI Overviews).
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    '@id': `${canonical}#faq`,
+    mainEntity: buildRestaurantFaq(locale, {
+      name: restaurant.name,
+      cityName,
+      address: restaurantAddress,
+      avg: Math.round(avgRating * 10) / 10,
+      count: Math.max(totalReviews, dishes.length),
+      top: dishes.map((d) => ({ dish_name: d.dish_name, avg_rating: Number(d.avg_rating) })),
+    }),
+  };
+
   // Titre H2 du DishGrid — réutilisé du composant existant
   const topDishesTitle =
     locale === 'fr' ? `Les plats notés chez ${restaurant.name}`
@@ -276,6 +413,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
       <script type="application/ld+json" nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }} />
       <script type="application/ld+json" nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
       <script type="application/ld+json" nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(restaurantJsonLd).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, '\\u003c') }} />
 
       <Nav />
       <main id="main-content">

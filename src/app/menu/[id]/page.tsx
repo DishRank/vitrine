@@ -1,10 +1,11 @@
 import { Metadata } from 'next';
 import MenuBridge, { buildMenuMetadata } from '@/components/MenuBridge';
 
-// Cible app-link (AASA + intent Android revendiquent `/restaurant*`) : c'est
-// la landing des PARTAGES resto et des anciens QR de table. App installée →
-// l'OS ouvre la fiche in-app avant cette page ; sinon web via MenuBridge, avec
-// pont deep-link discret (allowAppRedirect). Voir components/MenuBridge.tsx.
+// Landing du QR de table (table-tents). Chemin volontairement HORS des
+// app-links : l'app revendique `/restaurant*`, `/dish*`, `/review*`, `/join*`
+// — mais PAS `/menu*`. L'OS n'intercepte donc jamais ce lien → le client voit
+// toujours le menu numérique sur le web, même app installée, sans aucun
+// redirect (allowAppRedirect=false). Voir components/MenuBridge.tsx.
 interface PageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ src?: string; lang?: string }>;
@@ -18,5 +19,5 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function Page({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { src, lang } = await searchParams;
-  return <MenuBridge id={id} src={src} lang={lang} allowAppRedirect />;
+  return <MenuBridge id={id} src={src} lang={lang} allowAppRedirect={false} />;
 }

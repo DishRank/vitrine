@@ -81,6 +81,20 @@ function generateNonce(): string {
  * RSC (`self.__next_f.push(...)`). Surface XSS réduite par `object-src
  * 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`.
  */
+// L'hôte Supabase autorisé en connect-src suit l'environnement (le client
+// navigateur — notation sans compte — parle au projet de NEXT_PUBLIC_*) ;
+// défaut = prod.
+const SUPABASE_CONNECT =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yztbhdvrvgozhyaujtjz.supabase.co';
+
+// En dev uniquement, tolère tous les projets Supabase : NEXT_PUBLIC_* est
+// inliné dans le proxy à sa compilation, donc un .env.local modifié pendant
+// que `next dev` tourne laisse le proxy sur l'ancien hôte alors que les
+// bundles clients recompilés parlent déjà au nouveau → connect-src bloque
+// tout jusqu'au restart. En prod l'hôte reste exact.
+const supabaseConnect = (isDev: boolean) =>
+  isDev ? `${SUPABASE_CONNECT} https://*.supabase.co` : SUPABASE_CONNECT;
+
 function buildStaticCsp(isDev: boolean): string {
   return [
     "default-src 'self'",
@@ -88,7 +102,7 @@ function buildStaticCsp(isDev: boolean): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' https: data:",
-    "connect-src 'self' https://yztbhdvrvgozhyaujtjz.supabase.co",
+    `connect-src 'self' ${supabaseConnect(isDev)}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -113,7 +127,7 @@ function buildCsp(nonce: string, isDev: boolean): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' https: data:",
-    "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://yztbhdvrvgozhyaujtjz.supabase.co",
+    `connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com ${supabaseConnect(isDev)}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -190,14 +204,17 @@ export default function proxy(req: NextRequest) {
     return response;
   }
 
-  // Autres /auth/*, /join/* et /restaurant/* — pages dynamiques avec scripts
-  // inline (deeplinks contextuels : bridge vers le schéma dishrank://). Nonce
-  // CSP propagé pour autoriser leurs scripts inline tout en restant strict.
-  // /restaurant/<id> est l'atterrissage du QR kit (table-tents) hors [locale].
+  // Autres /auth/*, /join/*, /restaurant/* et /menu/* — pages dynamiques hors
+  // [locale] (bridge deep-link / menu numérique). Nonce CSP propagé pour
+  // autoriser leur script inline tout en restant strict, et court-circuit du
+  // routage next-intl (ces chemins ne sont pas localisés).
+  // /restaurant/<id> = landing des partages + anciens QR ; /menu/<id> = QR de
+  // table actuel (jamais intercepté par l'app → toujours le menu web).
   if (
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/join/') ||
-    pathname.startsWith('/restaurant/')
+    pathname.startsWith('/restaurant/') ||
+    pathname.startsWith('/menu/')
   ) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-nonce', nonce);

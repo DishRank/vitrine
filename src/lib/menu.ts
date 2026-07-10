@@ -156,6 +156,80 @@ export function fetchMenuTree(restaurantId: string): Promise<MenuTree[]> {
   })();
 }
 
+// ── Traduction du menu = PREMIUM (frontière v2 §2.1) ────────────────────────
+// Appliquée AU RENDU, même patron que le thème : pour un resto free (ou
+// premium expiré) on VIDE les feuilles i18n → tout le contenu restaurateur
+// retombe sur le français source, y compris variantes et options. Les libellés
+// de PLATEFORME (MENU_UI : allergènes, « épuisé », boutons…) restent dans la
+// langue du visiteur — ils sont à nous, pas au resto. Appliqué APRÈS le Data
+// Cache (qui ignore le tier) → dégradation propre à l'expiration, sans trigger.
+
+function gateSection(s: MenuSection): MenuSection {
+  return {
+    ...s,
+    i18n: {},
+    items: s.items.map(gateItem),
+    children: s.children.map(gateSection),
+  };
+}
+
+function gateItem(it: MenuItem): MenuItem {
+  return {
+    ...it,
+    i18n: {},
+    variants: it.variants.map((v) => ({ ...v, i18n: undefined })),
+    options: it.options.map((o) => ({ ...o, i18n: undefined })),
+  };
+}
+
+export function gateMenuTranslations(menus: MenuTree[], isPremium: boolean): MenuTree[] {
+  if (isPremium) return menus;
+  return menus.map((m) => ({ ...m, i18n: {}, sections: m.sections.map(gateSection) }));
+}
+
+// ── Notes communautaires par plat (l'allusion « organique » à l'app) ────────
+// Les avis DishRank du resto, agrégés par nom de plat normalisé (même clé que
+// get_signature_dishes : lower(trim(name))). Sert à afficher un discret
+// « ★ 4.3 · 12 avis » sur les plats DÉJÀ notés — jamais rien de forcé.
+export type DishRating = { avg: number; count: number };
+
+/** Clé de rapprochement plat ↔ avis (nom normalisé). */
+export function ratingKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+export function fetchMenuRatings(restaurantId: string): Promise<Record<string, DishRating>> {
+  return unstable_cache(
+    async () => {
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) return {};
+      const supabase = createClient(url, key);
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('dish_name, rating')
+        .eq('restaurant_id', restaurantId)
+        .eq('pending_moderation', false)
+        .limit(4000);
+      if (error || !data) return {};
+      const agg: Record<string, { sum: number; count: number }> = {};
+      for (const r of data as { dish_name: string | null; rating: number | null }[]) {
+        const nm = (r.dish_name ?? '').trim().toLowerCase();
+        if (!nm || r.rating == null) continue;
+        (agg[nm] ??= { sum: 0, count: 0 }).sum += Number(r.rating);
+        agg[nm].count += 1;
+      }
+      const out: Record<string, DishRating> = {};
+      for (const [nm, v] of Object.entries(agg)) {
+        out[nm] = { avg: Math.round((v.sum / v.count) * 10) / 10, count: v.count };
+      }
+      return out;
+    },
+    ['menu-ratings', restaurantId],
+    { revalidate: 300, tags: [`menu:${restaurantId}`] }
+  )();
+}
+
 // ── Logs serveur (scan QR + vue menu) ───────────────────────────────────────
 // Appelés via after() par la page — jamais bloquants, jamais levants.
 
@@ -219,6 +293,114 @@ export function loc(
   return base;
 }
 
+/**
+ * Langues RÉELLEMENT disponibles pour ce menu : `fr` (source) + les locales
+ * présentes dans les feuilles i18n (name non vide). Ces traductions sont
+ * produites par l'edge `menu-translate` (DeepL, premium → en/es/de/it) ; on
+ * n'offre donc dans le sélecteur que les langues effectivement traduites.
+ * (Pour un resto free/expiré, `gateMenuTranslations` a vidé les i18n → `['fr']`
+ * → sélecteur masqué.)
+ */
+export function menuLocales(menus: MenuTree[]): MenuLocale[] {
+  const present = new Set<MenuLocale>();
+  const scan = (i18n: MenuI18n | null | undefined) => {
+    if (!i18n) return;
+    for (const code of Object.keys(i18n)) {
+      if ((MENU_LOCALES as readonly string[]).includes(code) && i18n[code]?.name?.trim()) {
+        present.add(code as MenuLocale);
+      }
+    }
+  };
+  for (const m of menus) {
+    scan(m.i18n);
+    for (const s of m.sections) {
+      scan(s.i18n);
+      for (const it of s.items) scan(it.i18n);
+      for (const c of s.children) {
+        scan(c.i18n);
+        for (const it of c.items) scan(it.i18n);
+      }
+    }
+  }
+  // fr en tête, puis dans l'ordre MENU_LOCALES.
+  return MENU_LOCALES.filter((l) => l === 'fr' || present.has(l));
+}
+
+// ── Thème d'apparence (feature premium, migration 091) ──────────────────────
+// Copie synchronisée de constants/menuTheme.ts côté app. Le thème n'est
+// APPLIQUÉ que si le resto est premium (sinon défaut ivoire) → dégradation
+// propre à l'expiration, sans trigger DB.
+
+export type MenuThemePreset = 'ivory' | 'linen' | 'charcoal' | 'night';
+export interface ResolvedMenuTheme {
+  bg: string;
+  card: string;
+  text: string;
+  sub: string;
+  line: string;
+  accent: string;
+  dark: boolean;
+  font: 'serif' | 'modern';
+  photos: boolean;
+  logoUrl: string | null;
+}
+
+const MENU_PRESETS: Record<MenuThemePreset, Omit<ResolvedMenuTheme, 'accent' | 'font' | 'photos' | 'logoUrl'>> = {
+  ivory: { bg: '#FBF8F3', card: '#FFFFFF', text: '#2A241E', sub: '#8C8478', line: '#EBE4D8', dark: false },
+  linen: { bg: '#F5EEE3', card: '#FFFDF9', text: '#3A2E22', sub: '#90806A', line: '#E5DAC8', dark: false },
+  charcoal: { bg: '#211D1B', card: '#2A2523', text: '#F2ECE3', sub: '#A89C8D', line: '#37312C', dark: true },
+  night: { bg: '#14161F', card: '#1C1F2B', text: '#ECEEF5', sub: '#9AA0B0', line: '#262A38', dark: true },
+};
+
+export function isRestaurantPremium(
+  tier: string | null | undefined,
+  expires: string | null | undefined
+): boolean {
+  return tier === 'premium' && (!expires || new Date(expires) > new Date());
+}
+
+export type StorePlatform = 'ios' | 'android' | 'desktop';
+
+/** Plateforme depuis le User-Agent de la requête (SSR — le detectPlatform du
+ *  site est client-only). iPhone/iPad/iPod → ios ; Android → android ; sinon
+ *  desktop (montre les deux boutons). */
+export function detectPlatformFromUA(ua: string | null | undefined): StorePlatform {
+  const s = ua ?? '';
+  if (/iPhone|iPad|iPod/i.test(s)) return 'ios';
+  if (/Android/i.test(s)) return 'android';
+  return 'desktop';
+}
+
+/** Thème effectif. Les PHOTOS de plats sont GRATUITES (frontière v2 §2.1 —
+ *  défaut true, seule une désactivation explicite les masque) ; le reste du
+ *  thème (ambiance, accent, police, logo) reste PREMIUM — défaut ivoire sinon. */
+export function resolveMenuTheme(raw: unknown, isPremium: boolean): ResolvedMenuTheme {
+  const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const photos = o.photos !== false;
+  if (!isPremium) {
+    return {
+      ...MENU_PRESETS.ivory,
+      accent: '#AE8324',
+      font: 'serif',
+      // Free = comportement par défaut : photos TOUJOURS affichées. Le toggle
+      // d'affichage appartient au thème (premium) — sans ça, un resto
+      // rétrogradé avec `photos:false` stocké ne pourrait plus les réactiver.
+      photos: true,
+      logoUrl: null,
+    };
+  }
+  const key: MenuThemePreset = (['ivory', 'linen', 'charcoal', 'night'] as const).includes(
+    o.theme as MenuThemePreset
+  )
+    ? (o.theme as MenuThemePreset)
+    : 'ivory';
+  const accent =
+    typeof o.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.accent) ? (o.accent as string) : '#AE8324';
+  const font = o.font === 'modern' ? 'modern' : 'serif';
+  const logoUrl = typeof o.logo_url === 'string' && o.logo_url ? (o.logo_url as string) : null;
+  return { ...MENU_PRESETS[key], accent, font, photos, logoUrl };
+}
+
 /** Libellés UI de la page menu (autonome — la route vit hors [locale]). */
 export const MENU_UI: Record<
   MenuLocale,
@@ -227,6 +409,13 @@ export const MENU_UI: Record<
     from: string;
     soldOut: string;
     signature: string;
+    rateAction: string;
+    ratePublish: string;
+    rateCommentPh: string;
+    rateThanks: string;
+    rateAnonHint: string;
+    rateAlready: string;
+    rateError: string;
     lunchOnly: string;
     dinnerOnly: string;
     choiceOf: string;
@@ -238,6 +427,15 @@ export const MENU_UI: Record<
     appStore: string;
     playStore: string;
     orVisit: string;
+    reviewsWord: string;
+    ratedBy: string;
+    likedTitle: string;
+    rateInvite: string;
+    openApp: string;
+    searchPlaceholder: string;
+    filterAll: string;
+    filterSignature: string;
+    noResults: string;
     allergens: Record<string, string>;
     diets: Record<string, string>;
   }
@@ -246,7 +444,7 @@ export const MENU_UI: Record<
     menuTitle: 'Menu',
     from: 'dès',
     soldOut: 'Épuisé',
-    signature: 'Signature',
+    signature: 'Choix du chef', rateAction: 'Noter', ratePublish: 'Publier', rateCommentPh: 'Un mot sur ce plat ? (optionnel)', rateThanks: 'Merci pour votre note !', rateAnonHint: 'Sans compte — votre note est anonyme.', rateAlready: 'Vous avez déjà noté ce plat ce mois-ci.', rateError: 'Impossible d’envoyer la note — réessayez.',
     lunchOnly: 'Le midi',
     dinnerOnly: 'Le soir',
     choiceOf: 'Au choix',
@@ -258,6 +456,15 @@ export const MENU_UI: Record<
     appStore: 'Télécharger sur l’App Store',
     playStore: 'Télécharger sur Google Play',
     orVisit: 'Ou visite',
+    reviewsWord: 'avis',
+    searchPlaceholder: 'Rechercher un plat…',
+    filterAll: 'Tout',
+    filterSignature: 'Signature',
+    noResults: 'Aucun plat ne correspond',
+    ratedBy: 'Noté par la communauté',
+    likedTitle: 'Un plat vous a plu ?',
+    rateInvite: 'Notez-le sur DishRank',
+    openApp: 'Ouvrir dans l’app',
     allergens: {
       gluten: 'Gluten', crustaces: 'Crustacés', oeufs: 'Œufs', poissons: 'Poissons',
       arachides: 'Arachides', soja: 'Soja', lait: 'Lait', fruits_coque: 'Fruits à coque',
@@ -265,7 +472,7 @@ export const MENU_UI: Record<
       lupin: 'Lupin', mollusques: 'Mollusques',
     },
     diets: {
-      vegetarien: 'Végétarien', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Sans gluten',
+      vegetarien: 'Végétarien', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Sans gluten', bio: 'Bio',
       fait_maison: 'Fait maison', epice: 'Épicé', nouveau: 'Nouveau',
     },
   },
@@ -273,7 +480,7 @@ export const MENU_UI: Record<
     menuTitle: 'Menu',
     from: 'from',
     soldOut: 'Sold out',
-    signature: 'Signature',
+    signature: "Chef's choice", rateAction: 'Rate', ratePublish: 'Publish', rateCommentPh: 'A word about this dish? (optional)', rateThanks: 'Thanks for rating!', rateAnonHint: 'No account needed — your rating is anonymous.', rateAlready: 'You already rated this dish this month.', rateError: 'Could not send your rating — try again.',
     lunchOnly: 'Lunch only',
     dinnerOnly: 'Dinner only',
     choiceOf: 'Choice of',
@@ -285,6 +492,15 @@ export const MENU_UI: Record<
     appStore: 'Download on the App Store',
     playStore: 'Get it on Google Play',
     orVisit: 'Or visit',
+    reviewsWord: 'reviews',
+    searchPlaceholder: 'Search a dish…',
+    filterAll: 'All',
+    filterSignature: 'Signature',
+    noResults: 'No matching dish',
+    ratedBy: 'Rated by the community',
+    likedTitle: 'Enjoyed a dish?',
+    rateInvite: 'Rate it on DishRank',
+    openApp: 'Open in the app',
     allergens: {
       gluten: 'Gluten', crustaces: 'Crustaceans', oeufs: 'Eggs', poissons: 'Fish',
       arachides: 'Peanuts', soja: 'Soy', lait: 'Milk', fruits_coque: 'Tree nuts',
@@ -292,7 +508,7 @@ export const MENU_UI: Record<
       lupin: 'Lupin', mollusques: 'Molluscs',
     },
     diets: {
-      vegetarien: 'Vegetarian', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Gluten-free',
+      vegetarien: 'Vegetarian', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Gluten-free', bio: 'Organic',
       fait_maison: 'Homemade', epice: 'Spicy', nouveau: 'New',
     },
   },
@@ -300,7 +516,7 @@ export const MENU_UI: Record<
     menuTitle: 'Carta',
     from: 'desde',
     soldOut: 'Agotado',
-    signature: 'Estrella',
+    signature: 'Elección del chef', rateAction: 'Valorar', ratePublish: 'Publicar', rateCommentPh: '¿Unas palabras sobre el plato? (opcional)', rateThanks: '¡Gracias por tu valoración!', rateAnonHint: 'Sin cuenta — tu valoración es anónima.', rateAlready: 'Ya valoraste este plato este mes.', rateError: 'No se pudo enviar la valoración — inténtalo de nuevo.',
     lunchOnly: 'Solo mediodía',
     dinnerOnly: 'Solo noche',
     choiceOf: 'A elegir',
@@ -312,6 +528,15 @@ export const MENU_UI: Record<
     appStore: 'Descargar en el App Store',
     playStore: 'Disponible en Google Play',
     orVisit: 'O visita',
+    reviewsWord: 'reseñas',
+    searchPlaceholder: 'Buscar un plato…',
+    filterAll: 'Todo',
+    filterSignature: 'Especialidad',
+    noResults: 'Ningún plato coincide',
+    ratedBy: 'Puntuado por la comunidad',
+    likedTitle: '¿Te gustó un plato?',
+    rateInvite: 'Puntúalo en DishRank',
+    openApp: 'Abrir en la app',
     allergens: {
       gluten: 'Gluten', crustaces: 'Crustáceos', oeufs: 'Huevos', poissons: 'Pescado',
       arachides: 'Cacahuetes', soja: 'Soja', lait: 'Leche', fruits_coque: 'Frutos de cáscara',
@@ -319,7 +544,7 @@ export const MENU_UI: Record<
       lupin: 'Altramuces', mollusques: 'Moluscos',
     },
     diets: {
-      vegetarien: 'Vegetariano', vegan: 'Vegano', halal: 'Halal', sans_gluten: 'Sin gluten',
+      vegetarien: 'Vegetariano', vegan: 'Vegano', halal: 'Halal', sans_gluten: 'Sin gluten', bio: 'Ecológico',
       fait_maison: 'Casero', epice: 'Picante', nouveau: 'Nuevo',
     },
   },
@@ -327,7 +552,7 @@ export const MENU_UI: Record<
     menuTitle: 'Speisekarte',
     from: 'ab',
     soldOut: 'Ausverkauft',
-    signature: 'Signature',
+    signature: 'Empfehlung des Chefs', rateAction: 'Bewerten', ratePublish: 'Senden', rateCommentPh: 'Ein Wort zum Gericht? (optional)', rateThanks: 'Danke für deine Bewertung!', rateAnonHint: 'Ohne Konto — deine Bewertung ist anonym.', rateAlready: 'Du hast dieses Gericht diesen Monat schon bewertet.', rateError: 'Bewertung konnte nicht gesendet werden — bitte erneut versuchen.',
     lunchOnly: 'Nur mittags',
     dinnerOnly: 'Nur abends',
     choiceOf: 'Zur Wahl',
@@ -339,6 +564,15 @@ export const MENU_UI: Record<
     appStore: 'Im App Store laden',
     playStore: 'Bei Google Play laden',
     orVisit: 'Oder besuche',
+    reviewsWord: 'Bewertungen',
+    searchPlaceholder: 'Gericht suchen…',
+    filterAll: 'Alle',
+    filterSignature: 'Spezialität',
+    noResults: 'Kein passendes Gericht',
+    ratedBy: 'Von der Community bewertet',
+    likedTitle: 'Ein Gericht genossen?',
+    rateInvite: 'Bewerte es auf DishRank',
+    openApp: 'In der App öffnen',
     allergens: {
       gluten: 'Gluten', crustaces: 'Krebstiere', oeufs: 'Eier', poissons: 'Fisch',
       arachides: 'Erdnüsse', soja: 'Soja', lait: 'Milch', fruits_coque: 'Schalenfrüchte',
@@ -346,7 +580,7 @@ export const MENU_UI: Record<
       lupin: 'Lupinen', mollusques: 'Weichtiere',
     },
     diets: {
-      vegetarien: 'Vegetarisch', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Glutenfrei',
+      vegetarien: 'Vegetarisch', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Glutenfrei', bio: 'Bio',
       fait_maison: 'Hausgemacht', epice: 'Scharf', nouveau: 'Neu',
     },
   },
@@ -354,7 +588,7 @@ export const MENU_UI: Record<
     menuTitle: 'Menu',
     from: 'da',
     soldOut: 'Esaurito',
-    signature: 'Signature',
+    signature: 'Scelta dello chef', rateAction: 'Valuta', ratePublish: 'Pubblica', rateCommentPh: 'Due parole sul piatto? (facoltativo)', rateThanks: 'Grazie per la valutazione!', rateAnonHint: 'Senza account — la tua valutazione è anonima.', rateAlready: 'Hai già valutato questo piatto questo mese.', rateError: 'Invio non riuscito — riprova.',
     lunchOnly: 'Solo pranzo',
     dinnerOnly: 'Solo cena',
     choiceOf: 'A scelta',
@@ -366,6 +600,15 @@ export const MENU_UI: Record<
     appStore: 'Scarica su App Store',
     playStore: 'Disponibile su Google Play',
     orVisit: 'Oppure visita',
+    reviewsWord: 'recensioni',
+    searchPlaceholder: 'Cerca un piatto…',
+    filterAll: 'Tutto',
+    filterSignature: 'Specialità',
+    noResults: 'Nessun piatto corrisponde',
+    ratedBy: 'Votato dalla comunità',
+    likedTitle: 'Ti è piaciuto un piatto?',
+    rateInvite: 'Votalo su DishRank',
+    openApp: 'Apri nell’app',
     allergens: {
       gluten: 'Glutine', crustaces: 'Crostacei', oeufs: 'Uova', poissons: 'Pesce',
       arachides: 'Arachidi', soja: 'Soia', lait: 'Latte', fruits_coque: 'Frutta a guscio',
@@ -373,7 +616,7 @@ export const MENU_UI: Record<
       lupin: 'Lupini', mollusques: 'Molluschi',
     },
     diets: {
-      vegetarien: 'Vegetariano', vegan: 'Vegano', halal: 'Halal', sans_gluten: 'Senza glutine',
+      vegetarien: 'Vegetariano', vegan: 'Vegano', halal: 'Halal', sans_gluten: 'Senza glutine', bio: 'Bio',
       fait_maison: 'Fatto in casa', epice: 'Piccante', nouveau: 'Novità',
     },
   },
