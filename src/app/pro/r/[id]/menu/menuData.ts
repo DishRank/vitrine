@@ -44,14 +44,25 @@ export interface EditorMenu {
   name: string;
   version: number;
   sections: EditorSection[];
+  /** Langues cibles (en/es/de/it) ayant AU MOINS une traduction dans l'arbre. */
+  translatedLocales: string[];
+}
+
+/** Langues cibles de la traduction auto (la saisie se fait en FR). */
+export const MENU_TARGET_LOCALES = ['en', 'es', 'de', 'it'] as const;
+
+type I18nMap = Record<string, { name?: string; description?: string } | undefined> | null;
+function hasLocaleContent(i18n: I18nMap, locale: string): boolean {
+  const e = i18n?.[locale];
+  return !!(e && ((e.name && e.name.trim()) || (e.description && e.description.trim())));
 }
 
 const byOrder = <T extends { display_order: number; created_at: string }>(a: T, b: T) =>
   a.display_order - b.display_order || a.created_at.localeCompare(b.created_at);
 
 const SELECT = `id, name, version, display_order, created_at,
-  menu_sections(id, name, description, parent_section_id, display_order, is_visible, created_at,
-    menu_items(id, section_id, kind, name, description, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, variants, options, availability, updated_at, created_at))`;
+  menu_sections(id, name, description, i18n, parent_section_id, display_order, is_visible, created_at,
+    menu_items(id, section_id, kind, name, description, i18n, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, variants, options, availability, updated_at, created_at))`;
 
 /** L'arbre complet des cartes du resto (souvent une seule, « Notre carte »). */
 export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]> {
@@ -61,12 +72,13 @@ export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]
     .select(SELECT)
     .eq('restaurant_id', restaurantId);
 
-  type RawItem = EditorItem & { parent_section_id?: string | null };
+  type RawItem = EditorItem & { parent_section_id?: string | null; i18n?: I18nMap };
   type RawSection = Omit<EditorSection, 'items'> & {
     parent_section_id: string | null;
+    i18n?: I18nMap;
     menu_items: RawItem[];
   };
-  type RawMenu = Omit<EditorMenu, 'sections'> & { display_order: number; created_at: string; menu_sections: RawSection[] };
+  type RawMenu = Omit<EditorMenu, 'sections' | 'translatedLocales'> & { display_order: number; created_at: string; menu_sections: RawSection[] };
 
   return ((data ?? []) as unknown as RawMenu[])
     .sort(byOrder)
@@ -74,6 +86,13 @@ export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]
       id: m.id,
       name: m.name,
       version: m.version,
+      translatedLocales: MENU_TARGET_LOCALES.filter((loc) =>
+        (m.menu_sections ?? []).some(
+          (s) =>
+            hasLocaleContent(s.i18n ?? null, loc) ||
+            (s.menu_items ?? []).some((it) => hasLocaleContent(it.i18n ?? null, loc))
+        )
+      ),
       sections: (m.menu_sections ?? [])
         .filter((s) => !s.parent_section_id) // 1 niveau : on ignore les sous-sections en v1
         .sort(byOrder)

@@ -4,11 +4,11 @@ import { useActionState, useEffect, useState, useTransition } from 'react';
 import {
   createDefaultMenuAction,
   upsertSectionAction,
-  translateMenuAction,
   type MenuActionState,
 } from './menuActions';
 import type { EditorMenu } from './menuData';
 import SectionBlock from './SectionBlock';
+import LanguagePanel from './LanguagePanel';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
 
 export default function MenuEditor({
@@ -22,7 +22,6 @@ export default function MenuEditor({
 }) {
   const [pending, start] = useTransition();
   const [addingSection, setAddingSection] = useState(false);
-  const [notice, setNotice] = useState('');
 
   // ── Aucune carte encore ──────────────────────────────────────────────────
   if (!menu) {
@@ -45,14 +44,6 @@ export default function MenuEditor({
   }
 
   const sectionIds = menu.sections.map((s) => s.id);
-
-  const translate = () =>
-    start(async () => {
-      setNotice('');
-      const r = await translateMenuAction(restaurantId);
-      const msg = r.error === 'network' ? 'Service de traduction injoignable. Réessayez.' : r.error;
-      setNotice(r.ok ? `Traduction mise à jour (${r.translated ?? 0} champs).` : msg || 'Erreur.');
-    });
 
   return (
     <div className="space-y-4">
@@ -85,21 +76,10 @@ export default function MenuEditor({
           >
             Partager
           </a>
-          {premium ? (
-            <button
-              onClick={translate}
-              disabled={pending}
-              className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)] disabled:opacity-50"
-            >
-              Traduire (auto)
-            </button>
-          ) : null}
         </div>
       </div>
 
-      {notice ? (
-        <p className="rounded-lg border border-[var(--border2)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text2)]">{notice}</p>
-      ) : null}
+      <LanguagePanel restaurantId={restaurantId} translatedLocales={menu.translatedLocales} premium={premium} />
 
       {/* Catégories */}
       {menu.sections.length === 0 ? (
