@@ -80,10 +80,10 @@ export default function MenuEditor({
             Apparence
           </a>
           <a
-            href={`/pro/r/${restaurantId}/qr`}
+            href={`/pro/r/${restaurantId}/partage`}
             className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)]"
           >
-            QR code
+            Partager
           </a>
           {premium ? (
             <button

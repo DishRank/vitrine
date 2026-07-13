@@ -12,17 +12,18 @@ export default function WorkspaceNav({ id }: { id: string }) {
     { href: `${base}/menu`, label: 'Menu' },
     { href: `${base}/avis`, label: 'Avis' },
     { href: `${base}/stats`, label: 'Stats' },
+    { href: `${base}/partage`, label: 'Partage' },
   ];
 
   return (
-    <nav className="mt-5 flex gap-1 border-b border-[var(--border2)]">
+    <nav className="no-scrollbar mt-5 flex gap-1 overflow-x-auto border-b border-[var(--border2)]">
       {tabs.map((t) => {
         const active = t.href === base ? pathname === base : pathname.startsWith(t.href);
         return (
           <Link
             key={t.href}
             href={t.href}
-            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-bold transition-colors ${
+            className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-bold transition-colors ${
               active
                 ? 'border-[var(--primary)] text-[var(--primary)]'
                 : 'border-transparent text-[var(--text2)] hover:text-[var(--text)]'
