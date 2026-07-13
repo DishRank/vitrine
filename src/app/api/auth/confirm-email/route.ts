@@ -28,20 +28,30 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
+  // Multi-projet (lot 1.6 espace-pro-web) : le lien email ne dit pas de quel
+  // projet Supabase vient le token. On tente prod puis dev — un token_hash
+  // inconnu d'un projet n'y est PAS consommé, l'essai suivant reste valide.
+  const candidates = [
+    { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY },
+    { url: process.env.SUPABASE_URL_DEV, key: process.env.SUPABASE_SERVICE_ROLE_KEY_DEV },
+  ].filter((c): c is { url: string; key: string } => !!c.url && !!c.key);
+
+  if (candidates.length === 0) {
     return NextResponse.json(
       { ok: false, code: 'server_misconfig', message: 'Configuration serveur manquante.' },
       { status: 500 },
     );
   }
 
-  const supabase = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+  let error: { code?: string; message?: string } | null = null;
+  for (const { url, key } of candidates) {
+    const supabase = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const res = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+    error = res.error;
+    if (!error) break;
+  }
 
   if (error) {
     const expired = /expired|invalid|otp/i.test(`${error.code ?? ''} ${error.message ?? ''}`);

@@ -1,5 +1,6 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { routing } from './i18n/routing';
 import { citySlug } from './lib/slug';
 
@@ -35,9 +36,17 @@ const BLOCKED_BOTS = [
 ];
 
 function getClientIP(req: NextRequest): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown';
+  // x-real-ip est posé par Vercel (fiable). À défaut, l'entrée la plus à
+  // DROITE de x-forwarded-for : la gauche est fournie par le client et
+  // spoofable → contournait le rate-limit avec une fausse IP par requête.
+  const real = req.headers.get('x-real-ip');
+  if (real) return real.trim();
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) {
+    const parts = xff.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
+  return 'unknown';
 }
 
 /**
@@ -110,7 +119,11 @@ function buildStaticCsp(isDev: boolean): string {
   ].join('; ');
 }
 
-function buildCsp(nonce: string, isDev: boolean): string {
+function buildCsp(
+  nonce: string,
+  isDev: boolean,
+  opts?: { frameSrc?: string; extraConnect?: string }
+): string {
   const scriptSrc = [
     "'self'",
     `'nonce-${nonce}'`,
@@ -127,7 +140,8 @@ function buildCsp(nonce: string, isDev: boolean): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' https: data:",
-    `connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com ${supabaseConnect(isDev)}`,
+    `connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com ${supabaseConnect(isDev)}${opts?.extraConnect ? ` ${opts.extraConnect}` : ''}`,
+    ...(opts?.frameSrc ? [`frame-src ${opts.frameSrc}`] : []),
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -138,6 +152,97 @@ function buildCsp(nonce: string, isDev: boolean): string {
     // browsers — ceux qui supportent report-to ignorent report-uri.
     "report-uri /api/csp-report",
   ].join('; ');
+}
+
+// ─── Zone /pro (espace restaurateur, lot 1 espace-pro-web) ───────────────────
+// Session Supabase en cookies (@supabase/ssr) : le middleware la RAFRAÎCHIT à
+// chaque requête (sinon les Server Components lisent un token expiré) et garde
+// l'accès au edge. Pages auth publiques ; tout le reste exige une session.
+const PRO_PUBLIC_PATHS = new Set(['/pro/login', '/pro/signup', '/pro/reset', '/pro/callback']);
+
+// CSP /pro : la base stricte + Turnstile (iframe + télémétrie) quand le
+// captcha est configuré (NEXT_PUBLIC_* inliné au build, comme SUPABASE_CONNECT).
+const TURNSTILE_ENABLED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+const buildProCsp = (nonce: string, isDev: boolean) =>
+  buildCsp(
+    nonce,
+    isDev,
+    TURNSTILE_ENABLED
+      ? {
+          frameSrc: "'self' https://challenges.cloudflare.com",
+          extraConnect: 'https://challenges.cloudflare.com',
+        }
+      : undefined
+  );
+
+async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
+  const { pathname } = req.nextUrl;
+  const csp = buildProCsp(nonce, isDev);
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-nonce', nonce);
+
+  // Pattern canonique @supabase/ssr en middleware : les cookies rafraîchis
+  // doivent être posés sur la REQUEST (pour les Server Components de cette
+  // même requête) ET sur la RESPONSE (pour le navigateur).
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  let authenticated = false;
+
+  if (url && key) {
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          // Headers RE-COPIÉS APRÈS la mutation de req.cookies : un snapshot
+          // pris avant enverrait l'ancien token expiré aux Server Components
+          // de cette même requête → second refresh avec un refresh token déjà
+          // rotaté (ne survit que grâce à la fenêtre de réutilisation GoTrue).
+          const freshHeaders = new Headers(req.headers);
+          freshHeaders.set('x-nonce', nonce);
+          response = NextResponse.next({ request: { headers: freshHeaders } });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    });
+    const { data } = await supabase.auth.getUser();
+    authenticated = !!data.user;
+  }
+
+  const finalize = (r: NextResponse) => {
+    r.headers.set('Content-Security-Policy', csp);
+    // Zone jamais indexée (D1) — le sitemap ne la liste pas non plus.
+    r.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return r;
+  };
+
+  const redirectPreservingSession = (to: URL) => {
+    const r = NextResponse.redirect(to);
+    // Ne pas perdre un éventuel refresh de token fait ci-dessus — en copiant
+    // l'objet cookie ENTIER (avec ses options maxAge/sameSite/secure/path),
+    // pas juste name+value, sinon le cookie serait re-posé avec des attributs
+    // par défaut affaiblis (audit B4).
+    response.cookies.getAll().forEach((c) => r.cookies.set(c));
+    return finalize(r);
+  };
+
+  if (!authenticated && !PRO_PUBLIC_PATHS.has(pathname)) {
+    const loginUrl = req.nextUrl.clone();
+    loginUrl.pathname = '/pro/login';
+    loginUrl.search = pathname === '/pro' ? '' : `?next=${encodeURIComponent(pathname)}`;
+    return redirectPreservingSession(loginUrl);
+  }
+
+  // Déjà connecté sur login/signup → direction le dashboard.
+  if (authenticated && (pathname === '/pro/login' || pathname === '/pro/signup')) {
+    return redirectPreservingSession(new URL('/pro', req.url));
+  }
+
+  return finalize(response);
 }
 
 /**
@@ -161,7 +266,7 @@ function injectRequestHeaderOverride(response: NextResponse, name: string, value
   response.headers.set(`x-middleware-request-${lower}`, value);
 }
 
-export default function proxy(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Skip static files and internal Next.js routes
@@ -202,6 +307,12 @@ export default function proxy(req: NextRequest) {
     const response = NextResponse.next();
     response.headers.set('Content-Security-Policy', buildStaticCsp(isDev));
     return response;
+  }
+
+  // /pro — espace restaurateur (hors [locale], jamais indexé). Session
+  // Supabase rafraîchie + garde auth au edge, CSP stricte avec nonce.
+  if (pathname === '/pro' || pathname.startsWith('/pro/')) {
+    return handleProZone(req, nonce, isDev);
   }
 
   // Autres /auth/*, /join/*, /restaurant/* et /menu/* — pages dynamiques hors
