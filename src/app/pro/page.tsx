@@ -40,6 +40,10 @@ export default async function ProHomePage({
 
   const owned = (restaurants ?? []) as OwnedRestaurant[];
 
+  // Dès qu'on possède un resto, le workspace (avec le carrousel en haut) EST la
+  // home : on y bascule directement au lieu d'afficher une liste séparée.
+  if (owned.length > 0) redirect(`/pro/r/${owned[0].id}`);
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-6">
       <header className="flex items-center justify-between gap-4 pb-6 border-b border-[var(--border2)]">
@@ -71,62 +75,19 @@ export default async function ProHomePage({
       <section className="mt-8">
         <h1 className="text-xl font-extrabold tracking-tight mb-4">Mes établissements</h1>
 
-        {owned.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[var(--border2)] bg-[var(--surface)] p-8 text-center">
-            <p className="text-[15px] font-semibold mb-1">Aucun établissement pour l&apos;instant</p>
-            <p className="text-sm text-[var(--text2)] max-w-md mx-auto mb-5">
-              Revendiquez votre établissement pour gérer sa fiche, son menu et répondre aux avis
-              de vos clients.
-            </p>
-            <Link
-              href="/pro/claim"
-              className="inline-block rounded-xl bg-[var(--primary)] px-5 py-3 text-[15px] font-bold text-white hover:opacity-90"
-            >
-              Revendiquer mon établissement
-            </Link>
-          </div>
-        ) : (
-          <>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {owned.map((r) => (
-                <li key={r.id}>
-                  <Link
-                    href={`/pro/r/${r.id}`}
-                    className="rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 flex items-center gap-3 transition-colors hover:border-[var(--primary)]"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {r.photo_url ? (
-                      <img
-                        src={r.photo_url}
-                        alt=""
-                        className="h-12 w-12 rounded-xl object-cover bg-[var(--surface-var)]"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 rounded-xl bg-[var(--primary-container)] flex items-center justify-center text-lg">
-                        🍽️
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold truncate">{r.name ?? 'Sans nom'}</p>
-                      <p className="text-sm text-[var(--text2)] truncate">{r.city ?? '—'}</p>
-                    </div>
-                    {r.subscription_tier === 'premium' ? (
-                      <span className="shrink-0 rounded-full bg-[var(--primary-container)] px-2.5 py-1 text-xs font-bold text-[var(--primary)]">
-                        Premium
-                      </span>
-                    ) : null}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/pro/claim"
-              className="mt-4 inline-block text-sm font-semibold text-[var(--primary)] hover:underline"
-            >
-              + Revendiquer un autre établissement
-            </Link>
-          </>
-        )}
+        <div className="rounded-2xl border border-dashed border-[var(--border2)] bg-[var(--surface)] p-8 text-center">
+          <p className="text-[15px] font-semibold mb-1">Aucun établissement pour l&apos;instant</p>
+          <p className="text-sm text-[var(--text2)] max-w-md mx-auto mb-5">
+            Revendiquez votre établissement pour gérer sa fiche, son menu et répondre aux avis
+            de vos clients.
+          </p>
+          <Link
+            href="/pro/claim"
+            className="inline-block rounded-xl bg-[var(--primary)] px-5 py-3 text-[15px] font-bold text-white hover:opacity-90"
+          >
+            Revendiquer mon établissement
+          </Link>
+        </div>
       </section>
     </main>
   );

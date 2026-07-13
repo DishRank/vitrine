@@ -1,12 +1,11 @@
-import Link from 'next/link';
 import { requireOwnedRestaurant, isPremium } from '@/lib/pro/data';
-import ProHeader from '../../_components/ProHeader';
 import WorkspaceNav from './_components/WorkspaceNav';
 
 /**
- * Shell d'un établissement possédé. Garde d'ownership serveur (requireOwnedRestaurant
- * redirige vers /pro si le resto n'est pas au user), en-tête, sélecteur d'onglets.
- * Les enfants (fiche, avis, …) refont chacun leur propre chargement RLS.
+ * Contexte d'UN établissement (segment [id], sous le shell persistant /pro/r).
+ * L'en-tête + le carrousel vivent dans le parent ; ici on n'affiche que le
+ * nom/adresse du resto actif + les onglets. La garde d'ownership serveur reste
+ * (requireOwnedRestaurant redirige vers /pro si le resto n'est pas au user).
  */
 export default async function RestaurantWorkspaceLayout({
   children,
@@ -20,15 +19,10 @@ export default async function RestaurantWorkspaceLayout({
   const premium = isPremium(resto);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <ProHeader />
-
+    <>
       <div className="mt-6 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link href="/pro" className="text-xs font-semibold text-[var(--text3)] hover:text-[var(--text2)]">
-            ← Mes établissements
-          </Link>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight truncate">{resto.name}</h1>
+          <h1 className="text-xl font-extrabold tracking-tight truncate sm:text-2xl">{resto.name}</h1>
           <p className="text-sm text-[var(--text2)] truncate">
             {[resto.address, resto.city].filter(Boolean).join(' · ') || '—'}
           </p>
@@ -43,6 +37,6 @@ export default async function RestaurantWorkspaceLayout({
       <WorkspaceNav id={id} />
 
       <div className="mt-6">{children}</div>
-    </div>
+    </>
   );
 }

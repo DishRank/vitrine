@@ -197,6 +197,23 @@ p {
 .backdrop-out {
   animation: fadeOut 240ms ease-in both;
 }
+
+/* Espace pro : swap animé du contenu sous le carrousel de restaurants
+   (AnimatedOutlet re-keyé par pathname → l'animation rejoue à chaque
+   changement de resto/onglet). */
+.pro-swap {
+  animation: proSwap 240ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes proSwap {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pro-swap { animation: fadeIn 160ms ease-out both; }
+}
+/* Masque la scrollbar du carrousel horizontal tout en gardant le scroll. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 @keyframes chipPop {
   from { opacity: 0; transform: scale(0.7); }
   to { opacity: 1; transform: scale(1); }
