@@ -1,4 +1,5 @@
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
+import type { MenuVariant, MenuOption, MenuAvailability } from './menuLeaves';
 
 /**
  * Lecture de l'arbre menu pour l'ÉDITEUR (session RLS de l'owner → inclut les
@@ -21,6 +22,9 @@ export interface EditorItem {
   is_signature: boolean;
   allergens: string[];
   diet_tags: string[];
+  variants: MenuVariant[];
+  options: MenuOption[];
+  availability: MenuAvailability;
   updated_at: string;
   created_at: string;
 }
@@ -47,7 +51,7 @@ const byOrder = <T extends { display_order: number; created_at: string }>(a: T, 
 
 const SELECT = `id, name, version, display_order, created_at,
   menu_sections(id, name, description, parent_section_id, display_order, is_visible, created_at,
-    menu_items(id, section_id, kind, name, description, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, updated_at, created_at))`;
+    menu_items(id, section_id, kind, name, description, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, variants, options, availability, updated_at, created_at))`;
 
 /** L'arbre complet des cartes du resto (souvent une seule, « Notre carte »). */
 export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]> {
@@ -86,6 +90,10 @@ export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]
               price: it.price != null ? Number(it.price) : null,
               allergens: Array.isArray(it.allergens) ? it.allergens : [],
               diet_tags: Array.isArray(it.diet_tags) ? it.diet_tags : [],
+              variants: Array.isArray(it.variants) ? it.variants : [],
+              options: Array.isArray(it.options) ? it.options : [],
+              availability:
+                it.availability && typeof it.availability === 'object' ? it.availability : {},
             }))
             .sort(byOrder),
         })),

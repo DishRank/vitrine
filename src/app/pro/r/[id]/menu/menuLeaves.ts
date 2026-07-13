@@ -1,0 +1,99 @@
+/**
+ * Feuilles JSONB d'un plat (variantes / options / disponibilité) — miroir web
+ * de dishrank/lib/menuTypes.ts. Types + validation client alignés sur le trigger
+ * DB `validate_menu_item_leaves()` (le serveur reste juge). Les validateurs
+ * renvoient un message FR ou null (la vitrine est FR-only).
+ */
+
+export const MENU_SERVICES = ['lunch', 'dinner'] as const;
+export type MenuService = (typeof MENU_SERVICES)[number];
+
+export interface MenuVariant {
+  id: string;
+  label: string;
+  price: number;
+}
+
+export interface MenuOptionChoice {
+  label: string;
+  price_delta?: number;
+}
+
+export interface MenuOption {
+  id: string;
+  name: string;
+  required?: boolean;
+  max?: number;
+  choices: MenuOptionChoice[];
+}
+
+export interface MenuAvailability {
+  services?: MenuService[];
+  days?: number[];
+  season?: { from: string; to: string };
+}
+
+/** Id local stable pour les entrées de tableaux (jamais joint en base). */
+export function newLeafId(): string {
+  return `l_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// ── Validation (miroir du trigger) ──────────────────────────────────────────
+
+export function validateVariants(variants: MenuVariant[]): string | null {
+  for (const v of variants) {
+    if (!v.label || !v.label.trim()) return 'Chaque variante doit avoir un libellé.';
+    if (typeof v.price !== 'number' || !Number.isFinite(v.price) || v.price < 0)
+      return 'Prix de variante invalide.';
+  }
+  return null;
+}
+
+export function validateOptions(options: MenuOption[]): string | null {
+  for (const o of options) {
+    if (!o.name || !o.name.trim()) return 'Chaque groupe d’options doit avoir un nom.';
+    if (!Array.isArray(o.choices) || o.choices.length === 0)
+      return 'Chaque groupe d’options doit avoir au moins un choix.';
+    for (const ch of o.choices) {
+      if (!ch.label || !ch.label.trim()) return 'Chaque choix doit avoir un libellé.';
+      if (
+        ch.price_delta != null &&
+        (typeof ch.price_delta !== 'number' || !Number.isFinite(ch.price_delta) || ch.price_delta < 0)
+      )
+        return 'Supplément de choix invalide.';
+    }
+  }
+  return null;
+}
+
+const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
+export function validateAvailability(av: MenuAvailability): string | null {
+  if (av.season) {
+    if (!MMDD.test(av.season.from) || !MMDD.test(av.season.to))
+      return 'Saison invalide (format attendu MM-JJ).';
+  }
+  return null;
+}
+
+/**
+ * Nettoie ce que renvoie le formulaire en objet `availability` canonique :
+ * un service/jour n'est enregistré QUE s'il restreint réellement (sinon =
+ * toujours disponible → on omet), pour rester cohérent avec l'app.
+ */
+export function normalizeAvailability(input: {
+  services: string[];
+  days: number[];
+  seasonFrom: string;
+  seasonTo: string;
+}): MenuAvailability {
+  const out: MenuAvailability = {};
+  const services = input.services.filter((s): s is MenuService => s === 'lunch' || s === 'dinner');
+  if (services.length === 1) out.services = services;
+  const days = input.days.filter((d) => d >= 1 && d <= 7);
+  if (days.length > 0 && days.length < 7) out.days = [...days].sort((a, b) => a - b);
+  const from = input.seasonFrom.trim();
+  const to = input.seasonTo.trim();
+  if (from && to) out.season = { from, to };
+  return out;
+}

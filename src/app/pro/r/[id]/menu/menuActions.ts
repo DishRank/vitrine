@@ -3,6 +3,16 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { assertOwner } from '@/lib/pro/data';
 import { logProEvent } from '@/lib/pro/instrument';
+import {
+  newLeafId,
+  normalizeAvailability,
+  validateVariants,
+  validateOptions,
+  validateAvailability,
+  type MenuVariant,
+  type MenuOption,
+  type MenuOptionChoice,
+} from './menuLeaves';
 
 /**
  * Éditeur de menu web (lot 3). Portage fidèle de hooks/useRestaurantMenu.ts :
@@ -141,6 +151,62 @@ const DIET_KEYS = new Set([
   'vegetarien', 'vegan', 'halal', 'sans_gluten', 'bio', 'fait_maison', 'epice', 'nouveau',
 ]);
 
+function parseJson<T>(raw: FormDataEntryValue | null, fallback: T): T {
+  if (typeof raw !== 'string' || !raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Assainit les variantes reçues du client (non fiable) : lignes incomplètes
+ *  (libellé vide) écartées, prix borné. Le trigger DB reste juge. */
+function sanitizeVariants(raw: unknown): MenuVariant[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, 20)
+    .map((v): MenuVariant => {
+      const o = (v ?? {}) as Record<string, unknown>;
+      const price = Number(o.price);
+      return {
+        id: typeof o.id === 'string' && o.id ? o.id.slice(0, 40) : newLeafId(),
+        label: typeof o.label === 'string' ? o.label.trim().slice(0, 60) : '',
+        price: Number.isFinite(price) && price >= 0 ? Math.min(price, 100000) : 0,
+      };
+    })
+    .filter((v) => v.label);
+}
+
+/** Assainit les groupes d'options : choix sans libellé écartés, groupes vides
+ *  écartés, supplément gardé seulement si > 0. */
+function sanitizeOptions(raw: unknown): MenuOption[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, 20)
+    .map((op): MenuOption => {
+      const o = (op ?? {}) as Record<string, unknown>;
+      const rawChoices = Array.isArray(o.choices) ? o.choices : [];
+      const choices: MenuOptionChoice[] = rawChoices
+        .slice(0, 30)
+        .map((c) => {
+          const ch = (c ?? {}) as Record<string, unknown>;
+          const label = typeof ch.label === 'string' ? ch.label.trim().slice(0, 60) : '';
+          const d = Number(ch.price_delta);
+          return Number.isFinite(d) && d > 0 ? { label, price_delta: Math.min(d, 100000) } : { label };
+        })
+        .filter((c) => c.label);
+      return {
+        id: typeof o.id === 'string' && o.id ? o.id.slice(0, 40) : newLeafId(),
+        name: typeof o.name === 'string' ? o.name.trim().slice(0, 60) : '',
+        required: !!o.required,
+        max: 1,
+        choices,
+      };
+    })
+    .filter((o) => o.name && o.choices.length > 0);
+}
+
 /** Crée/édite un plat (kind='item'). CAS sur l'édition : si `expectedUpdatedAt`
  *  ne matche plus, 0 ligne modifiée → MENU_CONFLICT (édition concurrente). */
 export async function upsertItemAction(
@@ -164,32 +230,54 @@ export async function upsertItemAction(
   const dietTags = formData.getAll('diet_tags').map(String).filter((d) => DIET_KEYS.has(d));
   const expectedUpdatedAt = String(formData.get('expectedUpdatedAt') ?? '') || null;
 
+  // Feuilles JSONB éditables (parité app) — entrées client assainies puis
+  // validées (le trigger validate_menu_item_leaves reste juge).
+  const variants = sanitizeVariants(parseJson(formData.get('variants'), []));
+  const options = sanitizeOptions(parseJson(formData.get('options'), []));
+  const availRaw = parseJson<{ services?: unknown; days?: unknown; seasonFrom?: unknown; seasonTo?: unknown }>(
+    formData.get('availability'),
+    {}
+  );
+  const availability = normalizeAvailability({
+    services: Array.isArray(availRaw.services) ? availRaw.services.map(String) : [],
+    days: Array.isArray(availRaw.days) ? availRaw.days.map(Number).filter(Number.isFinite) : [],
+    seasonFrom: typeof availRaw.seasonFrom === 'string' ? availRaw.seasonFrom : '',
+    seasonTo: typeof availRaw.seasonTo === 'string' ? availRaw.seasonTo : '',
+  });
+
   if (!name) return { error: 'Le nom du plat est requis.' };
   if (name.length > 200) return { error: 'Nom trop long (200 caractères max).' };
   if (description && description.length > 1000) return { error: 'Description trop longue (1000 caractères max).' };
   if (price != null && (!Number.isFinite(price) || price < 0 || price > 100000))
     return { error: 'Prix invalide.' };
   if (!id && !sectionId) return { error: 'Catégorie introuvable.' };
+  const vErr = validateVariants(variants);
+  if (vErr) return { error: vErr };
+  const oErr = validateOptions(options);
+  if (oErr) return { error: oErr };
+  const aErr = validateAvailability(availability);
+  if (aErr) return { error: aErr };
 
-  // Champs réellement gérés par le formulaire web. À l'UPDATE on n'envoie QUE
-  // ceux-ci : NE PAS toucher variants/options/availability/category_slugs/
-  // formula_config/kind, qui peuvent avoir été configurés dans l'app (sinon
-  // édition du nom/prix depuis le web = écrasement silencieux — audit F1). Le
-  // trigger validate_menu_item_leaves valide NEW.* = valeurs existantes, donc
-  // les omettre est sûr.
+  // Avec des variantes, le prix simple n'a pas de sens (comme l'app).
+  const finalPrice = variants.length > 0 ? null : price;
+
+  // Le formulaire web charge et ré-envoie les feuilles existantes, donc l'UPDATE
+  // peut les inclure sans écraser ce qu'a posé l'app. On garde .eq('kind','item')
+  // (les formules ont leur propre éditeur) et le CAS optimiste.
   const formFields = {
     name,
     description,
-    price,
+    price: finalPrice,
     is_visible: isVisible,
     is_signature: isSignature,
     allergens,
     diet_tags: dietTags,
+    variants,
+    options,
+    availability,
   };
 
   if (id) {
-    // Ne pas éditer une FORMULE via ce formulaire (il ne gère pas ses slots) —
-    // .eq('kind','item') : une tentative sur une formule ne matche aucune ligne.
     let q = supabase
       .from('menu_items')
       .update(formFields)
@@ -202,16 +290,12 @@ export async function upsertItemAction(
     if (!data || data.length === 0)
       return { error: mapMenuError({ message: 'MENU_CONFLICT' }) };
   } else {
-    // INSERT : feuilles jsonb par défaut (kind='item', formula_config NULL).
     const { error } = await supabase.from('menu_items').insert({
       ...formFields,
       restaurant_id: restaurantId,
       section_id: sectionId,
       kind: 'item',
       category_slugs: [] as string[],
-      variants: [] as unknown[],
-      options: [] as unknown[],
-      availability: {} as Record<string, unknown>,
       formula_config: null,
     });
     if (error) return { error: mapMenuError(error) };
