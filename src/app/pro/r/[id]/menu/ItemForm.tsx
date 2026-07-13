@@ -89,6 +89,20 @@ export default function ItemForm({
   const [seasonFrom, setSeasonFrom] = useState(() => item?.availability?.season?.from ?? '');
   const [seasonTo, setSeasonTo] = useState(() => item?.availability?.season?.to ?? '');
 
+  // Repli progressif : sections avancées repliées par défaut (plat simple =
+  // nom + prix), ouvertes si le plat en a déjà.
+  const [advOpen, setAdvOpen] = useState(() => variants.length > 0 || options.length > 0);
+  const [metaOpen, setMetaOpen] = useState(
+    () =>
+      (item?.category_slugs?.length ?? 0) > 0 ||
+      services.length > 0 ||
+      days.length > 0 ||
+      !!seasonFrom ||
+      !!seasonTo
+  );
+  const summaryCls = 'cursor-pointer select-none text-sm font-bold text-[var(--text2)] hover:text-[var(--text)]';
+  const detailsCls = 'rounded-xl border border-[var(--border2)] bg-[var(--surface)] px-3.5 py-2.5';
+
   useEffect(() => {
     if (state.ok) onDone();
   }, [state.ok, onDone]);
@@ -149,6 +163,9 @@ export default function ItemForm({
         <textarea name="description" rows={2} maxLength={400} defaultValue={item?.description ?? ''} placeholder="Bouillon de porc mijoté 12 h, nouilles fraîches, œuf mollet…" className={inputCls} />
       </div>
 
+      <details open={advOpen} onToggle={(e) => setAdvOpen(e.currentTarget.open)} className={detailsCls}>
+        <summary className={summaryCls}>Variantes &amp; options <span className="font-normal text-[var(--text3)]">· facultatif</span></summary>
+        <div className="mt-3 space-y-3">
       {/* Variantes de prix */}
       <div>
         <label className={labelCls}>Variantes (verre/bouteille, 25/50 cl…)</label>
@@ -264,6 +281,8 @@ export default function ItemForm({
           </button>
         </div>
       </div>
+        </div>
+      </details>
 
       <div>
         <label className={labelCls}>Allergènes</label>
@@ -289,6 +308,9 @@ export default function ItemForm({
         </div>
       </div>
 
+      <details open={metaOpen} onToggle={(e) => setMetaOpen(e.currentTarget.open)} className={detailsCls}>
+        <summary className={summaryCls}>Catégories &amp; disponibilité <span className="font-normal text-[var(--text3)]">· facultatif</span></summary>
+        <div className="mt-3 space-y-3">
       <div>
         <label className={labelCls}>Catégories</label>
         <DishCategoryPicker initial={item?.category_slugs ?? []} max={3} />
@@ -337,6 +359,8 @@ export default function ItemForm({
           <p className="text-xs text-[var(--text3)]">Laissez vide = toujours disponible.</p>
         </div>
       </div>
+        </div>
+      </details>
 
       <div className="flex flex-wrap items-center gap-4 pt-1">
         <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
