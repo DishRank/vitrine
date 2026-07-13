@@ -1,19 +1,43 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import nodemailer, { type Transporter } from 'nodemailer';
 
 /**
- * Emails transactionnels de l'espace pro (lot 4.4). Consolidation sur Brevo
- * (même clé que l'edge fn claim-verify), sender no-reply@dishrank.fr.
+ * Emails transactionnels de l'espace pro (lot 4.4). Relais SMTP OVH — MÊMES
+ * variables d'env que la route `support-ticket` (SMTP_HOST/PORT/USERNAME/
+ * PASSWORD/FROM/SENDER_NAME), donc rien de nouveau à configurer sur Vercel et
+ * ZÉRO dépendance payante (pas de Brevo/SendGrid).
  *
  * Server-only : n'importe jamais de secret côté client.
  */
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
-const BREVO_SENDER = process.env.BREVO_SENDER || 'no-reply@dishrank.fr';
-const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'DishRank';
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://dishrank.fr';
-// Secret HMAC des liens de désabonnement (fallback CRON_SECRET pour ne pas
-// exiger une nouvelle variable en préprod).
-const UNSUB_SECRET = process.env.PRO_EMAIL_SECRET || process.env.CRON_SECRET || '';
+// Secret HMAC des liens de désabonnement. On réutilise un secret DÉJÀ présent
+// sur Vercel (INDEXNOW_TRIGGER_SECRET) pour ne pas exiger de variable dédiée ;
+// PRO_EMAIL_SECRET reste prioritaire si un jour on veut l'isoler.
+const UNSUB_SECRET =
+  process.env.PRO_EMAIL_SECRET ||
+  process.env.INDEXNOW_TRIGGER_SECRET ||
+  process.env.CRON_SECRET ||
+  '';
+
+// Transporter réutilisé entre les envois de la boucle du digest (pool SMTP).
+let _transporter: Transporter | null = null;
+function getTransporter(): Transporter | null {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USERNAME;
+  const pass = process.env.SMTP_PASSWORD;
+  if (!host || !user || !pass) return null;
+  if (!_transporter) {
+    const port = Number(process.env.SMTP_PORT || '587');
+    _transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465, // 465 = TLS implicite, 587 = STARTTLS
+      auth: { user, pass },
+    });
+  }
+  return _transporter;
+}
 
 export interface SendResult {
   ok: boolean;
@@ -21,28 +45,25 @@ export interface SendResult {
   error?: string;
 }
 
-/** Envoi via l'API transactionnelle Brevo. Sans clé (préprod) → skipped:true. */
+/** Envoi via le relais SMTP OVH. Sans config SMTP (préprod) → skipped:true. */
 export async function sendOwnerEmail(opts: {
   to: string;
   subject: string;
   html: string;
   text: string;
 }): Promise<SendResult> {
-  if (!BREVO_API_KEY) return { ok: false, skipped: true };
+  const transporter = getTransporter();
+  if (!transporter) return { ok: false, skipped: true };
+  const senderName = process.env.SMTP_SENDER_NAME || 'DishRank';
+  const fromAddr = process.env.SMTP_FROM || process.env.SMTP_USERNAME || '';
   try {
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json', accept: 'application/json' },
-      body: JSON.stringify({
-        sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER },
-        to: [{ email: opts.to }],
-        subject: opts.subject,
-        htmlContent: opts.html,
-        textContent: opts.text,
-      }),
-      signal: AbortSignal.timeout(8000),
+    await transporter.sendMail({
+      from: `"${senderName}" <${fromAddr}>`,
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text,
+      html: opts.html,
     });
-    if (!res.ok) return { ok: false, error: `brevo ${res.status}` };
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
