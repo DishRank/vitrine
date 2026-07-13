@@ -3,18 +3,17 @@
 import { useActionState } from 'react';
 import { updateListingAction, type ListingActionState } from './listingActions';
 import { SubmitButton, FormError, FormSuccess, inputCls, labelCls } from '../../_components/fields';
+import CuisineAutocomplete from './CuisineAutocomplete';
 
 export interface ListingInitial {
   description: string;
-  accepts_groups: boolean;
-  group_offer: string;
   phone: string;
   website: string;
   reservation_url: string;
   menu_url: string;
   instagram: string;
   price_level: number | null;
-  cuisines: string;
+  cuisines: string[];
 }
 
 export default function ListingForm({ id, initial }: { id: string; initial: ListingInitial }) {
@@ -46,12 +45,8 @@ export default function ListingForm({ id, initial }: { id: string; initial: List
             </select>
           </div>
           <div>
-            <label htmlFor="cuisines" className={labelCls}>Types de cuisine</label>
-            <input
-              id="cuisines" name="cuisines" type="text" defaultValue={initial.cuisines}
-              placeholder="italien, pizza, pâtes" className={inputCls}
-            />
-            <p className="mt-1 text-xs text-[var(--text3)]">Séparés par des virgules (8 max).</p>
+            <label className={labelCls}>Types de cuisine</label>
+            <CuisineAutocomplete initial={initial.cuisines} max={8} />
           </div>
         </div>
       </section>
@@ -79,21 +74,6 @@ export default function ListingForm({ id, initial }: { id: string; initial: List
             <label htmlFor="instagram" className={labelCls}>Instagram</label>
             <input id="instagram" name="instagram" type="text" defaultValue={initial.instagram} placeholder="@votre_resto" className={inputCls} />
           </div>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-5 sm:p-6 space-y-4">
-        <h2 className="text-base font-extrabold">Groupes</h2>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox" name="accepts_groups" defaultChecked={initial.accepts_groups}
-            className="h-5 w-5 rounded border-[var(--border2)] accent-[var(--primary)]"
-          />
-          <span className="text-sm font-semibold">Nous accueillons les groupes</span>
-        </label>
-        <div>
-          <label htmlFor="group_offer" className={labelCls}>Offre groupes (optionnel)</label>
-          <input id="group_offer" name="group_offer" type="text" maxLength={200} defaultValue={initial.group_offer} placeholder="Menu groupe à partir de 25€, salle privatisable…" className={inputCls} />
         </div>
       </section>
 

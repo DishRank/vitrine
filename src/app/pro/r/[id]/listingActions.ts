@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
 import { mapAuthErrorFr } from '@/lib/pro/authErrors';
 import { logProEvent } from '@/lib/pro/instrument';
+import { CUISINE_SLUGS } from '@/lib/pro/cuisines';
 
 export interface ListingActionState {
   error?: string;
@@ -44,15 +45,22 @@ export async function updateListingAction(
   const priceLevel =
     typeof priceRaw === 'string' && priceRaw !== '' ? Math.min(4, Math.max(1, Number(priceRaw))) : null;
 
+  // L'autocomplete envoie des slugs canoniques joints par virgule ; on ne
+  // garde que ceux du référentiel (les mêmes que l'app) et on dédoublonne.
   const cuisinesRaw = nn(formData.get('cuisines'));
   const cuisines = cuisinesRaw
-    ? cuisinesRaw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).slice(0, 8)
+    ? [
+        ...new Set(
+          cuisinesRaw
+            .split(',')
+            .map((s) => s.trim().toLowerCase())
+            .filter((s) => CUISINE_SLUGS.has(s))
+        ),
+      ].slice(0, 8)
     : [];
 
   const patch = {
     description: nn(formData.get('description')),
-    accepts_groups: formData.get('accepts_groups') === 'on',
-    group_offer: nn(formData.get('group_offer')),
     phone: nn(formData.get('phone')),
     website: toUrl(nn(formData.get('website'))),
     reservation_url: toUrl(nn(formData.get('reservation_url'))),
