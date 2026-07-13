@@ -23,6 +23,17 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
 
+  // Cache client (App Router) des segments dynamiques : revenir sur un onglet
+  // /pro visité il y a < 30 s est INSTANTANÉ (pas de re-SSR). Les mutations
+  // (Server Actions + revalidatePath) invalident le cache, donc pas de données
+  // périmées après une édition.
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
+
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 31536000,

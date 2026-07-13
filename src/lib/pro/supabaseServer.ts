@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
@@ -14,7 +15,10 @@ import { cookies } from 'next/headers';
  * Un projet Supabase par déploiement (D3 du plan espace-pro-web) : prod Vercel
  * → projet prod, préprod → projet DEV via ses propres NEXT_PUBLIC_*.
  */
-export async function getSupabaseServer() {
+// `cache()` : un SEUL client Supabase par requête (le rendu d'une page appelle
+// getSupabaseServer plusieurs fois — layout /pro/r, layout [id], page — sans
+// ça = autant de clients + autant de getUser réseau).
+export const getSupabaseServer = cache(async () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error('NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY manquantes');
@@ -39,4 +43,4 @@ export async function getSupabaseServer() {
       },
     },
   });
-}
+});

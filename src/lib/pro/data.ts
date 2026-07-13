@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { getSupabaseServer } from './supabaseServer';
 
@@ -35,12 +36,21 @@ const LISTING_COLS =
   'description, accepts_groups, group_offer, phone, website, menu_url, instagram, reservation_url, ' +
   'price_level, cuisines, opening_hours_raw, osm_id';
 
-/** Le user courant, ou redirect login. */
-export async function requireUser() {
+/**
+ * Contexte auth déduplifié par requête (`cache()`) : un SEUL getUser réseau
+ * même si le layout /pro/r, le layout [id] et la page l'appellent tous.
+ */
+const getAuthContext = cache(async () => {
   const supabase = await getSupabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  return { supabase, user };
+});
+
+/** Le user courant, ou redirect login. */
+export async function requireUser() {
+  const { supabase, user } = await getAuthContext();
   if (!user) redirect('/pro/login');
   return { supabase, user };
 }
@@ -51,10 +61,7 @@ export async function requireUser() {
  * cross-owner) : permet un message d'erreur clair dans les Server Actions.
  */
 export async function assertOwner(restaurantId: string) {
-  const supabase = await getSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthContext();
   if (!user) return null;
   const { data } = await supabase
     .from('restaurants')
@@ -88,7 +95,7 @@ export async function getMyRestaurants(): Promise<OwnedRestaurant[]> {
  * quel resto est lisible), donc on VÉRIFIE explicitement la possession :
  * `owner_id = user.id`. Renvoie aussi la session pour les appels suivants.
  */
-export async function requireOwnedRestaurant(id: string): Promise<OwnedRestaurant> {
+export const requireOwnedRestaurant = cache(async (id: string): Promise<OwnedRestaurant> => {
   const { supabase, user } = await requireUser();
   const { data } = await supabase
     .from('restaurants')
@@ -98,4 +105,4 @@ export async function requireOwnedRestaurant(id: string): Promise<OwnedRestauran
   const resto = data as unknown as OwnedRestaurant | null;
   if (!resto || resto.owner_id !== user.id) redirect('/pro');
   return resto;
-}
+});
