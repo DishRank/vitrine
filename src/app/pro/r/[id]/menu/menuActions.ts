@@ -87,6 +87,7 @@ export async function upsertSectionAction(
 
   const id = String(formData.get('id') ?? '') || null;
   const menuId = String(formData.get('menuId') ?? '');
+  const parentSectionId = String(formData.get('parentSectionId') ?? '') || null;
   const name = String(formData.get('name') ?? '').trim();
   const description = String(formData.get('description') ?? '').trim() || null;
   if (!name) return { error: 'Le nom de la catégorie est requis.' };
@@ -102,9 +103,11 @@ export async function upsertSectionAction(
       .eq('restaurant_id', restaurantId);
     if (error) return { error: mapMenuError(error) };
   } else {
+    // parent_section_id → sous-catégorie (le trigger DB borne la profondeur à 1
+    // niveau : MAX_DEPTH si on essaie d'imbriquer plus).
     const { error } = await supabase
       .from('menu_sections')
-      .insert({ menu_id: menuId, restaurant_id: restaurantId, name, description });
+      .insert({ menu_id: menuId, restaurant_id: restaurantId, parent_section_id: parentSectionId, name, description });
     if (error) return { error: mapMenuError(error) };
   }
   await logProEvent(supabase, 'pro_menu_edit', restaurantId);

@@ -34,10 +34,13 @@ export interface EditorSection {
   id: string;
   name: string;
   description: string | null;
+  parent_section_id: string | null;
   display_order: number;
   is_visible: boolean;
   created_at: string;
   items: EditorItem[];
+  /** Sous-catégories (1 seul niveau de profondeur, comme l'app). */
+  children: EditorSection[];
 }
 
 export interface EditorMenu {
@@ -74,49 +77,67 @@ export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]
     .eq('restaurant_id', restaurantId);
 
   type RawItem = EditorItem & { parent_section_id?: string | null; i18n?: I18nMap };
-  type RawSection = Omit<EditorSection, 'items'> & {
+  type RawSection = {
+    id: string;
+    name: string;
+    description: string | null;
     parent_section_id: string | null;
+    display_order: number;
+    is_visible: boolean;
+    created_at: string;
     i18n?: I18nMap;
     menu_items: RawItem[];
   };
   type RawMenu = Omit<EditorMenu, 'sections' | 'translatedLocales'> & { display_order: number; created_at: string; menu_sections: RawSection[] };
 
+  const normItem = (it: RawItem): EditorItem => ({
+    ...it,
+    price: it.price != null ? Number(it.price) : null,
+    allergens: Array.isArray(it.allergens) ? it.allergens : [],
+    diet_tags: Array.isArray(it.diet_tags) ? it.diet_tags : [],
+    category_slugs: Array.isArray(it.category_slugs) ? it.category_slugs : [],
+    variants: Array.isArray(it.variants) ? it.variants : [],
+    options: Array.isArray(it.options) ? it.options : [],
+    availability: it.availability && typeof it.availability === 'object' ? it.availability : {},
+  });
+
   return ((data ?? []) as unknown as RawMenu[])
     .sort(byOrder)
-    .map((m) => ({
-      id: m.id,
-      name: m.name,
-      version: m.version,
-      translatedLocales: MENU_TARGET_LOCALES.filter((loc) =>
-        (m.menu_sections ?? []).some(
+    .map((m) => {
+      const raw = m.menu_sections ?? [];
+      const translatedLocales = MENU_TARGET_LOCALES.filter((loc) =>
+        raw.some(
           (s) =>
             hasLocaleContent(s.i18n ?? null, loc) ||
             (s.menu_items ?? []).some((it) => hasLocaleContent(it.i18n ?? null, loc))
         )
-      ),
-      sections: (m.menu_sections ?? [])
-        .filter((s) => !s.parent_section_id) // 1 niveau : on ignore les sous-sections en v1
-        .sort(byOrder)
-        .map((s) => ({
+      );
+
+      // Toutes les sections en objets EditorSection (children vides d'abord)…
+      const byId = new Map<string, EditorSection>();
+      for (const s of raw) {
+        byId.set(s.id, {
           id: s.id,
           name: s.name,
           description: s.description,
+          parent_section_id: s.parent_section_id,
           display_order: s.display_order,
           is_visible: s.is_visible,
           created_at: s.created_at,
-          items: (s.menu_items ?? [])
-            .map((it) => ({
-              ...it,
-              price: it.price != null ? Number(it.price) : null,
-              allergens: Array.isArray(it.allergens) ? it.allergens : [],
-              diet_tags: Array.isArray(it.diet_tags) ? it.diet_tags : [],
-              category_slugs: Array.isArray(it.category_slugs) ? it.category_slugs : [],
-              variants: Array.isArray(it.variants) ? it.variants : [],
-              options: Array.isArray(it.options) ? it.options : [],
-              availability:
-                it.availability && typeof it.availability === 'object' ? it.availability : {},
-            }))
-            .sort(byOrder),
-        })),
-    }));
+          items: (s.menu_items ?? []).map(normItem).sort(byOrder),
+          children: [],
+        });
+      }
+      // …puis on rattache les sous-sections à leur parent (1 niveau).
+      const roots: EditorSection[] = [];
+      for (const s of byId.values()) {
+        const parent = s.parent_section_id ? byId.get(s.parent_section_id) : undefined;
+        if (parent) parent.children.push(s);
+        else roots.push(s);
+      }
+      roots.sort(byOrder);
+      for (const r of roots) r.children.sort(byOrder);
+
+      return { id: m.id, name: m.name, version: m.version, translatedLocales, sections: roots };
+    });
 }

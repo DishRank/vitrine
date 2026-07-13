@@ -92,6 +92,7 @@ export default function MenuEditor({
             <SectionBlock
               key={s.id}
               restaurantId={restaurantId}
+              menuId={menu.id}
               section={s}
               index={i}
               total={menu.sections.length}

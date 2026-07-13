@@ -18,20 +18,26 @@ import { inputCls, labelCls, FormError } from '../../../_components/fields';
 
 export default function SectionBlock({
   restaurantId,
+  menuId,
   section,
   index,
   total,
   siblingIds,
+  isChild = false,
 }: {
   restaurantId: string;
+  menuId: string;
   section: EditorSection;
   index: number;
   total: number;
   siblingIds: string[];
+  /** Sous-catégorie : pas de « + Sous-catégorie » (profondeur bornée à 1). */
+  isChild?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [editingSection, setEditingSection] = useState(false);
   const [addingItem, setAddingItem] = useState(false);
+  const [addingSub, setAddingSub] = useState(false);
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [err, setErr] = useState('');
 
@@ -146,16 +152,77 @@ export default function SectionBlock({
         ))}
       </ul>
 
-      {/* Ajouter un plat */}
+      {/* Ajouter un plat / une sous-catégorie */}
       <div className="p-4 pt-3">
         {addingItem ? (
           <ItemForm restaurantId={restaurantId} sectionId={section.id} onDone={() => setAddingItem(false)} />
         ) : (
-          <button onClick={() => setAddingItem(true)} className="text-sm font-bold text-[var(--primary)] hover:underline">+ Ajouter un plat</button>
+          <div className="flex flex-wrap items-center gap-4">
+            <button onClick={() => setAddingItem(true)} className="text-sm font-bold text-[var(--primary)] hover:underline">+ Ajouter un plat</button>
+            {!isChild ? (
+              <button onClick={() => setAddingSub(true)} className="text-sm font-semibold text-[var(--text2)] hover:text-[var(--primary)]">+ Sous-catégorie</button>
+            ) : null}
+          </div>
         )}
-        {err ? <p className="mt-2 text-[13px] font-medium text-red-500">{err}</p> : null}
       </div>
+
+      {/* Sous-catégories (1 niveau) */}
+      {!isChild && (section.children.length > 0 || addingSub) ? (
+        <div className="space-y-3 border-t border-[var(--border2)] bg-[var(--bg)]/50 p-4 pl-5 sm:pl-6">
+          {section.children.map((child, ci) => (
+            <SectionBlock
+              key={child.id}
+              restaurantId={restaurantId}
+              menuId={menuId}
+              section={child}
+              index={ci}
+              total={section.children.length}
+              siblingIds={section.children.map((c) => c.id)}
+              isChild
+            />
+          ))}
+          {addingSub ? (
+            <AddSubSectionForm restaurantId={restaurantId} menuId={menuId} parentId={section.id} onDone={() => setAddingSub(false)} />
+          ) : null}
+        </div>
+      ) : null}
+
+      {err ? <p className="px-4 pb-3 text-[13px] font-medium text-red-500">{err}</p> : null}
     </section>
+  );
+}
+
+/** Formulaire compact d'ajout d'une sous-catégorie (parent_section_id posé). */
+function AddSubSectionForm({
+  restaurantId,
+  menuId,
+  parentId,
+  onDone,
+}: {
+  restaurantId: string;
+  menuId: string;
+  parentId: string;
+  onDone: () => void;
+}) {
+  const [state, action] = useActionState<MenuActionState, FormData>(
+    upsertSectionAction.bind(null, restaurantId),
+    {}
+  );
+  useEffect(() => {
+    if (state.ok) onDone();
+  }, [state.ok, onDone]);
+  return (
+    <form action={action} className="rounded-xl border border-[var(--border2)] bg-[var(--surface)] p-3 space-y-2">
+      <input type="hidden" name="menuId" value={menuId} />
+      <input type="hidden" name="parentSectionId" value={parentId} />
+      <label className={labelCls}>Nom de la sous-catégorie</label>
+      <input name="name" type="text" required maxLength={80} placeholder="Rouges, Blancs, Au verre…" className={inputCls} autoFocus />
+      <FormError error={state.error} />
+      <div className="flex items-center gap-2">
+        <button type="submit" className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white hover:opacity-90">Ajouter</button>
+        <button type="button" onClick={onDone} className="rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text2)] hover:text-[var(--text)]">Annuler</button>
+      </div>
+    </form>
   );
 }
 
