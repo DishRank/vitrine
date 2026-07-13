@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { assertOwner } from '@/lib/pro/data';
+import { logProEvent } from '@/lib/pro/instrument';
 
 /**
  * Éditeur de menu web (lot 3). Portage fidèle de hooks/useRestaurantMenu.ts :
@@ -95,6 +96,7 @@ export async function upsertSectionAction(
       .insert({ menu_id: menuId, restaurant_id: restaurantId, name, description });
     if (error) return { error: mapMenuError(error) };
   }
+  await logProEvent(supabase, 'pro_menu_edit', restaurantId);
   revalidateMenu(restaurantId);
   return { ok: true };
 }
@@ -214,6 +216,7 @@ export async function upsertItemAction(
     });
     if (error) return { error: mapMenuError(error) };
   }
+  await logProEvent(supabase, 'pro_menu_edit', restaurantId);
   revalidateMenu(restaurantId);
   return { ok: true };
 }

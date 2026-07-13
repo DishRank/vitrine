@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
 import { mapAuthErrorFr, isPasswordValid } from '@/lib/pro/authErrors';
 import { rateLimit } from '@/lib/pro/rateLimit';
+import { logProEvent } from '@/lib/pro/instrument';
 
 /**
  * Server Actions auth de l'espace pro — TOUTES les mutations passent par ici
@@ -94,6 +95,7 @@ export async function signInAction(
   });
   if (error) return { error: mapAuthErrorFr(error) };
 
+  await logProEvent(supabase, 'pro_login');
   redirect(safeNext(formData.get('next')));
 }
 

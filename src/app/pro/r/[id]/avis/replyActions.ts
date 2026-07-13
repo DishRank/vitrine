@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
+import { logProEvent } from '@/lib/pro/instrument';
 
 export interface ReplyActionState {
   error?: string;
@@ -57,6 +58,7 @@ export async function upsertReplyAction(
   );
   if (error) return { error: mapReplyError(error) };
 
+  await logProEvent(supabase, 'pro_review_reply', restaurantId);
   revalidatePath(`/pro/r/${restaurantId}/avis`);
   return { ok: true };
 }

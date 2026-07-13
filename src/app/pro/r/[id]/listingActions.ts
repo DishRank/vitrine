@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
 import { mapAuthErrorFr } from '@/lib/pro/authErrors';
+import { logProEvent } from '@/lib/pro/instrument';
 
 export interface ListingActionState {
   error?: string;
@@ -73,6 +74,7 @@ export async function updateListingAction(
   if (error) return { error: mapAuthErrorFr(error) };
   if (!count) return { error: "Tu n'es pas le propriétaire de cet établissement." };
 
+  await logProEvent(supabase, 'pro_listing_edit', restaurantId);
   revalidatePath(`/pro/r/${restaurantId}`);
   return { ok: true };
 }

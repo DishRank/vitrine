@@ -2,6 +2,7 @@
 
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
 import { rateLimit } from '@/lib/pro/rateLimit';
+import { logProEvent } from '@/lib/pro/instrument';
 
 /**
  * Claim web (lot 2). Portage du flux de ClaimRestaurantSheet :
@@ -91,7 +92,12 @@ export async function requestClaimCodeAction(restaurantId: string, email?: strin
 export async function verifyClaimCodeAction(restaurantId: string, code: string): Promise<ClaimVerifyResult> {
   const uid = await currentUserId();
   if (!uid) return { ok: false, error: 'unauthenticated' };
-  return invokeClaimVerify(restaurantId, 'verify', { code: code.trim() });
+  const res = await invokeClaimVerify(restaurantId, 'verify', { code: code.trim() });
+  if (res.verified) {
+    const supabase = await getSupabaseServer();
+    await logProEvent(supabase, 'pro_claim_completed', restaurantId);
+  }
+  return res;
 }
 
 export interface ManualClaimResult {
