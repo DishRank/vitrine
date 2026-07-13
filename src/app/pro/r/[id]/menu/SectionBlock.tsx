@@ -11,8 +11,10 @@ import {
   type MenuActionState,
 } from './menuActions';
 import type { EditorSection, EditorItem } from './menuData';
+import type { FormulaSources } from './menuSources';
 import { ALLERGEN_LABEL, DIET_LABEL, formatPrice } from './vocab';
 import ItemForm from './ItemForm';
+import FormulaForm from './FormulaForm';
 import PhotoControl from './PhotoControl';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
 
@@ -23,6 +25,7 @@ export default function SectionBlock({
   index,
   total,
   siblingIds,
+  sources,
   isChild = false,
 }: {
   restaurantId: string;
@@ -31,14 +34,17 @@ export default function SectionBlock({
   index: number;
   total: number;
   siblingIds: string[];
+  sources: FormulaSources;
   /** Sous-catégorie : pas de « + Sous-catégorie » (profondeur bornée à 1). */
   isChild?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [editingSection, setEditingSection] = useState(false);
   const [addingItem, setAddingItem] = useState(false);
+  const [addingFormula, setAddingFormula] = useState(false);
   const [addingSub, setAddingSub] = useState(false);
   const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [editFormulaId, setEditFormulaId] = useState<string | null>(null);
   const [err, setErr] = useState('');
 
   const run = (p: Promise<MenuActionState>) =>
@@ -106,6 +112,8 @@ export default function SectionBlock({
           <li key={it.id} className="p-4">
             {editItemId === it.id ? (
               <ItemForm restaurantId={restaurantId} sectionId={section.id} item={it} onDone={() => setEditItemId(null)} />
+            ) : editFormulaId === it.id ? (
+              <FormulaForm restaurantId={restaurantId} sectionId={section.id} item={it} sources={sources} onDone={() => setEditFormulaId(null)} />
             ) : (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -137,9 +145,10 @@ export default function SectionBlock({
                       {it.is_available ? 'Marquer épuisé' : 'Rendre dispo'}
                     </button>
                     {it.kind === 'formula' ? (
-                      // Les formules (slots/suppléments) s'éditent dans l'app —
-                      // l'éditeur web ne gère pas leur configuration (audit F1).
-                      <span className="text-xs font-semibold text-[var(--text3)]" title="Éditable dans l'application">Formule</span>
+                      <>
+                        <span className="rounded bg-[var(--primary-container)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--primary)]">Formule</span>
+                        <button onClick={() => setEditFormulaId(it.id)} className="text-xs font-semibold text-[var(--primary)] hover:underline">Modifier</button>
+                      </>
                     ) : (
                       <button onClick={() => setEditItemId(it.id)} className="text-xs font-semibold text-[var(--primary)] hover:underline">Modifier</button>
                     )}
@@ -152,13 +161,16 @@ export default function SectionBlock({
         ))}
       </ul>
 
-      {/* Ajouter un plat / une sous-catégorie */}
+      {/* Ajouter un plat / une formule / une sous-catégorie */}
       <div className="p-4 pt-3">
         {addingItem ? (
           <ItemForm restaurantId={restaurantId} sectionId={section.id} onDone={() => setAddingItem(false)} />
+        ) : addingFormula ? (
+          <FormulaForm restaurantId={restaurantId} sectionId={section.id} sources={sources} onDone={() => setAddingFormula(false)} />
         ) : (
           <div className="flex flex-wrap items-center gap-4">
             <button onClick={() => setAddingItem(true)} className="text-sm font-bold text-[var(--primary)] hover:underline">+ Ajouter un plat</button>
+            <button onClick={() => setAddingFormula(true)} className="text-sm font-bold text-[var(--primary)] hover:underline">+ Ajouter une formule</button>
             {!isChild ? (
               <button onClick={() => setAddingSub(true)} className="text-sm font-semibold text-[var(--text2)] hover:text-[var(--primary)]">+ Sous-catégorie</button>
             ) : null}
@@ -178,6 +190,7 @@ export default function SectionBlock({
               index={ci}
               total={section.children.length}
               siblingIds={section.children.map((c) => c.id)}
+              sources={sources}
               isChild
             />
           ))}

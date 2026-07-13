@@ -1,5 +1,5 @@
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
-import type { MenuVariant, MenuOption, MenuAvailability } from './menuLeaves';
+import type { MenuVariant, MenuOption, MenuAvailability, FormulaConfig } from './menuLeaves';
 
 /**
  * Lecture de l'arbre menu pour l'ÉDITEUR (session RLS de l'owner → inclut les
@@ -26,6 +26,7 @@ export interface EditorItem {
   variants: MenuVariant[];
   options: MenuOption[];
   availability: MenuAvailability;
+  formula_config: FormulaConfig | null;
   updated_at: string;
   created_at: string;
 }
@@ -66,7 +67,7 @@ const byOrder = <T extends { display_order: number; created_at: string }>(a: T, 
 
 const SELECT = `id, name, version, display_order, created_at,
   menu_sections(id, name, description, i18n, parent_section_id, display_order, is_visible, created_at,
-    menu_items(id, section_id, kind, name, description, i18n, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, category_slugs, variants, options, availability, updated_at, created_at))`;
+    menu_items(id, section_id, kind, name, description, i18n, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, category_slugs, variants, options, availability, formula_config, updated_at, created_at))`;
 
 /** L'arbre complet des cartes du resto (souvent une seule, « Notre carte »). */
 export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]> {
@@ -99,6 +100,10 @@ export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]
     variants: Array.isArray(it.variants) ? it.variants : [],
     options: Array.isArray(it.options) ? it.options : [],
     availability: it.availability && typeof it.availability === 'object' ? it.availability : {},
+    formula_config:
+      it.formula_config && typeof it.formula_config === 'object'
+        ? (it.formula_config as unknown as FormulaConfig)
+        : null,
   });
 
   return ((data ?? []) as unknown as RawMenu[])

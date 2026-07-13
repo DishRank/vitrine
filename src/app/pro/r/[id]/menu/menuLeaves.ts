@@ -33,6 +33,26 @@ export interface MenuAvailability {
   season?: { from: string; to: string };
 }
 
+// ── Formules (kind='formula') ────────────────────────────────────────────────
+
+export interface FormulaPrice {
+  label: string;
+  price: number;
+}
+
+/** Un cran de formule (Entrée / Plat / Dessert) : soit tous les items d'une
+ *  section, soit une liste d'items explicite. */
+export interface FormulaSlot {
+  name: string;
+  source: { section_id?: string | null; item_ids?: string[] };
+  supplements?: { item_id: string; price_delta: number }[];
+}
+
+export interface FormulaConfig {
+  prices: FormulaPrice[];
+  slots: FormulaSlot[];
+}
+
 /** Id local stable pour les entrées de tableaux (jamais joint en base). */
 export function newLeafId(): string {
   return `l_${Math.random().toString(36).slice(2, 10)}`;
@@ -62,6 +82,21 @@ export function validateOptions(options: MenuOption[]): string | null {
       )
         return 'Supplément de choix invalide.';
     }
+  }
+  return null;
+}
+
+export function validateFormulaConfig(c: FormulaConfig | null): string | null {
+  if (!c || !Array.isArray(c.prices) || c.prices.length === 0)
+    return 'Une formule doit avoir au moins un prix.';
+  for (const p of c.prices) {
+    if (!p.label || !p.label.trim()) return 'Chaque prix de formule doit avoir un libellé.';
+    if (typeof p.price !== 'number' || !Number.isFinite(p.price) || p.price < 0)
+      return 'Prix de formule invalide.';
+  }
+  if (!Array.isArray(c.slots)) return 'Formule invalide.';
+  for (const s of c.slots) {
+    if (!s.name || !s.name.trim()) return 'Chaque étape de la formule doit avoir un nom.';
   }
   return null;
 }

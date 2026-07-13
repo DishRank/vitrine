@@ -9,9 +9,11 @@ import {
   validateVariants,
   validateOptions,
   validateAvailability,
+  validateFormulaConfig,
   type MenuVariant,
   type MenuOption,
   type MenuOptionChoice,
+  type FormulaConfig,
 } from './menuLeaves';
 import { CATEGORY_SLUGS } from '@/lib/pro/categories';
 
@@ -211,6 +213,39 @@ function sanitizeOptions(raw: unknown): MenuOption[] {
     .filter((o) => o.name && o.choices.length > 0);
 }
 
+/** Assainit un formula_config reçu du client : prix incomplets écartés, crans
+ *  sans nom écartés, source normalisée (section OU liste de plats). */
+function sanitizeFormula(raw: unknown): FormulaConfig {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const prices = (Array.isArray(o.prices) ? o.prices : [])
+    .slice(0, 12)
+    .map((p) => {
+      const pp = (p ?? {}) as Record<string, unknown>;
+      const price = Number(pp.price);
+      return {
+        label: typeof pp.label === 'string' ? pp.label.trim().slice(0, 60) : '',
+        price: Number.isFinite(price) && price >= 0 ? Math.min(price, 100000) : 0,
+      };
+    })
+    .filter((p) => p.label);
+  const slots = (Array.isArray(o.slots) ? o.slots : [])
+    .slice(0, 12)
+    .map((s) => {
+      const ss = (s ?? {}) as Record<string, unknown>;
+      const src = (ss.source ?? {}) as Record<string, unknown>;
+      const sectionId = typeof src.section_id === 'string' && src.section_id ? src.section_id.slice(0, 40) : null;
+      const itemIds = Array.isArray(src.item_ids)
+        ? src.item_ids.filter((x): x is string => typeof x === 'string').slice(0, 50)
+        : [];
+      return {
+        name: typeof ss.name === 'string' ? ss.name.trim().slice(0, 40) : '',
+        source: sectionId ? { section_id: sectionId } : { item_ids: itemIds },
+      };
+    })
+    .filter((s) => s.name);
+  return { prices, slots };
+}
+
 /** Crée/édite un plat (kind='item'). CAS sur l'édition : si `expectedUpdatedAt`
  *  ne matche plus, 0 ligne modifiée → MENU_CONFLICT (édition concurrente). */
 export async function upsertItemAction(
@@ -319,18 +354,110 @@ export async function upsertItemAction(
   return { ok: true };
 }
 
+/** Crée/édite une FORMULE (kind='formula'). CAS sur l'édition (.eq kind formula). */
+export async function upsertFormulaAction(
+  restaurantId: string,
+  _prev: MenuActionState,
+  formData: FormData
+): Promise<MenuActionState> {
+  const ctx = await assertOwner(restaurantId);
+  if (!ctx) return FAIL_OWNER;
+  const { supabase } = ctx;
+
+  const id = String(formData.get('id') ?? '') || null;
+  const sectionId = String(formData.get('sectionId') ?? '');
+  const name = String(formData.get('name') ?? '').trim();
+  const description = String(formData.get('description') ?? '').trim() || null;
+  const expectedUpdatedAt = String(formData.get('expectedUpdatedAt') ?? '') || null;
+  const formulaConfig = sanitizeFormula(parseJson(formData.get('formula_config'), {}));
+
+  if (!name) return { error: 'Le nom de la formule est requis.' };
+  if (name.length > 200) return { error: 'Nom trop long (200 caractères max).' };
+  if (!id && !sectionId) return { error: 'Catégorie introuvable.' };
+  const fErr = validateFormulaConfig(formulaConfig);
+  if (fErr) return { error: fErr };
+
+  // Une formule n'a ni prix simple, ni variantes/options.
+  const fields = {
+    name,
+    description,
+    price: null,
+    formula_config: formulaConfig,
+    variants: [] as unknown[],
+    options: [] as unknown[],
+  };
+
+  if (id) {
+    let q = supabase
+      .from('menu_items')
+      .update(fields)
+      .eq('id', id)
+      .eq('restaurant_id', restaurantId)
+      .eq('kind', 'formula');
+    if (expectedUpdatedAt) q = q.eq('updated_at', expectedUpdatedAt);
+    const { data, error } = await q.select('id');
+    if (error) return { error: mapMenuError(error) };
+    if (!data || data.length === 0) return { error: mapMenuError({ message: 'MENU_CONFLICT' }) };
+  } else {
+    const { error } = await supabase.from('menu_items').insert({
+      ...fields,
+      restaurant_id: restaurantId,
+      section_id: sectionId,
+      kind: 'formula',
+      allergens: [] as string[],
+      diet_tags: [] as string[],
+      category_slugs: [] as string[],
+      availability: {} as Record<string, unknown>,
+    });
+    if (error) return { error: mapMenuError(error) };
+  }
+  await logProEvent(supabase, 'pro_menu_edit', restaurantId);
+  revalidateMenu(restaurantId);
+  return { ok: true };
+}
+
 export async function deleteItemAction(restaurantId: string, itemId: string): Promise<MenuActionState> {
   const ctx = await assertOwner(restaurantId);
   if (!ctx) return FAIL_OWNER;
-  // NB : le sweep des formules référençant cet item (useDeleteMenuItem) n'est
-  // pas nécessaire tant que l'éditeur web ne crée pas de formules (kind='item'
-  // seulement) — à ajouter avec l'éditeur de formules.
-  const { error } = await ctx.supabase
+  const { supabase } = ctx;
+
+  const { error } = await supabase
     .from('menu_items')
     .delete()
     .eq('id', itemId)
     .eq('restaurant_id', restaurantId);
   if (error) return { error: mapMenuError(error) };
+
+  // Sweep : purge les références à ce plat dans les slots/suppléments des
+  // formules (pas de FK sur le JSONB). Miroir de useDeleteMenuItem.
+  const { data: formulas } = await supabase
+    .from('menu_items')
+    .select('id, formula_config')
+    .eq('restaurant_id', restaurantId)
+    .eq('kind', 'formula');
+  for (const f of (formulas ?? []) as { id: string; formula_config: FormulaConfig | null }[]) {
+    const cfg = f.formula_config;
+    if (!cfg || !Array.isArray(cfg.slots)) continue;
+    let touched = false;
+    const slots = cfg.slots.map((s) => {
+      const itemIds = s.source?.item_ids;
+      const supplements = s.supplements;
+      const nextItemIds = Array.isArray(itemIds) ? itemIds.filter((x) => x !== itemId) : itemIds;
+      const nextSupp = Array.isArray(supplements) ? supplements.filter((sp) => sp.item_id !== itemId) : supplements;
+      if (nextItemIds !== itemIds || nextSupp !== supplements) {
+        if (
+          (Array.isArray(itemIds) && nextItemIds!.length !== itemIds.length) ||
+          (Array.isArray(supplements) && nextSupp!.length !== supplements.length)
+        )
+          touched = true;
+      }
+      return { ...s, source: { ...s.source, item_ids: nextItemIds }, supplements: nextSupp };
+    });
+    if (touched) {
+      await supabase.from('menu_items').update({ formula_config: { ...cfg, slots } }).eq('id', f.id).eq('restaurant_id', restaurantId);
+    }
+  }
+
   revalidateMenu(restaurantId);
   return { ok: true };
 }

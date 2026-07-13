@@ -7,6 +7,7 @@ import {
   type MenuActionState,
 } from './menuActions';
 import type { EditorMenu } from './menuData';
+import { collectFormulaSources } from './menuSources';
 import SectionBlock from './SectionBlock';
 import LanguagePanel from './LanguagePanel';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
@@ -44,6 +45,7 @@ export default function MenuEditor({
   }
 
   const sectionIds = menu.sections.map((s) => s.id);
+  const formulaSources = collectFormulaSources(menu.sections);
 
   return (
     <div className="space-y-4">
@@ -97,6 +99,7 @@ export default function MenuEditor({
               index={i}
               total={menu.sections.length}
               siblingIds={sectionIds}
+              sources={formulaSources}
             />
           ))}
         </div>
