@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import { Outfit } from 'next/font/google';
+import { headers } from 'next/headers';
 import '../globals.css';
+
+// Applique la préférence de thème (localStorage) AVANT le paint → pas de flash.
+// Classe `.dark` / `.light` sur <html> ; sans préférence = thème système.
+const THEME_INIT = `try{var t=localStorage.getItem('dr-pro-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.add('light');}catch(e){}`;
 
 /**
  * Layout racine de la zone /pro (espace restaurateur).
@@ -28,9 +33,14 @@ export const viewport: Viewport = {
   themeColor: '#6C5CE7',
 };
 
-export default function ProLayout({ children }: { children: React.ReactNode }) {
+export default async function ProLayout({ children }: { children: React.ReactNode }) {
+  // Nonce CSP posé par le proxy (strict-dynamic) — requis pour le script inline.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <html lang="fr" className={outfit.variable}>
+      <head>
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
         {children}
       </body>

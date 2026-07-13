@@ -94,7 +94,6 @@ export default async function PartagePage({ params }: { params: Promise<{ id: st
           {/* eslint-disable-next-line react/no-danger */}
           <div className="mx-auto mt-5 w-56" dangerouslySetInnerHTML={{ __html: svg }} />
           <p className="mt-5 text-sm font-bold">Scannez pour voir la carte</p>
-          <p className="mt-1 text-xs text-[#8C8478]">Pas d&apos;appli à installer</p>
           <p className="mt-4 text-[11px] font-semibold text-[#6C5CE7]">Propulsé par DishRank</p>
         </div>
       </section>

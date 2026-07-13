@@ -140,11 +140,12 @@ export default function Nav() {
    *  L'href reste `/` pour la sémantique + fallback no-JS (la page recharge
    *  au top), mais le handler `preventDefault` + `scrollTo({ top: 0 })`
    *  garde l'utilisateur sur la même page sans recharge. */
-  const navLinks: Array<{ href: string; label: string; badge?: string; top?: boolean }> = [
+  const navLinks: Array<{ href: string; label: string; badge?: string; top?: boolean; pro?: boolean }> = [
     { href: '/', label: t('explore'), top: true },
     { href: '#top10', label: t('ranking') },
     { href: '#social', label: t('social'), badge: t('new') },
     { href: '#why', label: t('why') },
+    { href: '/pro', label: 'Espace pro', pro: true },
   ];
 
   /** Handler partagé desktop + drawer pour les liens "scroll to top". */
@@ -192,7 +193,11 @@ export default function Nav() {
                 key={l.label}
                 href={l.href}
                 onClick={(e) => onNavLinkClick(e, l)}
-                className="hover:text-[var(--text)] transition-colors inline-flex items-center gap-1.5"
+                className={
+                  l.pro
+                    ? 'inline-flex items-center gap-1.5 rounded-lg border border-[var(--border2)] px-3 py-1.5 font-semibold text-[var(--primary)] transition-colors hover:border-[var(--primary)]'
+                    : 'hover:text-[var(--text)] transition-colors inline-flex items-center gap-1.5'
+                }
               >
                 {l.label}
                 {l.badge && (

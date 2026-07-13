@@ -181,6 +181,7 @@ export default function Footer() {
                 </a>
               </li>
               <li><a href="#why" onClick={(e) => scrollToAnchor(e, '#why')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tn('why')}</a></li>
+              <li><a href="/pro" className="footer-link font-semibold text-[var(--primary)] hover:opacity-80">Espace pro</a></li>
             </ul>
           </div>
 

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import AnimatedLogo from '@/components/AnimatedLogo';
 import { signOutAction } from '../actions';
+import ThemeToggle from './ThemeToggle';
 
 /** En-tête commun à toutes les pages authentifiées de l'espace pro. */
 export default function ProHeader({ email }: { email?: string | null }) {
@@ -13,6 +14,7 @@ export default function ProHeader({ email }: { email?: string | null }) {
         </span>
       </Link>
       <div className="flex items-center gap-3">
+        <ThemeToggle />
         <Link href="/pro/compte" className="hidden sm:block text-sm font-semibold text-[var(--text2)] hover:text-[var(--text)]">
           {email ?? 'Mon compte'}
         </Link>
