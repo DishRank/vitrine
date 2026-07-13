@@ -1,11 +1,11 @@
-import { requireOwnedRestaurant, isPremium } from '@/lib/pro/data';
+import { requireOwnedRestaurant, isPremium, requireUser } from '@/lib/pro/data';
 import WorkspaceNav from './_components/WorkspaceNav';
 
 /**
  * Contexte d'UN établissement (segment [id], sous le shell persistant /pro/r).
- * L'en-tête + le carrousel vivent dans le parent ; ici on n'affiche que le
- * nom/adresse du resto actif + les onglets. La garde d'ownership serveur reste
- * (requireOwnedRestaurant redirige vers /pro si le resto n'est pas au user).
+ * L'en-tête + le carrousel vivent dans le parent ; ici : nom/adresse du resto
+ * actif, onglets, et la pastille « avis à répondre » (tâche récurrente n°1 de
+ * l'owner). Garde d'ownership serveur (requireOwnedRestaurant → redirect).
  */
 export default async function RestaurantWorkspaceLayout({
   children,
@@ -18,6 +18,16 @@ export default async function RestaurantWorkspaceLayout({
   const resto = await requireOwnedRestaurant(id);
   const premium = isPremium(resto);
 
+  // Avis publiés sans réponse = ce que l'owner doit traiter. 2 requêtes légères
+  // (colonnes d'id uniquement), déduplifiées côté auth par le cache getClaims.
+  const { supabase } = await requireUser();
+  const [{ data: reviewIds }, { data: repliedIds }] = await Promise.all([
+    supabase.from('reviews').select('id').eq('restaurant_id', id).eq('pending_moderation', false),
+    supabase.from('review_replies').select('review_id').eq('restaurant_id', id),
+  ]);
+  const replied = new Set(((repliedIds ?? []) as { review_id: string }[]).map((r) => r.review_id));
+  const pendingReviews = ((reviewIds ?? []) as { id: string }[]).filter((r) => !replied.has(r.id)).length;
+
   return (
     <>
       <div className="mt-6 flex items-start justify-between gap-4">
@@ -27,14 +37,24 @@ export default async function RestaurantWorkspaceLayout({
             {[resto.address, resto.city].filter(Boolean).join(' · ') || '—'}
           </p>
         </div>
-        {premium ? (
-          <span className="shrink-0 rounded-full bg-[var(--primary-container)] px-3 py-1 text-xs font-bold text-[var(--primary)]">
-            Premium
-          </span>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2">
+          <a
+            href={`/menu/${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden rounded-lg border border-[var(--border2)] px-3 py-1.5 text-xs font-semibold text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)] sm:inline-block"
+          >
+            Aperçu public ↗
+          </a>
+          {premium ? (
+            <span className="rounded-full bg-[var(--primary-container)] px-3 py-1 text-xs font-bold text-[var(--primary)]">
+              Premium
+            </span>
+          ) : null}
+        </div>
       </div>
 
-      <WorkspaceNav id={id} />
+      <WorkspaceNav id={id} pendingReviews={pendingReviews} />
 
       <div className="mt-6">{children}</div>
     </>
