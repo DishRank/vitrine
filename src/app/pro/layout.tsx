@@ -37,9 +37,12 @@ export default async function ProLayout({ children }: { children: React.ReactNod
   // Nonce CSP posé par le proxy (strict-dynamic) — requis pour le script inline.
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
-    <html lang="fr" className={outfit.variable}>
+    // suppressHydrationWarning : le script d'init modifie la classe de <html>
+    // (thème) avant l'hydratation et le navigateur retire l'attribut nonce du
+    // DOM → mismatch attendu server/client, à ne pas signaler.
+    <html lang="fr" className={outfit.variable} suppressHydrationWarning>
       <head>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
         {children}

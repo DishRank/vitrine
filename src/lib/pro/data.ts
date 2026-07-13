@@ -36,15 +36,23 @@ const LISTING_COLS =
   'description, accepts_groups, group_offer, phone, website, menu_url, instagram, reservation_url, ' +
   'price_level, cuisines, opening_hours_raw, osm_id';
 
+/** Identité minimale suffisante pour /pro (filtres owner_id + affichage). */
+export interface ProUser {
+  id: string;
+  email: string | null;
+}
+
 /**
- * Contexte auth déduplifié par requête (`cache()`) : un SEUL getUser réseau
- * même si le layout /pro/r, le layout [id] et la page l'appellent tous.
+ * Contexte auth déduplifié par requête (`cache()`). getClaims (au lieu de
+ * getUser) : validation LOCALE du JWT via les clés asymétriques ES256 (vérif de
+ * signature JWKS cachée) → ZÉRO appel réseau à GoTrue par rendu de page. L'id
+ * vient du token signé (infalsifiable) ; la RLS reste le vrai garde en base.
  */
 const getAuthContext = cache(async () => {
   const supabase = await getSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims as { sub?: string; email?: string } | undefined;
+  const user: ProUser | null = claims?.sub ? { id: claims.sub, email: claims.email ?? null } : null;
   return { supabase, user };
 });
 

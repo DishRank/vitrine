@@ -209,8 +209,13 @@ async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
         },
       },
     });
-    const { data } = await supabase.auth.getUser();
-    authenticated = !!data.user;
+    // getClaims (au lieu de getUser) : les projets utilisent des clés JWT
+    // asymétriques (ES256) → la validation du token est LOCALE (vérif de
+    // signature via JWKS caché), sans appel réseau à GoTrue à chaque
+    // navigation /pro. Le refresh de session (rotation du token) reste géré par
+    // le mécanisme cookies @supabase/ssr (getClaims passe par getSession).
+    const { data } = await supabase.auth.getClaims();
+    authenticated = !!data?.claims;
   }
 
   const finalize = (r: NextResponse) => {
