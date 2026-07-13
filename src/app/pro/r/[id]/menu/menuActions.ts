@@ -13,6 +13,7 @@ import {
   type MenuOption,
   type MenuOptionChoice,
 } from './menuLeaves';
+import { CATEGORY_SLUGS } from '@/lib/pro/categories';
 
 /**
  * Éditeur de menu web (lot 3). Portage fidèle de hooks/useRestaurantMenu.ts :
@@ -245,6 +246,16 @@ export async function upsertItemAction(
     seasonTo: typeof availRaw.seasonTo === 'string' ? availRaw.seasonTo : '',
   });
 
+  // Catégories (notes communauté) : slugs canoniques uniquement, max 3.
+  const categorySlugs = [
+    ...new Set(
+      String(formData.get('category_slugs') ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => CATEGORY_SLUGS.has(s))
+    ),
+  ].slice(0, 3);
+
   if (!name) return { error: 'Le nom du plat est requis.' };
   if (name.length > 200) return { error: 'Nom trop long (200 caractères max).' };
   if (description && description.length > 1000) return { error: 'Description trop longue (1000 caractères max).' };
@@ -272,6 +283,7 @@ export async function upsertItemAction(
     is_signature: isSignature,
     allergens,
     diet_tags: dietTags,
+    category_slugs: categorySlugs,
     variants,
     options,
     availability,
@@ -295,7 +307,6 @@ export async function upsertItemAction(
       restaurant_id: restaurantId,
       section_id: sectionId,
       kind: 'item',
-      category_slugs: [] as string[],
       formula_config: null,
     });
     if (error) return { error: mapMenuError(error) };

@@ -22,6 +22,7 @@ export interface EditorItem {
   is_signature: boolean;
   allergens: string[];
   diet_tags: string[];
+  category_slugs: string[];
   variants: MenuVariant[];
   options: MenuOption[];
   availability: MenuAvailability;
@@ -62,7 +63,7 @@ const byOrder = <T extends { display_order: number; created_at: string }>(a: T, 
 
 const SELECT = `id, name, version, display_order, created_at,
   menu_sections(id, name, description, i18n, parent_section_id, display_order, is_visible, created_at,
-    menu_items(id, section_id, kind, name, description, i18n, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, variants, options, availability, updated_at, created_at))`;
+    menu_items(id, section_id, kind, name, description, i18n, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, category_slugs, variants, options, availability, updated_at, created_at))`;
 
 /** L'arbre complet des cartes du resto (souvent une seule, « Notre carte »). */
 export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]> {
@@ -109,6 +110,7 @@ export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]
               price: it.price != null ? Number(it.price) : null,
               allergens: Array.isArray(it.allergens) ? it.allergens : [],
               diet_tags: Array.isArray(it.diet_tags) ? it.diet_tags : [],
+              category_slugs: Array.isArray(it.category_slugs) ? it.category_slugs : [],
               variants: Array.isArray(it.variants) ? it.variants : [],
               options: Array.isArray(it.options) ? it.options : [],
               availability:

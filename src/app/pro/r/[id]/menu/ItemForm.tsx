@@ -5,6 +5,7 @@ import { upsertItemAction, type MenuActionState } from './menuActions';
 import { ALLERGENS, DIETS } from './vocab';
 import type { EditorItem } from './menuData';
 import { newLeafId } from './menuLeaves';
+import DishCategoryPicker from './DishCategoryPicker';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
 
 /** États d'édition : prix en STRING (saisie tolérante), sérialisés en number. */
@@ -286,6 +287,12 @@ export default function ItemForm({
             </label>
           ))}
         </div>
+      </div>
+
+      <div>
+        <label className={labelCls}>Catégories</label>
+        <DishCategoryPicker initial={item?.category_slugs ?? []} max={3} />
+        <p className="mt-1 text-xs text-[var(--text3)]">Relie le plat aux catégories notées par la communauté DishRank (3 max).</p>
       </div>
 
       {/* Disponibilité */}
