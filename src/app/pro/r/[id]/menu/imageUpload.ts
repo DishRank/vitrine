@@ -42,9 +42,12 @@ export interface UploadResult {
   error?: string;
 }
 
-/** Upload full + thumb ; renvoie l'URL publique du full (à persister via une
- *  Server Action). L'appelant a déjà validé le type/poids côté input. */
-export async function uploadMenuImage(file: File): Promise<UploadResult> {
+/**
+ * Envoie un couple full + thumb DÉJÀ en webp (produits par le recadreur) vers
+ * `dish-photos/<uid>/…` et renvoie l'URL publique du full. Partagé avec
+ * uploadMenuImage. Le thumb est best-effort (l'app le dérive sinon via une
+ * transformation facturée). */
+export async function uploadWebpBlobs(full: Blob, thumb: Blob | null): Promise<UploadResult> {
   const supabase = getSupabaseBrowserPro();
   if (!supabase) return { ok: false, error: 'Configuration manquante.' };
   const {
@@ -52,6 +55,24 @@ export async function uploadMenuImage(file: File): Promise<UploadResult> {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Session expirée — reconnecte-toi.' };
 
+  const uniqueId = `${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+  const base = `${user.id}/${uniqueId}`;
+
+  const [fullRes] = await Promise.all([
+    supabase.storage.from('dish-photos').upload(`${base}.webp`, full, { contentType: 'image/webp', upsert: true }),
+    thumb
+      ? supabase.storage.from('dish-photos').upload(`${base}_thumb.webp`, thumb, { contentType: 'image/webp', upsert: true }).catch(() => {})
+      : Promise.resolve(),
+  ]);
+  if (fullRes.error) return { ok: false, error: "L'envoi a échoué. Réessaie." };
+
+  const { data } = supabase.storage.from('dish-photos').getPublicUrl(`${base}.webp`);
+  return { ok: true, url: `${data.publicUrl}?v=${Date.now()}` };
+}
+
+/** Upload full + thumb (resize proportionnel, SANS recadrage) ; renvoie l'URL
+ *  publique du full. Utilisé pour les photos de plats (aspect libre). */
+export async function uploadMenuImage(file: File): Promise<UploadResult> {
   if (!/^image\//.test(file.type)) return { ok: false, error: 'Fichier image requis.' };
   if (file.size > 12 * 1024 * 1024) return { ok: false, error: 'Image trop lourde (12 Mo max).' };
 
@@ -65,15 +86,5 @@ export async function uploadMenuImage(file: File): Promise<UploadResult> {
     return { ok: false, error: "Impossible de traiter l'image." };
   }
 
-  const uniqueId = `${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
-  const base = `${user.id}/${uniqueId}`;
-
-  const [fullRes] = await Promise.all([
-    supabase.storage.from('dish-photos').upload(`${base}.webp`, full, { contentType: 'image/webp', upsert: true }),
-    supabase.storage.from('dish-photos').upload(`${base}_thumb.webp`, thumb, { contentType: 'image/webp', upsert: true }).catch(() => {}),
-  ]);
-  if (fullRes.error) return { ok: false, error: "L'envoi a échoué. Réessaie." };
-
-  const { data } = supabase.storage.from('dish-photos').getPublicUrl(`${base}.webp`);
-  return { ok: true, url: `${data.publicUrl}?v=${Date.now()}` };
+  return uploadWebpBlobs(full, thumb);
 }

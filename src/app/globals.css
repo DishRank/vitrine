@@ -114,6 +114,22 @@ p {
   text-wrap: pretty;
 }
 
+/* Curseur « main » sur tout élément cliquable — les <button> natifs ont un
+   curseur flèche par défaut (et Tailwind v4 ne le corrige plus). Couvre boutons,
+   role=button et résumés de <details> ; exclut le désactivé. */
+button:not(:disabled),
+summary,
+[role='button']:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+/* Labels cochables — règle SÉPARÉE : un `:has()` non supporté invaliderait
+   toute la liste (une liste simple n'est pas « forgiving »), ce qui casserait
+   le curseur des boutons ci-dessus. */
+label:has(> input[type='checkbox']:not(:disabled)),
+label:has(> input[type='radio']:not(:disabled)) {
+  cursor: pointer;
+}
+
 /* Tabular figures — chiffres alignés en grille fixe (pas de proportional).
    Le skill flag les nombres en font proportionnel comme un tell d'AI design.
    À appliquer via la classe `.tabular` sur les stats, prix, %, durées. */
