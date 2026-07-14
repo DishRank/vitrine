@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState } from 'react';
-import { updateListingAction, type ListingActionState } from './listingActions';
-import { SubmitButton, FormError, FormSuccess, inputCls, labelCls } from '../../_components/fields';
+import { useCallback, useRef } from 'react';
+import { inputCls, labelCls } from '../../_components/fields';
+import { useAutoSave, type SaveStatus } from '../../_components/useAutoSave';
 import CuisineAutocomplete from './CuisineAutocomplete';
 
 export interface ListingInitial {
@@ -16,12 +16,49 @@ export interface ListingInitial {
   cuisines: string[];
 }
 
-export default function ListingForm({ id, initial }: { id: string; initial: ListingInitial }) {
-  const action = updateListingAction.bind(null, id);
-  const [state, formAction] = useActionState<ListingActionState, FormData>(action, {});
+const STATUS: Record<SaveStatus, { text: string; cls: string } | null> = {
+  idle: { text: 'Sauvegarde automatique', cls: 'text-[var(--text3)]' },
+  pending: { text: 'Modification…', cls: 'text-[var(--text3)]' },
+  saving: { text: 'Enregistrement…', cls: 'text-[var(--text3)]' },
+  saved: { text: 'Enregistré ✓', cls: 'text-[var(--accent-success)]' },
+  error: { text: 'Échec — nouvelle tentative…', cls: 'text-red-500' },
+};
 
+export default function ListingForm({ id, initial }: { id: string; initial: ListingInitial }) {
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const save = useCallback(async () => {
+    const form = formRef.current;
+    if (!form) return { ok: true };
+    const fd = new FormData(form);
+    const payload: Record<string, unknown> = { id };
+    fd.forEach((v, k) => {
+      payload[k] = v;
+    });
+    const res = await fetch('/api/pro/listing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    return { ok: res.ok && !!json.ok, error: json.error };
+  }, [id]);
+
+  const { status, schedule, flush } = useAutoSave(save);
+  const st = STATUS[status] ?? STATUS.idle;
+
+  // Déclenchement au niveau de CHAQUE champ (onChange React fiable, contrairement
+  // à onInput/onChange au niveau du <form> en React 19). Débounce dans le hook.
   return (
-    <form action={formAction} className="space-y-6">
+    <form
+      ref={formRef}
+      onBlur={flush}
+      onSubmit={(e) => {
+        e.preventDefault();
+        flush();
+      }}
+      className="space-y-6"
+    >
       <section className="rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-5 sm:p-6 space-y-4">
         <h2 className="text-base font-extrabold">Présentation</h2>
         <div>
@@ -29,6 +66,7 @@ export default function ListingForm({ id, initial }: { id: string; initial: List
           <textarea
             id="description" name="description" rows={4} maxLength={600}
             defaultValue={initial.description}
+            onChange={schedule}
             placeholder="Quelques mots sur votre établissement, votre cuisine, votre histoire…"
             className={inputCls}
           />
@@ -36,7 +74,7 @@ export default function ListingForm({ id, initial }: { id: string; initial: List
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="price_level" className={labelCls}>Gamme de prix</label>
-            <select id="price_level" name="price_level" defaultValue={initial.price_level ?? ''} className={inputCls}>
+            <select id="price_level" name="price_level" defaultValue={initial.price_level ?? ''} onChange={schedule} className={inputCls}>
               <option value="">Non précisé</option>
               <option value="1">€ — économique</option>
               <option value="2">€€ — modéré</option>
@@ -46,7 +84,7 @@ export default function ListingForm({ id, initial }: { id: string; initial: List
           </div>
           <div>
             <label className={labelCls}>Types de cuisine</label>
-            <CuisineAutocomplete initial={initial.cuisines} max={8} />
+            <CuisineAutocomplete initial={initial.cuisines} max={8} onChange={schedule} />
           </div>
         </div>
       </section>
@@ -56,35 +94,34 @@ export default function ListingForm({ id, initial }: { id: string; initial: List
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="phone" className={labelCls}>Téléphone</label>
-            <input id="phone" name="phone" type="tel" defaultValue={initial.phone} placeholder="04 78 00 00 00" className={inputCls} />
+            <input id="phone" name="phone" type="tel" defaultValue={initial.phone} onChange={schedule} placeholder="04 78 00 00 00" className={inputCls} />
           </div>
           <div>
             <label htmlFor="website" className={labelCls}>Site web</label>
-            <input id="website" name="website" type="text" defaultValue={initial.website} placeholder="votre-site.fr" className={inputCls} />
+            <input id="website" name="website" type="text" defaultValue={initial.website} onChange={schedule} placeholder="votre-site.fr" className={inputCls} />
           </div>
           <div>
             <label htmlFor="reservation_url" className={labelCls}>Lien de réservation</label>
-            <input id="reservation_url" name="reservation_url" type="text" defaultValue={initial.reservation_url} placeholder="thefork.fr/…" className={inputCls} />
+            <input id="reservation_url" name="reservation_url" type="text" defaultValue={initial.reservation_url} onChange={schedule} placeholder="thefork.fr/…" className={inputCls} />
           </div>
           <div>
             <label htmlFor="menu_url" className={labelCls}>Lien du menu (externe)</label>
-            <input id="menu_url" name="menu_url" type="text" defaultValue={initial.menu_url} placeholder="votre-site.fr/carte" className={inputCls} />
+            <input id="menu_url" name="menu_url" type="text" defaultValue={initial.menu_url} onChange={schedule} placeholder="votre-site.fr/carte" className={inputCls} />
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="instagram" className={labelCls}>Instagram</label>
-            <input id="instagram" name="instagram" type="text" defaultValue={initial.instagram} placeholder="@votre_resto" className={inputCls} />
+            <input id="instagram" name="instagram" type="text" defaultValue={initial.instagram} onChange={schedule} placeholder="@votre_resto" className={inputCls} />
           </div>
         </div>
       </section>
 
-      <div className="sticky bottom-0 -mx-4 border-t border-[var(--border2)] bg-[var(--bg)]/90 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <div className="w-full max-w-[220px]">
-            <SubmitButton>Enregistrer</SubmitButton>
-          </div>
-          <FormError error={state.error} />
-          <FormSuccess message={state.ok ? 'Fiche mise à jour ✓' : undefined} />
-        </div>
+      <div className="sticky bottom-0 -mx-4 flex items-center gap-2 border-t border-[var(--border2)] bg-[var(--bg)]/90 px-4 py-3 backdrop-blur">
+        <span
+          className={`inline-block h-2 w-2 rounded-full ${
+            status === 'saved' ? 'bg-[var(--accent-success)]' : status === 'error' ? 'bg-red-500' : status === 'idle' ? 'bg-[var(--text3)]' : 'bg-[var(--primary)] animate-pulse'
+          }`}
+        />
+        <span className={`text-sm font-semibold ${st?.cls}`}>{st?.text}</span>
       </div>
     </form>
   );

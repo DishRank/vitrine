@@ -12,15 +12,26 @@ export default function CuisineAutocomplete({
   initial,
   name = 'cuisines',
   max = 8,
+  onChange,
 }: {
   initial: string[];
   name?: string;
   max?: number;
+  /** Notifie le parent d'un changement de sélection (pour l'auto-save). */
+  onChange?: () => void;
 }) {
   // On ne garde que les slugs connus (un ancien texte libre est ignoré).
   const [selected, setSelected] = useState<string[]>(() =>
     initial.filter((s) => CUISINE_BY_SLUG.has(s))
   );
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    onChange?.();
+  }, [selected, onChange]);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
