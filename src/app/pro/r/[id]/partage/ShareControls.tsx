@@ -36,48 +36,96 @@ export function PrintButton() {
   );
 }
 
-/** Convertit le SVG (rendu serveur) en PNG 512px téléchargeable, côté client. */
-export function DownloadPngButton({ svg, filename }: { svg: string; filename: string }) {
+/** Charge une image (data: URI) en promesse. */
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+/**
+ * Convertit le SVG (rendu serveur) en PNG 512px téléchargeable, côté client.
+ *
+ * IMPORTANT : le SVG est chargé via un data: URI, PAS un blob: URL — la CSP
+ * (`img-src 'self' https: data:`, sans `blob:`) bloque les blob URLs, ce qui
+ * cassait silencieusement le téléchargement.
+ *
+ * Si `logo` (data: URI) est fourni, on le redessine SÉPARÉMENT sur le canvas
+ * (pastille blanche arrondie + logo « contain »), car une <image> imbriquée dans
+ * le SVG ne se rasterise pas en mode image. Géométrie alignée sur l'overlay de
+ * QrKit : pastille = 28% du côté, padding = 12% de la pastille.
+ */
+export function DownloadPngButton({
+  svg,
+  filename,
+  logo,
+}: {
+  svg: string;
+  filename: string;
+  logo?: string | null;
+}) {
   const [busy, setBusy] = useState(false);
   return (
     <button
       type="button"
       disabled={busy}
-      onClick={() => {
+      onClick={async () => {
         setBusy(true);
-        const blob = new Blob([svg], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.onload = () => {
-          const size = 512;
+        const size = 512;
+        try {
           const canvas = document.createElement('canvas');
           canvas.width = size;
           canvas.height = size;
           const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, size, size);
-            ctx.drawImage(img, 0, 0, size, size);
+          if (!ctx) {
+            setBusy(false);
+            return;
           }
-          URL.revokeObjectURL(url);
-          canvas.toBlob((png) => {
-            if (!png) {
-              setBusy(false);
-              return;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, size, size);
+
+          const qrImg = await loadImage(
+            'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+          );
+          ctx.drawImage(qrImg, 0, 0, size, size);
+
+          if (logo) {
+            const box = size * 0.28;
+            const bx = (size - box) / 2;
+            const rx = box * 0.16;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            if (typeof ctx.roundRect === 'function') ctx.roundRect(bx, bx, box, box, rx);
+            else ctx.rect(bx, bx, box, box);
+            ctx.fill();
+            try {
+              const logoImg = await loadImage(logo);
+              const avail = box * 0.76; // 12% de padding de chaque côté
+              const scale = Math.min(avail / logoImg.width, avail / logoImg.height);
+              const w = logoImg.width * scale;
+              const h = logoImg.height * scale;
+              ctx.drawImage(logoImg, (size - w) / 2, (size - h) / 2, w, h);
+            } catch {
+              /* logo indisponible → on garde le QR + pastille blanche */
             }
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(png);
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(a.href);
+          }
+
+          canvas.toBlob((png) => {
+            if (png) {
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(png);
+              a.download = filename;
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }
             setBusy(false);
           }, 'image/png');
-        };
-        img.onerror = () => {
-          URL.revokeObjectURL(url);
+        } catch {
           setBusy(false);
-        };
-        img.src = url;
+        }
       }}
       className="rounded-lg border border-[var(--border2)] px-4 py-2 text-sm font-semibold text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)] disabled:opacity-50"
     >
