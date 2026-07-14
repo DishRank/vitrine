@@ -1,5 +1,6 @@
 import { requireOwnedRestaurant, isPremium, getPendingReviewCount } from '@/lib/pro/data';
 import WorkspaceNav from './_components/WorkspaceNav';
+import SaveStatusSlot from './_components/SaveStatusSlot';
 
 /**
  * Contexte d'UN établissement (segment [id], sous le shell persistant /pro/r).
@@ -31,7 +32,8 @@ export default async function RestaurantWorkspaceLayout({
             {[resto.address, resto.city].filter(Boolean).join(' · ') || '—'}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-3">
+          <SaveStatusSlot />
           <a
             href={`/menu/${id}`}
             target="_blank"

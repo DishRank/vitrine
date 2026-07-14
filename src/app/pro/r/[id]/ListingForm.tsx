@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { inputCls, labelCls } from '../../_components/fields';
-import { useAutoSave, type SaveStatus } from '../../_components/useAutoSave';
+import { useAutoSave } from '../../_components/useAutoSave';
+import { setSaveStatus } from '../../_components/saveStatusStore';
 import CuisineAutocomplete from './CuisineAutocomplete';
 
 export interface ListingInitial {
@@ -15,14 +16,6 @@ export interface ListingInitial {
   price_level: number | null;
   cuisines: string[];
 }
-
-const STATUS: Record<SaveStatus, { text: string; cls: string } | null> = {
-  idle: { text: 'Sauvegarde automatique', cls: 'text-[var(--text3)]' },
-  pending: { text: 'Modification…', cls: 'text-[var(--text3)]' },
-  saving: { text: 'Enregistrement…', cls: 'text-[var(--text3)]' },
-  saved: { text: 'Enregistré ✓', cls: 'text-[var(--accent-success)]' },
-  error: { text: 'Échec — nouvelle tentative…', cls: 'text-red-500' },
-};
 
 export default function ListingForm({ id, initial }: { id: string; initial: ListingInitial }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -45,7 +38,13 @@ export default function ListingForm({ id, initial }: { id: string; initial: List
   }, [id]);
 
   const { status, schedule, flush } = useAutoSave(save);
-  const st = STATUS[status] ?? STATUS.idle;
+
+  // Publie l'état d'auto-save dans l'en-tête du workspace (à côté d'« Aperçu
+  // public »), pas dans le pied du formulaire. Remise à idle en quittant la fiche.
+  useEffect(() => {
+    setSaveStatus(status);
+  }, [status]);
+  useEffect(() => () => setSaveStatus('idle'), []);
 
   // Déclenchement au niveau de CHAQUE champ (onChange React fiable, contrairement
   // à onInput/onChange au niveau du <form> en React 19). Débounce dans le hook.
@@ -114,15 +113,6 @@ export default function ListingForm({ id, initial }: { id: string; initial: List
           </div>
         </div>
       </section>
-
-      <div className="sticky bottom-0 -mx-4 flex items-center gap-2 border-t border-[var(--border2)] bg-[var(--bg)]/90 px-4 py-3 backdrop-blur">
-        <span
-          className={`inline-block h-2 w-2 rounded-full ${
-            status === 'saved' ? 'bg-[var(--accent-success)]' : status === 'error' ? 'bg-red-500' : status === 'idle' ? 'bg-[var(--text3)]' : 'bg-[var(--primary)] animate-pulse'
-          }`}
-        />
-        <span className={`text-sm font-semibold ${st?.cls}`}>{st?.text}</span>
-      </div>
     </form>
   );
 }
