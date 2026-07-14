@@ -512,6 +512,78 @@ export async function reorderAction(
   return { ok: true };
 }
 
+/**
+ * Déplace un plat vers une AUTRE catégorie (glisser-déposer inter-catégories) :
+ * met à jour son `section_id` puis renumérote l'ordre des plats de la catégorie
+ * cible. `orderedIds` = les ids de la catégorie cible dans le nouvel ordre (le
+ * plat déplacé inclus). La catégorie source garde un trou dans display_order —
+ * sans effet, l'ordre relatif reste correct. Last-write-wins (comme reorder).
+ */
+export async function moveItemAction(
+  restaurantId: string,
+  itemId: string,
+  targetSectionId: string,
+  orderedIds: string[]
+): Promise<MenuActionState> {
+  if (!itemId || !targetSectionId) return { error: 'Déplacement invalide.' };
+  if (!Array.isArray(orderedIds) || orderedIds.length > 500) return { error: 'Liste invalide.' };
+  const ctx = await assertOwner(restaurantId);
+  if (!ctx) return FAIL_OWNER;
+  const { supabase } = ctx;
+
+  // La catégorie cible doit appartenir à ce resto (id client non fiable).
+  const { data: sec } = await supabase
+    .from('menu_sections')
+    .select('id')
+    .eq('id', targetSectionId)
+    .eq('restaurant_id', restaurantId)
+    .maybeSingle();
+  if (!sec) return { error: 'Catégorie de destination introuvable.' };
+
+  // 1) rattacher le plat à la catégorie cible.
+  const { error: moveErr } = await supabase
+    .from('menu_items')
+    .update({ section_id: targetSectionId })
+    .eq('id', itemId)
+    .eq('restaurant_id', restaurantId);
+  if (moveErr) return { error: mapMenuError(moveErr) };
+
+  // 2) renuméroter l'ordre de la catégorie cible (le plat déplacé y est désormais).
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabase
+      .from('menu_items')
+      .update({ display_order: i })
+      .eq('id', orderedIds[i])
+      .eq('restaurant_id', restaurantId);
+    if (error) return { error: mapMenuError(error) };
+  }
+  await logProEvent(supabase, 'pro_menu_edit', restaurantId);
+  revalidateMenu(restaurantId);
+  return { ok: true };
+}
+
+// ── Langues d'affichage du menu ──────────────────────────────────────────────
+
+const MENU_TARGET_SET = new Set(['en', 'es', 'de', 'it']);
+
+/** Enregistre les langues activées par l'owner (sous-ensemble de en/es/de/it) ;
+ *  le français reste toujours la source. Le menu web n'offrira que `fr + celles-ci`. */
+export async function setMenuLanguagesAction(
+  restaurantId: string,
+  langs: string[]
+): Promise<MenuActionState> {
+  const ctx = await assertOwner(restaurantId);
+  if (!ctx) return FAIL_OWNER;
+  const clean = [...new Set(langs)].filter((l) => MENU_TARGET_SET.has(l));
+  const { error } = await ctx.supabase
+    .from('restaurants')
+    .update({ menu_languages: clean } as never)
+    .eq('id', restaurantId);
+  if (error) return { error: 'Une erreur est survenue. Réessayez.' };
+  revalidateMenu(restaurantId);
+  return { ok: true };
+}
+
 // ── Traduction automatique (PREMIUM, edge fn menu-translate) ──────────────────
 
 export interface TranslateResult {

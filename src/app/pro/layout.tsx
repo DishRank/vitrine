@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Outfit } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
+import FlagPolyfill from '@/components/FlagPolyfill';
 import '../globals.css';
 
 // Applique la préférence de thème (localStorage) AVANT le paint → pas de flash.
@@ -21,7 +22,12 @@ const THEME_INIT = `try{var t=localStorage.getItem('dr-pro-theme');if(t==='dark'
  */
 export const dynamic = 'force-dynamic';
 
-const outfit = Outfit({ subsets: ['latin'], display: 'swap', variable: '--font-outfit' });
+// Inter : dessinée pour les interfaces denses, très lisible aux petites tailles
+// (l'espace pro est une « app » de gestion, pas une page vitrine) — plus
+// pratique que la police géométrique Outfit du site. Scopée à /pro : c'est le
+// SEUL segment qui définit --font-inter (cf. font-family de body dans
+// globals.css, qui retombe sur --font-outfit ailleurs).
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 
 export const metadata: Metadata = {
   title: { default: 'Espace restaurateur — DishRank', template: '%s — DishRank Pro' },
@@ -40,11 +46,15 @@ export default async function ProLayout({ children }: { children: React.ReactNod
     // suppressHydrationWarning : le script d'init modifie la classe de <html>
     // (thème) avant l'hydratation et le navigateur retire l'attribut nonce du
     // DOM → mismatch attendu server/client, à ne pas signaler.
-    <html lang="fr" className={outfit.variable} suppressHydrationWarning>
+    <html lang="fr" className={inter.variable} suppressHydrationWarning>
       <head>
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
+        {/* Injecte la police « Twemoji Country Flags » → les emoji drapeau des
+            types de cuisine s'affichent en icônes (et pas « FR » sur Windows).
+            globals.css met déjà cette police en tête du font-family de body. */}
+        <FlagPolyfill />
         {children}
       </body>
     </html>

@@ -133,7 +133,7 @@ export default function ItemForm({
   const availabilityPayload = { services, days, seasonFrom, seasonTo };
 
   return (
-    <form action={action} className="rounded-xl border border-[var(--border2)] bg-[var(--bg)] p-4 space-y-3">
+    <form action={action} className="space-y-4">
       {item ? <input type="hidden" name="id" value={item.id} /> : null}
       {item ? <input type="hidden" name="expectedUpdatedAt" value={item.updated_at} /> : null}
       <input type="hidden" name="sectionId" value={sectionId} />

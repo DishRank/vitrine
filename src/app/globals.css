@@ -88,7 +88,13 @@ html {
 }
 
 html, body {
-  font-family: 'Twemoji Country Flags', var(--font-outfit), 'Outfit', -apple-system, sans-serif;
+  /* Police pilotée par le segment : /pro définit --font-inter (Inter, lisible
+     pour une app de gestion) ; le reste du site définit --font-outfit (Outfit,
+     vitrine). Fallback IMBRIQUÉ obligatoire : un var() sans valeur de repli qui
+     pointe une variable non définie invalide TOUTE la déclaration font-family
+     (→ serif). La chaîne inter→outfit→système garantit qu'un seul des deux
+     suffit sur chaque segment. */
+  font-family: 'Twemoji Country Flags', var(--font-inter, var(--font-outfit, -apple-system)), BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;

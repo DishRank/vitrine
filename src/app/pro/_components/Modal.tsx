@@ -53,8 +53,9 @@ export default function Modal({
       if (oy === 'auto' || oy === 'scroll') lock(el);
     });
 
-    // Focus la modale pour l'accessibilité clavier.
-    panelRef.current?.focus();
+    // Focus la modale pour l'accessibilité clavier — SAUF si un champ interne a
+    // déjà pris le focus (autoFocus d'un formulaire), qu'on ne veut pas voler.
+    if (!panelRef.current?.contains(document.activeElement)) panelRef.current?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
       locked.forEach(({ el, prev }) => {

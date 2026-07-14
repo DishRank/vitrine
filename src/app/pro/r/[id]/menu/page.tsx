@@ -13,5 +13,13 @@ export default async function MenuPage({ params }: { params: Promise<{ id: strin
   const menu = menus[0] ?? null;
   const initialTheme = normalizeMenuTheme(resto.menu_theme);
 
-  return <MenuEditor restaurantId={id} menu={menu} premium={premium} initialTheme={initialTheme} />;
+  return (
+    <MenuEditor
+      restaurantId={id}
+      menu={menu}
+      premium={premium}
+      initialTheme={initialTheme}
+      menuLanguages={resto.menu_languages ?? []}
+    />
+  );
 }

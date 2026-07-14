@@ -1,39 +1,38 @@
 'use client';
 
 import { useActionState, useEffect, useState, useTransition } from 'react';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   deleteSectionAction,
   setSectionVisibleAction,
   upsertSectionAction,
   deleteItemAction,
   setItemFlagAction,
-  reorderAction,
   type MenuActionState,
 } from './menuActions';
 import type { EditorSection, EditorItem } from './menuData';
 import type { FormulaSources } from './menuSources';
+import type { DragData } from './menuDnd';
 import { ALLERGEN_LABEL, DIET_LABEL, formatPrice } from './vocab';
 import ItemForm from './ItemForm';
 import FormulaForm from './FormulaForm';
 import PhotoControl from './PhotoControl';
+import Modal from '../../../_components/Modal';
+import ConfirmDialog from '../../../_components/ConfirmDialog';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
 
 export default function SectionBlock({
   restaurantId,
   menuId,
   section,
-  index,
-  total,
-  siblingIds,
   sources,
   isChild = false,
 }: {
   restaurantId: string;
   menuId: string;
   section: EditorSection;
-  index: number;
-  total: number;
-  siblingIds: string[];
   sources: FormulaSources;
   /** Sous-catégorie : pas de « + Sous-catégorie » (profondeur bornée à 1). */
   isChild?: boolean;
@@ -45,7 +44,19 @@ export default function SectionBlock({
   const [addingSub, setAddingSub] = useState(false);
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [editFormulaId, setEditFormulaId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<{ title: string; message: React.ReactNode; action: () => void } | null>(null);
   const [err, setErr] = useState('');
+
+  // La catégorie est déplaçable (poignée dans l'en-tête) parmi ses sœurs…
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: section.id,
+    data: { type: 'section', parentId: section.parent_section_id ?? null, label: section.name } satisfies DragData,
+  });
+  // …et sert de zone de dépôt pour les plats (y compris quand elle est vide).
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `container:${section.id}`,
+    data: { type: 'container', sectionId: section.id } satisfies DragData,
+  });
 
   const run = (p: Promise<MenuActionState>) =>
     start(async () => {
@@ -54,146 +65,134 @@ export default function SectionBlock({
       if (r.error) setErr(r.error);
     });
 
-  const moveSection = (dir: -1 | 1) => {
-    const next = [...siblingIds];
-    const j = index + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[index], next[j]] = [next[j], next[index]];
-    run(reorderAction(restaurantId, 'menu_sections', next));
-  };
+  const editingItem = editItemId ? section.items.find((it) => it.id === editItemId) : undefined;
+  const editingFormula = editFormulaId ? section.items.find((it) => it.id === editFormulaId) : undefined;
 
-  const moveItem = (items: EditorItem[], i: number, dir: -1 | 1) => {
-    const ids = items.map((it) => it.id);
-    const j = i + dir;
-    if (j < 0 || j >= ids.length) return;
-    [ids[i], ids[j]] = [ids[j], ids[i]];
-    run(reorderAction(restaurantId, 'menu_items', ids));
-  };
+  const itemIds = section.items.map((i) => i.id);
+  const childIds = section.children.map((c) => c.id);
+  const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    <section className={`rounded-2xl border border-[var(--border2)] bg-[var(--surface)] ${section.is_visible ? '' : 'opacity-60'}`}>
+    <section
+      ref={setNodeRef}
+      style={style}
+      className={`overflow-hidden rounded-2xl border bg-[var(--surface)] ${isDragging ? 'z-10 border-[var(--primary)] shadow-[0_12px_32px_var(--card-shadow)]' : 'border-[var(--border2)]'} ${section.is_visible ? '' : 'opacity-60'}`}
+    >
       {/* En-tête de catégorie */}
-      <header className="flex items-start justify-between gap-3 p-4 border-b border-[var(--border2)]">
-        {editingSection ? (
-          <SectionForm
-            restaurantId={restaurantId}
-            section={section}
-            onDone={() => setEditingSection(false)}
-          />
-        ) : (
-          <>
-            <div className="min-w-0">
-              <h3 className="font-extrabold truncate">
-                {section.name}
-                {!section.is_visible ? <span className="ml-2 text-xs font-semibold text-[var(--text3)]">(masquée)</span> : null}
-              </h3>
-              {section.description ? <p className="text-sm text-[var(--text2)] truncate">{section.description}</p> : null}
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <button title="Monter" disabled={pending || index === 0} onClick={() => moveSection(-1)} className="rounded p-1 text-[var(--text2)] hover:text-[var(--text)] disabled:opacity-30">↑</button>
-              <button title="Descendre" disabled={pending || index === total - 1} onClick={() => moveSection(1)} className="rounded p-1 text-[var(--text2)] hover:text-[var(--text)] disabled:opacity-30">↓</button>
-              <button onClick={() => run(setSectionVisibleAction(restaurantId, section.id, !section.is_visible))} disabled={pending} className="rounded px-2 py-1 text-xs font-semibold text-[var(--text2)] hover:text-[var(--primary)]">
-                {section.is_visible ? 'Masquer' : 'Afficher'}
-              </button>
-              <button onClick={() => setEditingSection(true)} className="rounded px-2 py-1 text-xs font-semibold text-[var(--text2)] hover:text-[var(--primary)]">Renommer</button>
-              <button
-                onClick={() => { if (confirm(`Supprimer la catégorie « ${section.name} » et tous ses plats ?`)) run(deleteSectionAction(restaurantId, section.id)); }}
-                disabled={pending}
-                className="rounded px-2 py-1 text-xs font-semibold text-red-500 hover:underline"
-              >Supprimer</button>
-            </div>
-          </>
-        )}
+      <header className="flex items-start justify-between gap-2 border-b border-[var(--border2)] bg-[var(--surface-var)]/40 p-4">
+        <div className="flex min-w-0 items-start gap-2">
+          <DragHandle attributes={attributes} listeners={listeners} label="Déplacer la catégorie" />
+          <div className="min-w-0">
+            <h3 className="flex items-center gap-2 font-extrabold">
+              <span className="truncate">{section.name}</span>
+              {!section.is_visible ? (
+                <span className="shrink-0 rounded-full bg-[var(--surface-var)] px-2 py-0.5 text-[11px] font-bold text-[var(--text3)]">Masquée</span>
+              ) : null}
+            </h3>
+            {section.description ? <p className="mt-0.5 text-sm text-[var(--text2)]">{section.description}</p> : null}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <IconBtn
+            title={section.is_visible ? 'Masquer sur le menu' : 'Afficher sur le menu'}
+            disabled={pending}
+            onClick={() => run(setSectionVisibleAction(restaurantId, section.id, !section.is_visible))}
+          >
+            {section.is_visible ? <Eye /> : <EyeOff />}
+          </IconBtn>
+          <IconBtn title="Renommer la catégorie" onClick={() => setEditingSection(true)}>
+            <Pencil />
+          </IconBtn>
+          <IconBtn
+            title="Supprimer la catégorie"
+            danger
+            disabled={pending}
+            onClick={() =>
+              setConfirming({
+                title: 'Supprimer la catégorie',
+                message: (
+                  <>
+                    La catégorie <strong className="text-[var(--text)]">« {section.name} »</strong>
+                    {section.items.length > 0 ? ` et ses ${section.items.length} plat${section.items.length > 1 ? 's' : ''}` : ''} seront supprimés. Cette action est définitive.
+                  </>
+                ),
+                action: () => run(deleteSectionAction(restaurantId, section.id)),
+              })
+            }
+          >
+            <Trash />
+          </IconBtn>
+        </div>
       </header>
 
-      {/* Plats */}
-      <ul className="divide-y divide-[var(--border2)]">
-        {section.items.map((it, i) => (
-          <li key={it.id} className="p-4">
-            {editItemId === it.id ? (
-              <ItemForm restaurantId={restaurantId} sectionId={section.id} item={it} onDone={() => setEditItemId(null)} />
-            ) : editFormulaId === it.id ? (
-              <FormulaForm restaurantId={restaurantId} sectionId={section.id} item={it} sources={sources} onDone={() => setEditFormulaId(null)} />
-            ) : (
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`font-bold ${it.is_visible ? '' : 'text-[var(--text3)] line-through'}`}>{it.name}</span>
-                    {it.price != null ? <span className="text-sm font-semibold text-[var(--text2)]">{formatPrice(it.price, it.currency)}</span> : null}
-                    {it.is_signature ? <span className="text-xs font-bold text-[var(--primary)]">⭐ Signature</span> : null}
-                    {!it.is_available ? <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-xs font-bold text-red-500">Épuisé</span> : null}
-                  </div>
-                  {it.description ? <p className="mt-0.5 text-sm text-[var(--text2)] line-clamp-2">{it.description}</p> : null}
-                  {it.allergens.length || it.diet_tags.length ? (
-                    <p className="mt-1 text-xs text-[var(--text3)]">
-                      {[...it.diet_tags.map((d) => DIET_LABEL[d] ?? d), ...it.allergens.map((a) => `⚠ ${ALLERGEN_LABEL[a] ?? a}`)].join(' · ')}
-                    </p>
-                  ) : null}
-                  {it.kind === 'item' ? (
-                    <div className="mt-2">
-                      <PhotoControl restaurantId={restaurantId} itemId={it.id} photoUrl={it.photo_url} />
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <div className="flex items-center gap-1">
-                    <button title="Monter" disabled={pending || i === 0} onClick={() => moveItem(section.items, i, -1)} className="rounded p-1 text-[var(--text2)] hover:text-[var(--text)] disabled:opacity-30">↑</button>
-                    <button title="Descendre" disabled={pending || i === section.items.length - 1} onClick={() => moveItem(section.items, i, 1)} className="rounded p-1 text-[var(--text2)] hover:text-[var(--text)] disabled:opacity-30">↓</button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => run(setItemFlagAction(restaurantId, it.id, 'is_available', !it.is_available))} disabled={pending} className="text-xs font-semibold text-[var(--text2)] hover:text-[var(--primary)]">
-                      {it.is_available ? 'Marquer épuisé' : 'Rendre dispo'}
-                    </button>
-                    {it.kind === 'formula' ? (
-                      <>
-                        <span className="rounded bg-[var(--primary-container)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--primary)]">Formule</span>
-                        <button onClick={() => setEditFormulaId(it.id)} className="text-xs font-semibold text-[var(--primary)] hover:underline">Modifier</button>
-                      </>
-                    ) : (
-                      <button onClick={() => setEditItemId(it.id)} className="text-xs font-semibold text-[var(--primary)] hover:underline">Modifier</button>
-                    )}
-                    <button onClick={() => { if (confirm(`Supprimer « ${it.name} » ?`)) run(deleteItemAction(restaurantId, it.id)); }} disabled={pending} className="text-xs font-semibold text-red-500 hover:underline">Suppr.</button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {/* Ajouter un plat / une formule / une sous-catégorie */}
-      <div className="p-4 pt-3">
-        {addingItem ? (
-          <ItemForm restaurantId={restaurantId} sectionId={section.id} onDone={() => setAddingItem(false)} />
-        ) : addingFormula ? (
-          <FormulaForm restaurantId={restaurantId} sectionId={section.id} sources={sources} onDone={() => setAddingFormula(false)} />
+      {/* Plats (zone de dépôt) */}
+      <div ref={setDropRef} className={isOver ? 'bg-[var(--primary-container)]/40' : ''}>
+        {section.items.length > 0 ? (
+          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+            <ul className="divide-y divide-[var(--border2)]">
+              {section.items.map((it) => (
+                <SortableItemRow
+                  key={it.id}
+                  restaurantId={restaurantId}
+                  sectionId={section.id}
+                  item={it}
+                  pending={pending}
+                  onEdit={() => (it.kind === 'formula' ? setEditFormulaId(it.id) : setEditItemId(it.id))}
+                  onToggleAvailable={() => run(setItemFlagAction(restaurantId, it.id, 'is_available', !it.is_available))}
+                  onDelete={() =>
+                    setConfirming({
+                      title: it.kind === 'formula' ? 'Supprimer la formule' : 'Supprimer le plat',
+                      message: (
+                        <>
+                          <strong className="text-[var(--text)]">« {it.name} »</strong> sera définitivement supprimé de votre carte.
+                        </>
+                      ),
+                      action: () => run(deleteItemAction(restaurantId, it.id)),
+                    })
+                  }
+                />
+              ))}
+            </ul>
+          </SortableContext>
         ) : (
-          <div className="flex flex-wrap items-center gap-4">
-            <button onClick={() => setAddingItem(true)} className="text-sm font-bold text-[var(--primary)] hover:underline">+ Ajouter un plat</button>
-            <button onClick={() => setAddingFormula(true)} className="text-sm font-bold text-[var(--primary)] hover:underline">+ Ajouter une formule</button>
-            {!isChild ? (
-              <button onClick={() => setAddingSub(true)} className="text-sm font-semibold text-[var(--text2)] hover:text-[var(--primary)]">+ Sous-catégorie</button>
-            ) : null}
-          </div>
+          <p className={`px-4 py-6 text-center text-sm ${isOver ? 'text-[var(--primary)]' : 'text-[var(--text3)]'}`}>
+            {isOver ? 'Déposer le plat ici' : 'Aucun plat. Ajoutez-en un, ou glissez-en un ici.'}
+          </p>
         )}
       </div>
 
-      {/* Sous-catégories (1 niveau) */}
+      {/* Ajouter un plat / une formule / une sous-catégorie */}
+      <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border2)] p-3">
+        <button
+          onClick={() => setAddingItem(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
+        >
+          <Plus /> Ajouter un plat
+        </button>
+        <button
+          onClick={() => setAddingFormula(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)]"
+        >
+          <Plus /> Formule
+        </button>
+        {!isChild ? (
+          <button
+            onClick={() => setAddingSub(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-[var(--text2)] transition-colors hover:text-[var(--primary)]"
+          >
+            <Plus /> Sous-catégorie
+          </button>
+        ) : null}
+      </div>
+
+      {/* Sous-catégories (1 niveau) — réordonnables entre elles */}
       {!isChild && (section.children.length > 0 || addingSub) ? (
         <div className="space-y-3 border-t border-[var(--border2)] bg-[var(--bg)]/50 p-4 pl-5 sm:pl-6">
-          {section.children.map((child, ci) => (
-            <SectionBlock
-              key={child.id}
-              restaurantId={restaurantId}
-              menuId={menuId}
-              section={child}
-              index={ci}
-              total={section.children.length}
-              siblingIds={section.children.map((c) => c.id)}
-              sources={sources}
-              isChild
-            />
-          ))}
+          <SortableContext items={childIds} strategy={verticalListSortingStrategy}>
+            {section.children.map((child) => (
+              <SectionBlock key={child.id} restaurantId={restaurantId} menuId={menuId} section={child} sources={sources} isChild />
+            ))}
+          </SortableContext>
           {addingSub ? (
             <AddSubSectionForm restaurantId={restaurantId} menuId={menuId} parentId={section.id} onDone={() => setAddingSub(false)} />
           ) : null}
@@ -201,7 +200,143 @@ export default function SectionBlock({
       ) : null}
 
       {err ? <p className="px-4 pb-3 text-[13px] font-medium text-red-500">{err}</p> : null}
+
+      {/* ── Modales d'édition (centrées, sans décaler la liste) ─────────────── */}
+      <Modal open={addingItem} onClose={() => setAddingItem(false)} title="Ajouter un plat" maxWidth="max-w-2xl">
+        <ItemForm restaurantId={restaurantId} sectionId={section.id} onDone={() => setAddingItem(false)} />
+      </Modal>
+      <Modal open={!!editingItem} onClose={() => setEditItemId(null)} title="Modifier le plat" maxWidth="max-w-2xl">
+        {editingItem ? (
+          <ItemForm restaurantId={restaurantId} sectionId={section.id} item={editingItem} onDone={() => setEditItemId(null)} />
+        ) : null}
+      </Modal>
+
+      <Modal open={addingFormula} onClose={() => setAddingFormula(false)} title="Ajouter une formule" maxWidth="max-w-2xl">
+        <FormulaForm restaurantId={restaurantId} sectionId={section.id} sources={sources} onDone={() => setAddingFormula(false)} />
+      </Modal>
+      <Modal open={!!editingFormula} onClose={() => setEditFormulaId(null)} title="Modifier la formule" maxWidth="max-w-2xl">
+        {editingFormula ? (
+          <FormulaForm restaurantId={restaurantId} sectionId={section.id} item={editingFormula} sources={sources} onDone={() => setEditFormulaId(null)} />
+        ) : null}
+      </Modal>
+
+      <Modal open={editingSection} onClose={() => setEditingSection(false)} title="Renommer la catégorie" maxWidth="max-w-md">
+        <SectionForm restaurantId={restaurantId} section={section} onDone={() => setEditingSection(false)} />
+      </Modal>
+
+      <ConfirmDialog
+        open={!!confirming}
+        title={confirming?.title ?? ''}
+        message={confirming?.message ?? ''}
+        confirmLabel="Supprimer"
+        onConfirm={() => confirming?.action()}
+        onClose={() => setConfirming(null)}
+      />
     </section>
+  );
+}
+
+/** Une ligne de plat, déplaçable (poignée de glissement à gauche). */
+function SortableItemRow({
+  restaurantId,
+  sectionId,
+  item,
+  pending,
+  onEdit,
+  onToggleAvailable,
+  onDelete,
+}: {
+  restaurantId: string;
+  sectionId: string;
+  item: EditorItem;
+  pending: boolean;
+  onEdit: () => void;
+  onToggleAvailable: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    data: { type: 'item', sectionId, label: item.name } satisfies DragData,
+  });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-start gap-2 p-4 ${isDragging ? 'rounded-xl bg-[var(--surface-var)] opacity-80' : 'transition-colors hover:bg-[var(--surface-var)]/30'}`}
+    >
+      <DragHandle attributes={attributes} listeners={listeners} label="Déplacer le plat" />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className={`font-bold ${item.is_visible ? '' : 'text-[var(--text3)] line-through'}`}>{item.name}</span>
+          {item.kind === 'formula' ? (
+            <span className="rounded-full bg-[var(--primary-container)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary)]">Formule</span>
+          ) : null}
+          {item.price != null ? <span className="tabular text-sm font-semibold text-[var(--text2)]">{formatPrice(item.price, item.currency)}</span> : null}
+          {item.is_signature ? <span className="text-xs font-bold text-[var(--primary)]">⭐ Signature</span> : null}
+          {!item.is_available ? <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-bold text-red-500">Épuisé</span> : null}
+        </div>
+        {item.description ? <p className="mt-0.5 text-sm text-[var(--text2)] line-clamp-2">{item.description}</p> : null}
+        {item.allergens.length || item.diet_tags.length ? (
+          <p className="mt-1 text-xs text-[var(--text3)]">
+            {[...item.diet_tags.map((d) => DIET_LABEL[d] ?? d), ...item.allergens.map((a) => `⚠ ${ALLERGEN_LABEL[a] ?? a}`)].join(' · ')}
+          </p>
+        ) : null}
+        {item.kind === 'item' ? (
+          <div className="mt-2">
+            <PhotoControl restaurantId={restaurantId} itemId={item.id} photoUrl={item.photo_url} />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex shrink-0 flex-col items-end gap-1.5">
+        <div className="flex items-center gap-0.5">
+          <IconBtn title={item.kind === 'formula' ? 'Modifier la formule' : 'Modifier le plat'} onClick={onEdit}>
+            <Pencil />
+          </IconBtn>
+          <IconBtn title="Supprimer" danger disabled={pending} onClick={onDelete}>
+            <Trash />
+          </IconBtn>
+        </div>
+        <button
+          onClick={onToggleAvailable}
+          disabled={pending}
+          className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-50 ${
+            item.is_available
+              ? 'border-[var(--border2)] text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)]'
+              : 'border-[var(--accent-success)]/40 bg-[var(--accent-success)]/10 text-[var(--accent-success)]'
+          }`}
+        >
+          {item.is_available ? 'Marquer épuisé' : 'Remettre dispo'}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+/** Poignée de glissement (bouton dédié → n'entre pas en conflit avec les clics). */
+function DragHandle({
+  attributes,
+  listeners,
+  label,
+}: {
+  attributes: ReturnType<typeof useSortable>['attributes'];
+  listeners: ReturnType<typeof useSortable>['listeners'];
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      {...attributes}
+      {...listeners}
+      className="mt-0.5 flex h-7 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded text-[var(--text3)] transition-colors hover:bg-[var(--surface-var)] hover:text-[var(--text2)] active:cursor-grabbing"
+    >
+      <Grip />
+    </button>
   );
 }
 
@@ -239,7 +374,7 @@ function AddSubSectionForm({
   );
 }
 
-/** Formulaire inline de renommage/description de catégorie. */
+/** Formulaire de renommage/description de catégorie (dans une modale). */
 function SectionForm({
   restaurantId,
   section,
@@ -257,7 +392,7 @@ function SectionForm({
     if (state.ok) onDone();
   }, [state.ok, onDone]);
   return (
-    <form action={action} className="w-full space-y-2">
+    <form action={action} className="space-y-3">
       <input type="hidden" name="id" value={section.id} />
       <div>
         <label className={labelCls}>Nom de la catégorie</label>
@@ -265,7 +400,7 @@ function SectionForm({
       </div>
       <div>
         <label className={labelCls}>Description (optionnel)</label>
-        <input name="description" type="text" maxLength={200} defaultValue={section.description ?? ''} className={inputCls} />
+        <input name="description" type="text" maxLength={200} defaultValue={section.description ?? ''} placeholder="Ex. Faites maison, servies avec…" className={inputCls} />
       </div>
       <FormError error={state.error} />
       <div className="flex items-center gap-2">
@@ -275,3 +410,49 @@ function SectionForm({
     </form>
   );
 }
+
+// ── Bouton-icône compact + jeu d'icônes (stroke, currentColor) ───────────────
+function IconBtn({
+  title,
+  onClick,
+  disabled,
+  danger,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text2)] transition-colors disabled:opacity-30 ${
+        danger ? 'hover:bg-red-500/10 hover:text-red-500' : 'hover:bg-[var(--surface-var)] hover:text-[var(--text)]'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+type P = { className?: string };
+const svg = (children: React.ReactNode) => {
+  const Icon = (p: P) => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className} aria-hidden>
+      {children}
+    </svg>
+  );
+  return Icon;
+};
+const Pencil = svg(<><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></>);
+const Trash = svg(<><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" /></>);
+const Eye = svg(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>);
+const EyeOff = svg(<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12A3 3 0 1 1 9.88 9.88" /><path d="M1 1l22 22" /></>);
+const Plus = svg(<><path d="M12 5v14" /><path d="M5 12h14" /></>);
+const Grip = svg(<><circle cx="9" cy="6" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="9" cy="18" r="1" /><circle cx="15" cy="6" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="18" r="1" /></>);

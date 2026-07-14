@@ -9,7 +9,7 @@ import {
 import type { EditorMenu } from './menuData';
 import type { MenuThemeConfig } from './themeConstants';
 import { collectFormulaSources } from './menuSources';
-import SectionBlock from './SectionBlock';
+import MenuBoard from './MenuBoard';
 import LanguagePanel from './LanguagePanel';
 import AppearanceButton from './apparence/AppearanceButton';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
@@ -19,11 +19,13 @@ export default function MenuEditor({
   menu,
   premium,
   initialTheme,
+  menuLanguages,
 }: {
   restaurantId: string;
   menu: EditorMenu | null;
   premium: boolean;
   initialTheme: MenuThemeConfig;
+  menuLanguages: string[];
 }) {
   const [pending, start] = useTransition();
   const [addingSection, setAddingSection] = useState(false);
@@ -48,7 +50,6 @@ export default function MenuEditor({
     );
   }
 
-  const sectionIds = menu.sections.map((s) => s.id);
   const formulaSources = collectFormulaSources(menu.sections);
 
   return (
@@ -80,28 +81,21 @@ export default function MenuEditor({
         </div>
       </div>
 
-      <LanguagePanel restaurantId={restaurantId} translatedLocales={menu.translatedLocales} premium={premium} />
+      <LanguagePanel
+        restaurantId={restaurantId}
+        translatedLocales={menu.translatedLocales}
+        menuLanguages={menuLanguages}
+        premium={premium}
+      />
 
-      {/* Catégories */}
+      {/* Catégories — glisser-déposer (réordonner catégories & plats, déplacer
+          un plat d'une catégorie à l'autre) orchestré par MenuBoard. */}
       {menu.sections.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-[var(--border2)] bg-[var(--surface)] p-6 text-center text-sm text-[var(--text2)]">
           Votre carte est vide. Ajoutez une première catégorie (Entrées, Plats, Desserts…).
         </p>
       ) : (
-        <div className="space-y-3">
-          {menu.sections.map((s, i) => (
-            <SectionBlock
-              key={s.id}
-              restaurantId={restaurantId}
-              menuId={menu.id}
-              section={s}
-              index={i}
-              total={menu.sections.length}
-              siblingIds={sectionIds}
-              sources={formulaSources}
-            />
-          ))}
-        </div>
+        <MenuBoard restaurantId={restaurantId} menu={menu} sources={formulaSources} />
       )}
 
       {/* Ajouter une catégorie */}
