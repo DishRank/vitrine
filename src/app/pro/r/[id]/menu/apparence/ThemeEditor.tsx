@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
-import { updateThemeAction } from '../mediaActions';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { uploadMenuImage } from '../imageUpload';
+import { useAutoSave } from '@/app/pro/_components/useAutoSave';
+import { setSaveStatus } from '@/app/pro/_components/saveStatusStore';
 import {
   MENU_THEME_PRESETS,
   MENU_THEME_ORDER,
@@ -23,8 +24,7 @@ export default function ThemeEditor({
   premium: boolean;
 }) {
   const [theme, setTheme] = useState<MenuThemeConfig>(initial);
-  const [pending, start] = useTransition();
-  const [notice, setNotice] = useState('');
+  const [uploadError, setUploadError] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -34,29 +34,48 @@ export default function ThemeEditor({
   const preset = MENU_THEME_PRESETS[theme.theme];
   const fontFamily = theme.font === 'serif' ? 'Georgia, "Times New Roman", serif' : 'system-ui, sans-serif';
 
-  const save = () =>
-    start(async () => {
-      setNotice('');
-      const r = await updateThemeAction(restaurantId, theme);
-      setNotice(r.ok ? 'Apparence enregistrée ✓' : r.error || 'Erreur.');
+  // Auto-save en arrière-plan (comme la fiche) : POST /api/pro/theme, pas de
+  // refresh de route → l'aperçu en direct (état local) reste fluide.
+  const save = useCallback(async () => {
+    const res = await fetch('/api/pro/theme', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: restaurantId, theme }),
     });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    return { ok: res.ok && !!json.ok, error: json.error };
+  }, [restaurantId, theme]);
+
+  const { status, error, schedule } = useAutoSave(save);
+
+  // Chaque changement de thème (clic preset/accent/police/photos/logo) planifie
+  // une sauvegarde. On saute le premier rendu (état initial inchangé).
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    schedule();
+  }, [theme, schedule]);
+
+  // Publie l'état d'auto-save dans l'en-tête du workspace ; remise à idle en sortant.
+  useEffect(() => {
+    setSaveStatus(status);
+  }, [status]);
+  useEffect(() => () => setSaveStatus('idle'), []);
 
   const reset = () => {
-    const def: MenuThemeConfig = { theme: 'ivory', accent: '#AE8324', font: 'serif', photos: true, logo_url: null };
-    setTheme(def);
-    start(async () => {
-      const r = await updateThemeAction(restaurantId, def);
-      setNotice(r.ok ? 'Apparence réinitialisée.' : r.error || 'Erreur.');
-    });
+    setTheme({ theme: 'ivory', accent: '#AE8324', font: 'serif', photos: true, logo_url: null });
   };
 
   const onLogo = async (file: File) => {
     setUploading(true);
-    setNotice('');
+    setUploadError('');
     const r = await uploadMenuImage(file);
     setUploading(false);
     if (r.ok && r.url) set('logo_url', r.url);
-    else setNotice(r.error || "Échec de l'envoi du logo.");
+    else setUploadError(r.error || "Échec de l'envoi du logo.");
   };
 
   const disabled = !premium;
@@ -138,6 +157,7 @@ export default function ThemeEditor({
             </button>
             {theme.logo_url ? <button onClick={() => set('logo_url', null)} className="text-sm font-semibold text-red-500 hover:underline">Retirer</button> : null}
           </div>
+          {uploadError ? <p className="mt-2 text-sm font-medium text-red-500">{uploadError}</p> : null}
         </section>
 
         <section className={disabled ? 'opacity-60 pointer-events-none' : ''}>
@@ -152,15 +172,17 @@ export default function ThemeEditor({
           </p>
         </section>
 
-        <div className="flex items-center gap-3 pt-2">
-          <button onClick={save} disabled={pending} className="rounded-xl bg-[var(--primary)] px-5 py-3 text-[15px] font-bold text-white hover:opacity-90 disabled:opacity-50">
-            {pending ? 'Enregistrement…' : 'Enregistrer l’apparence'}
-          </button>
-          {!isDefaultTheme(theme) ? (
-            <button onClick={reset} disabled={pending} className="text-sm font-semibold text-[var(--text2)] hover:text-[var(--text)]">Réinitialiser</button>
-          ) : null}
-          {notice ? <span className="text-sm font-medium text-[var(--text2)]">{notice}</span> : null}
-        </div>
+        {premium ? (
+          <div className="flex items-center gap-3 pt-2 text-sm">
+            <span className="text-[var(--text3)]">
+              Vos changements sont enregistrés automatiquement.
+            </span>
+            {!isDefaultTheme(theme) ? (
+              <button onClick={reset} className="font-semibold text-[var(--text2)] hover:text-[var(--text)]">Réinitialiser</button>
+            ) : null}
+            {status === 'error' && error ? <span className="font-medium text-red-500">{error}</span> : null}
+          </div>
+        ) : null}
       </div>
 
       {/* Aperçu en direct */}
