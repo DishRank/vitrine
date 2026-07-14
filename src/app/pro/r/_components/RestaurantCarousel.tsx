@@ -2,6 +2,8 @@
 
 import { useRef, useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Modal from '@/app/pro/_components/Modal';
+import ClaimClient from '@/app/pro/claim/ClaimClient';
 
 export interface CarouselResto {
   id: string;
@@ -22,6 +24,7 @@ export default function RestaurantCarousel({ restaurants }: { restaurants: Carou
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [claimOpen, setClaimOpen] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // /pro/r/<id><suffix>  → activeId + suffixe d'onglet (/menu, /menu/apparence…)
@@ -91,17 +94,26 @@ export default function RestaurantCarousel({ restaurants }: { restaurants: Carou
           );
         })}
 
-        {/* Card « + » revendiquer */}
+        {/* Card « + » revendiquer → modale (ouverture instantanée, sans quitter le workspace) */}
         <button
           type="button"
-          onClick={() => startTransition(() => router.push('/pro/claim'))}
-          onMouseEnter={() => router.prefetch('/pro/claim')}
+          onClick={() => setClaimOpen(true)}
           className="flex w-[128px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-[var(--border2)] bg-[var(--surface)] py-4 text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
         >
           <span className="text-2xl leading-none">＋</span>
           <span className="text-xs font-bold">Revendiquer</span>
         </button>
       </div>
+
+      <Modal
+        open={claimOpen}
+        onClose={() => setClaimOpen(false)}
+        title="Revendiquer un établissement"
+        subtitle="Retrouvez votre restaurant et prouvez que vous en êtes responsable."
+        maxWidth="max-w-lg"
+      >
+        <ClaimClient onDone={() => setClaimOpen(false)} />
+      </Modal>
     </div>
   );
 }

@@ -18,7 +18,7 @@ const btn =
   'rounded-xl bg-[var(--primary)] px-4 py-3 text-[15px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50';
 const linkBtn = 'text-sm font-semibold text-[var(--text2)] hover:text-[var(--primary)]';
 
-export default function ClaimClient() {
+export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
   const router = useRouter();
   const [pending, start] = useTransition();
 
@@ -100,7 +100,7 @@ export default function ClaimClient() {
         <p className="mt-1 text-sm text-[var(--text2)]">
           {picked?.name} vous appartient désormais. Vous pouvez gérer sa fiche et ses avis.
         </p>
-        <button onClick={() => router.push(picked ? `/pro/r/${picked.id}` : '/pro')} className={`${btn} mt-5 w-full`}>
+        <button onClick={() => { onDone?.(); router.push(picked ? `/pro/r/${picked.id}` : '/pro'); }} className={`${btn} mt-5 w-full`}>
           Gérer mon établissement
         </button>
       </div>
@@ -116,7 +116,7 @@ export default function ClaimClient() {
           Nous vérifions votre demande pour {picked?.name}. Vous serez notifié par email dès qu&apos;elle
           est validée.
         </p>
-        <button onClick={() => router.push('/pro')} className={`${btn} mt-5 w-full`}>
+        <button onClick={() => { onDone?.(); router.push('/pro'); }} className={`${btn} mt-5 w-full`}>
           Retour à mes établissements
         </button>
       </div>
