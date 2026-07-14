@@ -48,12 +48,15 @@ export default function ReviewCard({
   restaurantId,
   review,
   canPin,
+  thankTemplate,
 }: {
   restaurantId: string;
   review: ProReview;
   canPin: boolean;
+  thankTemplate: string;
 }) {
   const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState('');
   const [upsertState, upsert] = useActionState<ReplyActionState, FormData>(
     upsertReplyAction.bind(null, restaurantId),
     {}
@@ -70,7 +73,10 @@ export default function ReviewCard({
   // Après une mise à jour réussie, revalidatePath re-rend la carte avec la
   // nouvelle réponse ; on referme le mode édition (l'état local survivrait sinon).
   useEffect(() => {
-    if (upsertState.ok) setEditing(false);
+    if (upsertState.ok) {
+      setEditing(false);
+      setBody('');
+    }
   }, [upsertState.ok]);
 
   const reply = review.reply;
@@ -119,7 +125,10 @@ export default function ReviewCard({
             {!locked ? (
               <button
                 type="button"
-                onClick={() => setEditing(true)}
+                onClick={() => {
+                  setBody(reply?.body ?? '');
+                  setEditing(true);
+                }}
                 className="text-xs font-semibold text-[var(--primary)] hover:underline"
               >
                 Modifier
@@ -155,11 +164,22 @@ export default function ReviewCard({
           <input type="hidden" name="reviewId" value={review.id} />
           <textarea
             name="body" rows={3} maxLength={1000} required
-            defaultValue={editing ? reply?.body : ''}
-            placeholder="Merci pour votre visite ! …"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder={thankTemplate}
             className={inputCls}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {!reply ? (
+              <button
+                type="button"
+                onClick={() => setBody(thankTemplate)}
+                title="Pré-remplir avec votre message de remerciement (modifiable)"
+                className="rounded-lg border border-[var(--primary)] px-3 py-2 text-sm font-bold text-[var(--primary)] hover:bg-[var(--primary-container)]"
+              >
+                💬 Remercier
+              </button>
+            ) : null}
             <button
               type="submit"
               className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white hover:opacity-90"

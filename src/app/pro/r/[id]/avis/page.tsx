@@ -1,5 +1,7 @@
 import { requireOwnedRestaurant, isPremium, requireUser } from '@/lib/pro/data';
 import ReviewCard, { type ProReview, type ProReply } from './ReviewCard';
+import ThankSettings from './ThankSettings';
+import { DEFAULT_THANK } from '@/lib/pro/thanks';
 
 export const metadata = { title: 'Avis' };
 
@@ -62,8 +64,12 @@ export default async function ReviewsPage({ params }: { params: Promise<{ id: st
     reply: replies.get(r.id) ?? null,
   }));
 
+  const thankTemplate = resto.thank_template?.trim() || DEFAULT_THANK;
+
   return (
     <div>
+      <ThankSettings id={id} initialEnabled={resto.auto_thank_enabled} initialTemplate={resto.thank_template} />
+
       <p className="mb-4 text-sm text-[var(--text2)]">
         Répondez publiquement aux avis de vos clients. Votre réponse apparaît sous l&apos;avis, signée
         du nom de votre établissement.
@@ -80,7 +86,7 @@ export default async function ReviewsPage({ params }: { params: Promise<{ id: st
         <ul className="space-y-3">
           {items.map((r) => (
             <li key={r.id}>
-              <ReviewCard restaurantId={id} review={r} canPin={premium} />
+              <ReviewCard restaurantId={id} review={r} canPin={premium} thankTemplate={thankTemplate} />
             </li>
           ))}
         </ul>
