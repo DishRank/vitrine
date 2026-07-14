@@ -32,12 +32,13 @@ export interface OwnedRestaurant {
   auto_thank_enabled: boolean;
   thank_template: string | null;
   menu_theme: unknown;
+  menu_languages: string[] | null;
 }
 
 const LISTING_COLS =
   'id, name, city, address, photo_url, place_type, owner_id, subscription_tier, subscription_expires_at, ' +
   'description, accepts_groups, group_offer, phone, website, menu_url, instagram, reservation_url, ' +
-  'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template, menu_theme';
+  'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template, menu_theme, menu_languages';
 
 /** Identité minimale suffisante pour /pro (filtres owner_id + affichage). */
 export interface ProUser {
@@ -115,6 +116,26 @@ export const getPendingReviewCount = cache(async (id: string): Promise<number> =
   const replied = new Set(((repliedIds ?? []) as { review_id: string }[]).map((r) => r.review_id));
   return ((reviewIds ?? []) as { id: string }[]).filter((r) => !replied.has(r.id)).length;
 });
+
+/**
+ * Comme getPendingReviewCount mais pour TOUS les restos d'un coup (pastille
+ * « Avis » de la sidebar + point de notification, qui vivent au-dessus du
+ * segment [id] et ne connaissent donc pas le resto actif côté serveur).
+ */
+export async function getPendingReviewCounts(ids: string[]): Promise<Record<string, number>> {
+  if (ids.length === 0) return {};
+  const { supabase } = await requireUser();
+  const [{ data: reviews }, { data: replies }] = await Promise.all([
+    supabase.from('reviews').select('id, restaurant_id').in('restaurant_id', ids).eq('pending_moderation', false),
+    supabase.from('review_replies').select('review_id').in('restaurant_id', ids),
+  ]);
+  const replied = new Set(((replies ?? []) as { review_id: string }[]).map((r) => r.review_id));
+  const counts: Record<string, number> = {};
+  for (const r of (reviews ?? []) as { id: string; restaurant_id: string }[]) {
+    if (!replied.has(r.id)) counts[r.restaurant_id] = (counts[r.restaurant_id] ?? 0) + 1;
+  }
+  return counts;
+}
 
 /**
  * Charge un resto possédé, ou redirige. La RLS SELECT est publique (n'importe

@@ -1,12 +1,12 @@
-import { requireOwnedRestaurant, isPremium, getPendingReviewCount } from '@/lib/pro/data';
-import WorkspaceNav from './_components/WorkspaceNav';
+import { requireOwnedRestaurant, isPremium } from '@/lib/pro/data';
 import SaveStatusSlot from './_components/SaveStatusSlot';
 
 /**
- * Contexte d'UN établissement (segment [id], sous le shell persistant /pro/r).
- * L'en-tête + le carrousel vivent dans le parent ; ici : nom/adresse du resto
- * actif, onglets, et la pastille « avis à répondre » (tâche récurrente n°1 de
- * l'owner). Garde d'ownership serveur (requireOwnedRestaurant → redirect).
+ * Contexte d'UN établissement (segment [id], sous le shell dashboard /pro/r).
+ * La navigation (sidebar) et le sélecteur d'établissement vivent dans le
+ * parent ; ici : l'en-tête de page (nom/adresse du resto actif, statut de
+ * sauvegarde, aperçu public, badge Premium). Garde d'ownership serveur
+ * (requireOwnedRestaurant → redirect).
  */
 export default async function RestaurantWorkspaceLayout({
   children,
@@ -19,13 +19,9 @@ export default async function RestaurantWorkspaceLayout({
   const resto = await requireOwnedRestaurant(id);
   const premium = isPremium(resto);
 
-  // Avis publiés sans réponse = ce que l'owner doit traiter (partagé avec le
-  // cockpit via cache()).
-  const pendingReviews = await getPendingReviewCount(id);
-
   return (
     <>
-      <div className="mt-6 flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-xl font-extrabold tracking-tight truncate sm:text-2xl">{resto.name}</h1>
           <p className="text-sm text-[var(--text2)] truncate">
@@ -49,8 +45,6 @@ export default async function RestaurantWorkspaceLayout({
           ) : null}
         </div>
       </div>
-
-      <WorkspaceNav id={id} pendingReviews={pendingReviews} />
 
       <div className="mt-6">{children}</div>
     </>

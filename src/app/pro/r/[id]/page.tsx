@@ -105,12 +105,20 @@ export default async function CockpitPage({ params }: { params: Promise<{ id: st
 
       {/* Chiffres clés */}
       <section>
-        <h2 className="mb-3 text-sm font-bold text-[var(--text2)]">En un coup d’œil</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold text-[var(--text2)]">En un coup d’œil</h2>
+          <Link
+            href={`${base}/stats`}
+            className="rounded-lg bg-[var(--primary-container)] px-3 py-1.5 text-xs font-bold text-[var(--primary)] transition-opacity hover:opacity-80"
+          >
+            Voir le rapport
+          </Link>
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {kpis.map((k, i) => {
             const inner = (
               <div
-                className={`h-full rounded-2xl border p-4 transition-colors ${
+                className={`h-full rounded-2xl border p-4 shadow-[0_2px_10px_var(--card-shadow)] transition-colors ${
                   k.accent
                     ? 'border-[var(--primary)] bg-[var(--primary-container)]'
                     : 'border-[var(--border2)] bg-[var(--surface)]'
@@ -118,7 +126,7 @@ export default async function CockpitPage({ params }: { params: Promise<{ id: st
                 style={{ animation: 'fadeUp 0.4s ease-out both', animationDelay: `${i * 55}ms` }}
               >
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text3)]">{k.label}</p>
-                <p className={`mt-1 text-2xl font-extrabold ${k.accent ? 'text-[var(--primary)]' : k.value === 'Pas encore' ? 'text-[var(--text3)]' : ''}`}>
+                <p className={`tabular mt-1 text-2xl font-extrabold ${k.accent ? 'text-[var(--primary)]' : k.value === 'Pas encore' ? 'text-[var(--text3)]' : ''}`}>
                   {k.value}
                 </p>
                 <p className={`mt-0.5 text-xs ${k.captionOk ? 'font-semibold text-[var(--accent-success)]' : 'text-[var(--text2)]'}`}>{k.caption}</p>
@@ -144,7 +152,7 @@ export default async function CockpitPage({ params }: { params: Promise<{ id: st
               <Link
                 key={a.label}
                 href={a.href}
-                className="flex items-center gap-3 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--primary)]"
+                className="flex items-center gap-3 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--card-shadow)] transition-colors hover:border-[var(--primary)]"
                 style={{ animation: 'fadeUp 0.4s ease-out both', animationDelay: `${i * 55}ms` }}
               >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-container)] text-[var(--primary)]">
@@ -161,9 +169,6 @@ export default async function CockpitPage({ params }: { params: Promise<{ id: st
         </section>
       ) : null}
 
-      <Link href={`${base}/stats`} className="inline-block text-sm font-semibold text-[var(--primary)] hover:underline">
-        Voir toutes mes statistiques →
-      </Link>
     </div>
   );
 }

@@ -49,9 +49,9 @@ function n(v: unknown): number | null {
 
 function KpiCard({ label, value, sub, locked }: { label: string; value: string; sub?: string; locked?: boolean }) {
   return (
-    <div className={`rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 ${locked ? 'opacity-70' : ''}`}>
+    <div className={`rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--card-shadow)] ${locked ? 'opacity-70' : ''}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text3)]">{label}</p>
-      <p className="mt-1 text-2xl font-extrabold">{locked ? '🔒' : value}</p>
+      <p className="tabular mt-1 text-2xl font-extrabold">{locked ? '🔒' : value}</p>
       {sub ? <p className="mt-0.5 text-xs text-[var(--text2)]">{sub}</p> : null}
     </div>
   );

@@ -6,8 +6,14 @@ import { createPortal } from 'react-dom';
 /**
  * Modale légère (portal sur <body>) pour ouvrir un éditeur SANS navigation :
  * l'ouverture est instantanée (contenu déjà côté client), pas de chargement de
- * page. Fermeture par ✕, clic sur le fond, ou Échap. Verrouille le scroll du
- * fond tant qu'elle est ouverte.
+ * page. Fermeture par ✕, clic sur le fond, ou Échap. Centrée à l'écran et
+ * scroll du fond bloqué tant qu'elle est ouverte.
+ *
+ * Blocage du scroll : dans le shell /pro le conteneur qui scrolle est <main>
+ * (cadre d'app), pas <body>. On verrouille donc TOUT scroll container ancêtre
+ * (overflow-y auto/scroll) via `overflow:hidden`, plus body en filet. Le
+ * `overscroll-contain` sur le corps de la modale empêche en outre le
+ * scroll-chaining de propager la molette au fond une fois arrivé en butée.
  */
 export default function Modal({
   open,
@@ -32,13 +38,28 @@ export default function Modal({
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+
+    // Verrouille chaque conteneur scrollable de la page (le vrai scroll du
+    // shell /pro vit dans <main>, pas dans <body>) + <body> en filet.
+    const locked: { el: HTMLElement; prev: string }[] = [];
+    const lock = (el: HTMLElement | null) => {
+      if (!el) return;
+      locked.push({ el, prev: el.style.overflow });
+      el.style.overflow = 'hidden';
+    };
+    lock(document.body);
+    document.querySelectorAll<HTMLElement>('main, [data-scroll-lock]').forEach((el) => {
+      const oy = getComputedStyle(el).overflowY;
+      if (oy === 'auto' || oy === 'scroll') lock(el);
+    });
+
     // Focus la modale pour l'accessibilité clavier.
     panelRef.current?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
+      locked.forEach(({ el, prev }) => {
+        el.style.overflow = prev;
+      });
     };
   }, [open, onClose]);
 
@@ -46,8 +67,8 @@ export default function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:p-6"
-      style={{ animation: 'fadeUp 0.15s ease-out both' }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 sm:p-6"
+      style={{ animation: 'fadeIn 0.15s ease-out both' }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -58,9 +79,12 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`my-4 w-full ${maxWidth} rounded-2xl border border-[var(--border2)] bg-[var(--surface)] shadow-2xl outline-none`}
+        // flex column + max-h : centrée, et si le contenu dépasse la hauteur
+        // de l'écran c'est le CORPS qui scrolle (l'en-tête reste visible).
+        className={`flex max-h-[calc(100dvh-2rem)] w-full ${maxWidth} flex-col rounded-2xl border border-[var(--border2)] bg-[var(--surface)] shadow-2xl outline-none`}
+        style={{ animation: 'fadeUp 0.15s ease-out both' }}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-[var(--border2)] p-5 sm:p-6">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--border2)] p-5 sm:p-6">
           <div className="min-w-0">
             <h2 className="text-lg font-extrabold tracking-tight">{title}</h2>
             {subtitle ? <p className="mt-0.5 text-sm text-[var(--text2)]">{subtitle}</p> : null}
@@ -75,7 +99,7 @@ export default function Modal({
             </svg>
           </button>
         </div>
-        <div className="p-5 sm:p-6">{children}</div>
+        <div className="overflow-y-auto overscroll-contain p-5 sm:p-6">{children}</div>
       </div>
     </div>,
     document.body,
