@@ -7,19 +7,23 @@ import {
   type MenuActionState,
 } from './menuActions';
 import type { EditorMenu } from './menuData';
+import type { MenuThemeConfig } from './themeConstants';
 import { collectFormulaSources } from './menuSources';
 import SectionBlock from './SectionBlock';
 import LanguagePanel from './LanguagePanel';
+import AppearanceButton from './apparence/AppearanceButton';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
 
 export default function MenuEditor({
   restaurantId,
   menu,
   premium,
+  initialTheme,
 }: {
   restaurantId: string;
   menu: EditorMenu | null;
   premium: boolean;
+  initialTheme: MenuThemeConfig;
 }) {
   const [pending, start] = useTransition();
   const [addingSection, setAddingSection] = useState(false);
@@ -66,12 +70,7 @@ export default function MenuEditor({
           >
             Voir le menu public ↗
           </a>
-          <a
-            href={`/pro/r/${restaurantId}/menu/apparence`}
-            className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)]"
-          >
-            Apparence
-          </a>
+          <AppearanceButton restaurantId={restaurantId} initialTheme={initialTheme} premium={premium} />
           <a
             href={`/pro/r/${restaurantId}/partage`}
             className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)]"

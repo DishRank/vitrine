@@ -31,12 +31,13 @@ export interface OwnedRestaurant {
   osm_id: number | null;
   auto_thank_enabled: boolean;
   thank_template: string | null;
+  menu_theme: unknown;
 }
 
 const LISTING_COLS =
   'id, name, city, address, photo_url, place_type, owner_id, subscription_tier, subscription_expires_at, ' +
   'description, accepts_groups, group_offer, phone, website, menu_url, instagram, reservation_url, ' +
-  'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template';
+  'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template, menu_theme';
 
 /** Identité minimale suffisante pour /pro (filtres owner_id + affichage). */
 export interface ProUser {
