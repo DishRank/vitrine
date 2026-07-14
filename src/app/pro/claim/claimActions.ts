@@ -36,24 +36,24 @@ async function currentUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-/** Recherche par nom. RLS SELECT publique — on n'expose qu'un booléen `claimed`
- *  (jamais l'owner_id d'un tiers). */
+/** Recherche par nom via l'RPC `search_restaurants` : insensible aux accents,
+ *  tolérante aux fautes de frappe (trigram) et classée par pertinence (exact →
+ *  préfixe → sous-chaîne → similarité). RLS SELECT publique — on n'expose qu'un
+ *  booléen `claimed` (jamais l'owner_id d'un tiers). */
 export async function searchRestaurantsAction(query: string): Promise<RestaurantHit[]> {
   const uid = await currentUserId();
   if (!uid) return [];
   const q = query.trim();
   if (q.length < 2) return [];
   const supabase = await getSupabaseServer();
-  const pattern = `%${q.replace(/[%_\\]/g, (m) => `\\${m}`)}%`;
-  const { data } = await supabase
-    .from('restaurants')
-    .select('id, name, city, address, owner_id')
-    .ilike('name', pattern)
-    .order('name')
-    .limit(15);
-  return ((data ?? []) as { id: string; name: string; city: string | null; address: string | null; owner_id: string | null }[]).map(
-    (r) => ({ id: r.id, name: r.name, city: r.city, address: r.address, claimed: !!r.owner_id })
-  );
+  const { data } = await supabase.rpc('search_restaurants', { p_query: q, p_limit: 15 });
+  return ((data ?? []) as {
+    id: string;
+    name: string;
+    city: string | null;
+    address: string | null;
+    owner_id: string | null;
+  }[]).map((r) => ({ id: r.id, name: r.name, city: r.city, address: r.address, claimed: !!r.owner_id }));
 }
 
 export interface ClaimVerifyResult {
