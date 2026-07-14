@@ -8,7 +8,8 @@ export default function WorkspaceNav({ id, pendingReviews = 0 }: { id: string; p
   const pathname = usePathname();
   const base = `/pro/r/${id}`;
   const tabs = [
-    { href: base, label: 'Fiche', icon: FicheIcon },
+    { href: base, label: 'Accueil', icon: HomeIcon },
+    { href: `${base}/fiche`, label: 'Fiche', icon: StoreIcon },
     { href: `${base}/menu`, label: 'Menu', icon: MenuIcon },
     { href: `${base}/avis`, label: 'Avis', icon: ChatIcon, badge: pendingReviews },
     { href: `${base}/stats`, label: 'Stats', icon: ChartIcon },
@@ -51,7 +52,8 @@ const svg = (children: React.ReactNode) => (p: P) => (
     {children}
   </svg>
 );
-const FicheIcon = svg(<><path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M9 21v-6h6v6" /></>);
+const HomeIcon = svg(<><path d="M3 21h18" /><path d="M5 21V7l7-4 7 4v14" /><path d="M9 21v-6h6v6" /></>);
+const StoreIcon = svg(<><path d="M3 9l1.5-5h15L21 9" /><path d="M4 9v11h16V9" /><path d="M3 9h18" /><path d="M9 20v-6h6v6" /></>);
 const MenuIcon = svg(<><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="3.5" cy="6" r="1" /><circle cx="3.5" cy="12" r="1" /><circle cx="3.5" cy="18" r="1" /></>);
 const ChatIcon = svg(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />);
 const ChartIcon = svg(<><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>);

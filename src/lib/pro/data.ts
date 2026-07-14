@@ -99,6 +99,21 @@ export async function getMyRestaurants(): Promise<OwnedRestaurant[]> {
 }
 
 /**
+ * Nombre d'avis publiés SANS réponse — la tâche récurrente n°1 de l'owner.
+ * `cache()` : partagé par le layout (pastille onglet) et le cockpit d'accueil
+ * dans un même rendu. 2 requêtes légères (ids seulement).
+ */
+export const getPendingReviewCount = cache(async (id: string): Promise<number> => {
+  const { supabase } = await requireUser();
+  const [{ data: reviewIds }, { data: repliedIds }] = await Promise.all([
+    supabase.from('reviews').select('id').eq('restaurant_id', id).eq('pending_moderation', false),
+    supabase.from('review_replies').select('review_id').eq('restaurant_id', id),
+  ]);
+  const replied = new Set(((repliedIds ?? []) as { review_id: string }[]).map((r) => r.review_id));
+  return ((reviewIds ?? []) as { id: string }[]).filter((r) => !replied.has(r.id)).length;
+});
+
+/**
  * Charge un resto possédé, ou redirige. La RLS SELECT est publique (n'importe
  * quel resto est lisible), donc on VÉRIFIE explicitement la possession :
  * `owner_id = user.id`. Renvoie aussi la session pour les appels suivants.

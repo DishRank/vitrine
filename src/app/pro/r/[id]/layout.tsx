@@ -1,4 +1,4 @@
-import { requireOwnedRestaurant, isPremium, requireUser } from '@/lib/pro/data';
+import { requireOwnedRestaurant, isPremium, getPendingReviewCount } from '@/lib/pro/data';
 import WorkspaceNav from './_components/WorkspaceNav';
 
 /**
@@ -18,15 +18,9 @@ export default async function RestaurantWorkspaceLayout({
   const resto = await requireOwnedRestaurant(id);
   const premium = isPremium(resto);
 
-  // Avis publiés sans réponse = ce que l'owner doit traiter. 2 requêtes légères
-  // (colonnes d'id uniquement), déduplifiées côté auth par le cache getClaims.
-  const { supabase } = await requireUser();
-  const [{ data: reviewIds }, { data: repliedIds }] = await Promise.all([
-    supabase.from('reviews').select('id').eq('restaurant_id', id).eq('pending_moderation', false),
-    supabase.from('review_replies').select('review_id').eq('restaurant_id', id),
-  ]);
-  const replied = new Set(((repliedIds ?? []) as { review_id: string }[]).map((r) => r.review_id));
-  const pendingReviews = ((reviewIds ?? []) as { id: string }[]).filter((r) => !replied.has(r.id)).length;
+  // Avis publiés sans réponse = ce que l'owner doit traiter (partagé avec le
+  // cockpit via cache()).
+  const pendingReviews = await getPendingReviewCount(id);
 
   return (
     <>

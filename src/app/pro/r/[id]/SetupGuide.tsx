@@ -21,8 +21,8 @@ export default function SetupGuide({
       done: hasDescription,
       label: 'Complétez votre fiche',
       hint: 'Description, types de cuisine, contact',
-      href: null,
-      cta: 'Ci-dessous ↓',
+      href: `/pro/r/${id}/fiche`,
+      cta: 'Compléter',
     },
     {
       done: hasMenu,
