@@ -18,7 +18,13 @@ export type ProEvent =
   | 'pro_listing_edit'
   | 'pro_menu_edit'
   | 'pro_review_reply'
-  | 'pro_claim_completed';
+  | 'pro_review_link'
+  | 'pro_menu_bootstrap'
+  | 'pro_menu_alias'
+  | 'pro_claim_completed'
+  | 'pro_upgrade_click'
+  | 'pro_portal_open'
+  | 'pro_premium_activated';
 
 export async function logProEvent(
   supabase: SupabaseClient,

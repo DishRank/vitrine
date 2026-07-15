@@ -33,12 +33,17 @@ export interface OwnedRestaurant {
   thank_template: string | null;
   menu_theme: unknown;
   menu_languages: string[] | null;
+  subscription_source: string | null;
+  subscription_status: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
 }
 
 const LISTING_COLS =
   'id, name, city, address, photo_url, place_type, owner_id, subscription_tier, subscription_expires_at, ' +
   'description, accepts_groups, group_offer, phone, website, menu_url, instagram, reservation_url, ' +
-  'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template, menu_theme, menu_languages';
+  'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template, menu_theme, menu_languages, ' +
+  'subscription_source, subscription_status, stripe_customer_id, stripe_subscription_id';
 
 /** Identité minimale suffisante pour /pro (filtres owner_id + affichage). */
 export interface ProUser {
@@ -89,6 +94,13 @@ export function isPremium(r: Pick<OwnedRestaurant, 'subscription_tier' | 'subscr
     r.subscription_tier === 'premium' &&
     (!r.subscription_expires_at || new Date(r.subscription_expires_at) > new Date())
   );
+}
+
+/** Premium OFFERT (comp) — pas un abonnement Stripe payant. Founder = à vie ;
+ *  admin = comp de lancement (v1 « premium offert »). Ces lignes sont immunisées
+ *  contre le webhook Stripe (apply_stripe_subscription les refuse). */
+export function isComped(r: Pick<OwnedRestaurant, 'subscription_source'>): boolean {
+  return r.subscription_source === 'founder_comp' || r.subscription_source === 'admin';
 }
 
 /** Les établissements que je possède (drive le sélecteur + la home). */

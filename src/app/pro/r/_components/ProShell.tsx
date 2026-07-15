@@ -70,7 +70,7 @@ export default function ProShell({
   useEffect(() => {
     if (!activeId) return;
     const base = `/pro/r/${activeId}`;
-    for (const url of [base, `${base}/fiche`, `${base}/menu`, `${base}/avis`, `${base}/stats`, `${base}/partage`]) {
+    for (const url of [base, `${base}/fiche`, `${base}/menu`, `${base}/avis`, `${base}/stats`, `${base}/partage`, `${base}/abonnement`]) {
       router.prefetch(url);
     }
   }, [activeId, router]);
@@ -224,6 +224,7 @@ function SidebarContent({
     { href: `${base}/avis`, label: 'Avis', icon: ChatIcon, badge: pendingCount },
     { href: `${base}/stats`, label: 'Statistiques', icon: ChartIcon },
     { href: `${base}/partage`, label: 'Partage', icon: ShareIcon },
+    { href: `${base}/abonnement`, label: 'Abonnement', icon: StarIcon },
   ];
 
   const item = (active: boolean) =>
@@ -581,6 +582,7 @@ const MenuIcon = svg(<><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12"
 const ChatIcon = svg(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />);
 const ChartIcon = svg(<><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>);
 const ShareIcon = svg(<><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" /><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" /></>);
+const StarIcon = svg(<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />);
 const UserIcon = svg(<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>);
 const ExternalIcon = svg(<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><path d="M15 3h6v6" /><path d="M10 14L21 3" /></>);
 const LogoutIcon = svg(<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></>);
