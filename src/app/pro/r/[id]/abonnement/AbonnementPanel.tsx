@@ -49,7 +49,7 @@ export default function AbonnementPanel({
         return;
       }
       const MAP: Record<string, string> = {
-        coming_soon: 'La souscription en ligne arrive très bientôt — le premium est offert pendant le lancement.',
+        coming_soon: 'La souscription en ligne arrive très bientôt — le premium est offert 6 mois au lancement.',
         already_comped: 'Premium déjà offert sur cet établissement.',
         already_premium: 'Votre abonnement est déjà actif.',
         no_subscription: 'Aucun abonnement à gérer.',
@@ -62,19 +62,22 @@ export default function AbonnementPanel({
 
   // ── Premium OFFERT (comp founder / admin) ────────────────────────────────────
   if (comped) {
-    const lifetime = !expiresAt;
+    // « À vie » = Partenaire Fondateur SANS échéance uniquement. Toute comp AVEC
+    // une échéance (lancement 6 mois, ou ancienne comp fondateur datée) montre sa
+    // date d'expiration — jamais « à vie ».
+    const founderLifetime = source === 'founder_comp' && !expiresAt;
     return (
       <div className={card}>
         <span className="inline-flex rounded-full bg-[var(--primary-container)] px-3 py-1 text-xs font-extrabold text-[var(--primary)]">
           ✦ Premium
         </span>
-        <h2 className="mt-3 text-lg font-extrabold">Premium offert</h2>
+        <h2 className="mt-3 text-lg font-extrabold">{founderLifetime ? 'Premium à vie' : 'Premium offert'}</h2>
         <p className="mt-1 text-sm text-[var(--text2)]">
-          {source === 'founder_comp'
+          {founderLifetime
             ? 'Partenaire Fondateur — premium à vie, offert. Merci de votre confiance !'
-            : lifetime
-              ? 'Le premium est offert sur cet établissement pendant le lancement.'
-              : `Premium offert jusqu'au ${fmtDate(expiresAt)}.`}
+            : expiresAt
+              ? `Offre de lancement — premium offert jusqu'au ${fmtDate(expiresAt)}.`
+              : 'Le premium est offert sur cet établissement.'}
         </p>
         <p className="mt-3 text-sm text-[var(--text3)]">
           Toutes les fonctionnalités premium sont débloquées sur <strong>{name}</strong>.
@@ -142,7 +145,7 @@ export default function AbonnementPanel({
         </button>
         {!billingEnabled ? (
           <p className="mt-2 text-sm font-semibold text-[var(--primary)]">
-            🎁 Pendant le lancement, le Premium est offert — contactez-nous pour l&apos;activer sur votre établissement.
+            🎁 Le Premium est offert 6 mois au lancement — contactez-nous pour l&apos;activer sur votre établissement.
           </p>
         ) : null}
         {errEl}

@@ -25,9 +25,13 @@ export const DIETS: { key: string; label: string }[] = [
   { key: 'vegetarien', label: 'Végétarien' },
   { key: 'vegan', label: 'Vegan' },
   { key: 'halal', label: 'Halal' },
+  { key: 'casher', label: 'Casher' },
   { key: 'sans_gluten', label: 'Sans gluten' },
+  { key: 'sans_lactose', label: 'Sans lactose' },
   { key: 'bio', label: 'Bio' },
   { key: 'fait_maison', label: 'Fait maison' },
+  { key: 'de_saison', label: 'De saison' },
+  { key: 'local', label: 'Local' },
   { key: 'epice', label: 'Épicé' },
   { key: 'nouveau', label: 'Nouveau' },
 ];

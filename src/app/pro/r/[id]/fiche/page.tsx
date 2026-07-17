@@ -1,4 +1,4 @@
-import { requireOwnedRestaurant, isPremium, requireUser } from '@/lib/pro/data';
+import { requireOwnedRestaurant, requireUser } from '@/lib/pro/data';
 import { normalizeMenuTheme } from '../menu/themeConstants';
 import ListingForm from '../ListingForm';
 import ListingImages, { type ReviewPhoto } from '../ListingImages';
@@ -10,7 +10,6 @@ export const metadata = { title: 'Fiche' };
 export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const resto = await requireOwnedRestaurant(id);
-  const premium = isPremium(resto);
   const { supabase } = await requireUser();
 
   // Photos d'avis publiés de ce resto → réutilisables comme image vitrine
@@ -34,7 +33,6 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
         initialPhotoUrl={resto.photo_url}
         initialLogoUrl={logoUrl}
         reviewPhotos={reviewPhotos}
-        premium={premium}
       />
       <ListingForm
         id={id}

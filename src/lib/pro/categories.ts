@@ -1,14 +1,14 @@
 /**
  * Taxonomie complète des catégories de plats — miroir web de
- * dishrank/constants/categories.ts (les 260 entrées de DISH_CATEGORIES,
+ * dishrank/constants/categories.ts (les 290 entrées de DISH_CATEGORIES,
  * tous groupes confondus). Sert au picker « Catégories » d'un plat du menu
  * (colonne menu_items.category_slugs) : les slugs DOIVENT rester identiques à
  * ceux de l'app pour relier le plat aux notes de la communauté.
  *
- * ⚠️ Fichier GÉNÉRÉ (scratchpad/gen-categories.mjs). Ne pas éditer à la main :
+ * ⚠️ Fichier GÉNÉRÉ (scratchpad/gen-categories2.mjs). Ne pas éditer à la main :
  * régénérer depuis l'app après toute évolution de la taxonomie.
  */
-export type CategoryGroup = 'dish' | 'street' | 'breakfast' | 'sweet' | 'drink' | 'cuisine' | 'diet';
+export type CategoryGroup = 'dish' | 'cuisine' | 'venue' | 'breakfast' | 'sweet' | 'drink' | 'street' | 'diet';
 
 export interface Category {
   slug: string;
@@ -17,16 +17,17 @@ export interface Category {
   name: string;
 }
 
-export const GROUP_ORDER: CategoryGroup[] = ["dish","street","breakfast","sweet","drink","cuisine","diet"];
+export const GROUP_ORDER: CategoryGroup[] = ["dish","cuisine","venue","breakfast","sweet","drink","street","diet"];
 
 export const GROUP_LABELS: Record<CategoryGroup, string> = {
   dish: 'Plats',
-  street: 'Street food',
-  breakfast: 'Petit-déjeuner',
+  cuisine: 'Cuisines du monde',
+  venue: 'Type d\'établissement',
+  breakfast: 'Petit-déj & Brunch',
   sweet: 'Sucré',
   drink: 'Boissons',
-  cuisine: 'Cuisines du monde',
-  diet: 'Régimes'
+  street: 'Street Food',
+  diet: 'Régimes',
 };
 
 export const CATEGORIES: Category[] = [
@@ -290,6 +291,36 @@ export const CATEGORIES: Category[] = [
   { slug: 'wrap', icon: '🌯', group: 'street', name: 'Wrap' },
   { slug: 'corn-dog', icon: '🌽', group: 'street', name: 'Corn Dog' },
   { slug: 'takoyaki', icon: '🐙', group: 'street', name: 'Takoyaki' },
+  { slug: 'armenian', icon: '🇦🇲', group: 'cuisine', name: 'Arménien' },
+  { slug: 'syrian', icon: '🇸🇾', group: 'cuisine', name: 'Syrien' },
+  { slug: 'taiwanese', icon: '🇹🇼', group: 'cuisine', name: 'Taïwanais' },
+  { slug: 'maghrebi', icon: '🌍', group: 'cuisine', name: 'Maghrébin' },
+  { slug: 'corsican', icon: '🏝️', group: 'cuisine', name: 'Corse' },
+  { slug: 'bistro', icon: '🍴', group: 'venue', name: 'Bistrot' },
+  { slug: 'brasserie', icon: '🍺', group: 'venue', name: 'Brasserie' },
+  { slug: 'bouchon', icon: '🍷', group: 'venue', name: 'Bouchon lyonnais' },
+  { slug: 'gastronomique', icon: '⭐', group: 'venue', name: 'Gastronomique' },
+  { slug: 'buffet', icon: '🍽️', group: 'venue', name: 'Buffet' },
+  { slug: 'food-truck', icon: '🚚', group: 'venue', name: 'Food truck' },
+  { slug: 'wine-bar', icon: '🍷', group: 'venue', name: 'Bar à vin' },
+  { slug: 'coffee-shop', icon: '☕', group: 'venue', name: 'Coffee shop' },
+  { slug: 'tea-room', icon: '🫖', group: 'venue', name: 'Salon de thé' },
+  { slug: 'creperie', icon: '🥞', group: 'venue', name: 'Crêperie' },
+  { slug: 'pizzeria', icon: '🍕', group: 'venue', name: 'Pizzeria' },
+  { slug: 'snack', icon: '🥪', group: 'venue', name: 'Snack' },
+  { slug: 'truffe', icon: '🍄', group: 'dish', name: 'Truffe' },
+  { slug: 'burrata', icon: '🧀', group: 'dish', name: 'Burrata' },
+  { slug: 'antipasti', icon: '🫒', group: 'dish', name: 'Antipasti' },
+  { slug: 'pinsa', icon: '🍕', group: 'dish', name: 'Pinsa' },
+  { slug: 'arancini', icon: '🍙', group: 'street', name: 'Arancini' },
+  { slug: 'focaccia', icon: '🫓', group: 'street', name: 'Focaccia' },
+  { slug: 'quesadilla', icon: '🫓', group: 'street', name: 'Quesadilla' },
+  { slug: 'nachos', icon: '🧀', group: 'street', name: 'Nachos' },
+  { slug: 'macaron', icon: '🍬', group: 'sweet', name: 'Macaron' },
+  { slug: 'panna-cotta', icon: '🍮', group: 'sweet', name: 'Panna cotta' },
+  { slug: 'baklava', icon: '🍯', group: 'sweet', name: 'Baklava' },
+  { slug: 'shakshuka', icon: '🍳', group: 'breakfast', name: 'Shakshuka' },
+  { slug: 'bagel', icon: '🥯', group: 'breakfast', name: 'Bagel' },
 ];
 
 export const CATEGORY_BY_SLUG = new Map(CATEGORIES.map((c) => [c.slug, c]));

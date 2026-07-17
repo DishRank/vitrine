@@ -148,3 +148,30 @@ export async function submitManualClaimAction(
   }
   return { ok: true };
 }
+
+export interface MyClaim {
+  status: 'pending' | 'verified' | 'rejected';
+  verification_method: string | null;
+  rejection_reason: string | null;
+}
+
+/** Demande de revendication EXISTANTE de l'utilisateur pour ce resto (la plus
+ *  récente). Miroir de `useMyClaim` de l'app → permet à l'écran claim de résoudre
+ *  l'état à l'ouverture (en attente / refusée + motif) au lieu de repartir de
+ *  l'étape email. RLS : le requester ne lit que ses propres claims. */
+export async function getMyClaimAction(restaurantId: string): Promise<MyClaim | null> {
+  const supabase = await getSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from('restaurant_claims')
+    .select('status, verification_method, rejection_reason')
+    .eq('restaurant_id', restaurantId)
+    .eq('requester_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as MyClaim | null) ?? null;
+}

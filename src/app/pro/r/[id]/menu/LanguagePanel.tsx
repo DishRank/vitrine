@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { translateMenuAction, setMenuLanguagesAction } from './menuActions';
+import FlagIcon from '@/components/FlagIcon';
 
 /** Langues cibles disponibles (source = français). */
 const LANGS = [
-  { code: 'en', label: 'Anglais', flag: '🇬🇧' },
-  { code: 'es', label: 'Espagnol', flag: '🇪🇸' },
-  { code: 'de', label: 'Allemand', flag: '🇩🇪' },
-  { code: 'it', label: 'Italien', flag: '🇮🇹' },
+  { code: 'en', label: 'Anglais' },
+  { code: 'es', label: 'Espagnol' },
+  { code: 'de', label: 'Allemand' },
+  { code: 'it', label: 'Italien' },
 ];
 const BY_CODE = new Map(LANGS.map((l) => [l.code, l]));
 
@@ -66,6 +67,8 @@ export default function LanguagePanel({
     setOpen(false);
   };
   const remove = (code: string) => persist(enabled.filter((c) => c !== code));
+  // Frontière langues : fr + en gratuits ; es/de/it = Premium.
+  const canAdd = (code: string) => premium || code === 'en';
 
   const translate = () =>
     start(async () => {
@@ -98,7 +101,7 @@ export default function LanguagePanel({
       {/* Chips : français (source) + langues activées + autocomplete d'ajout */}
       <div ref={boxRef} className="mt-3 flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--primary)] bg-[var(--primary-container)] px-2.5 py-1.5 text-xs font-bold text-[var(--primary)]">
-          🇫🇷 Français
+          <FlagIcon code="fr" size={16} /> Français
           <span className="font-semibold opacity-70">· saisie</span>
         </span>
 
@@ -109,7 +112,7 @@ export default function LanguagePanel({
               key={code}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border2)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text2)]"
             >
-              <span aria-hidden>{l.flag}</span>
+              <FlagIcon code={code} size={16} />
               <a
                 href={`/menu/${restaurantId}?lang=${code}`}
                 target="_blank"
@@ -151,18 +154,30 @@ export default function LanguagePanel({
             />
             {open ? (
               <ul className="absolute z-20 mt-1 w-44 overflow-hidden rounded-xl border border-[var(--border2)] bg-[var(--surface)] py-1 shadow-lg">
-                {results.map((l) => (
-                  <li key={l.code}>
-                    <button
-                      type="button"
-                      onClick={() => add(l.code)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text)] hover:bg-[var(--primary-container)] hover:text-[var(--primary)]"
-                    >
-                      <span aria-hidden>{l.flag}</span>
-                      {l.label}
-                    </button>
-                  </li>
-                ))}
+                {results.map((l) => {
+                  const locked = !canAdd(l.code);
+                  return (
+                    <li key={l.code}>
+                      <button
+                        type="button"
+                        disabled={locked}
+                        onClick={() => add(l.code)}
+                        title={locked ? 'Réservé au Premium' : undefined}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                          locked
+                            ? 'cursor-not-allowed text-[var(--text3)] opacity-60'
+                            : 'text-[var(--text)] hover:bg-[var(--primary-container)] hover:text-[var(--primary)]'
+                        }`}
+                      >
+                        <FlagIcon code={l.code} size={16} />
+                        {l.label}
+                        {locked ? (
+                          <span className="ml-auto text-[11px] font-bold text-[var(--text3)]">🔒 Premium</span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             ) : null}
           </div>
@@ -176,8 +191,9 @@ export default function LanguagePanel({
             ✨ Traduction automatique de tout le menu —{' '}
             <span className="font-extrabold">Premium</span>
             <span className="block text-xs font-medium text-[var(--text2)]">
-              Ajoutez déjà vos langues gratuitement ; elles s&apos;affichent en français tant qu&apos;elles
-              ne sont pas traduites.
+              <FlagIcon code="en" size={13} style={{ verticalAlign: '-1px', marginRight: 3 }} />
+              L&apos;anglais est gratuit : traduisez chaque plat à la main via les onglets de langue.
+              Espagnol, allemand, italien et la traduction automatique = Premium.
             </span>
           </p>
           <span className="shrink-0 rounded-full bg-[var(--primary)] px-3 py-1.5 text-xs font-bold text-white">

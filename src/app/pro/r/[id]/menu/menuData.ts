@@ -7,6 +7,24 @@ import type { MenuVariant, MenuOption, MenuAvailability, FormulaConfig } from '.
  * Tri client (display_order puis created_at), 1 seul niveau de section.
  */
 
+/** Nom alternatif d'un plat (mig 112) — les avis portant ce nom comptent pour lui. */
+export interface MenuItemAlias {
+  id: string;
+  alias_label: string;
+}
+
+/**
+ * Feuilles de traduction d'un plat (menu_items.i18n). fr = colonnes source
+ * (name/description) — jamais dans i18n. Contrat mig 085 : une entrée SANS
+ * `_auto` = traduction MANUELLE (jamais réécrite par l'edge auto-trad) ; `_auto:
+ * true` + `_h` = auto (retraduite si la source change). L'éditeur préserve
+ * `_auto`/`_h` des locales NON éditées et les retire des locales éditées à la main.
+ */
+export type MenuItemI18n = Record<
+  string,
+  { name?: string; description?: string; _auto?: boolean; _h?: string }
+>;
+
 export interface EditorItem {
   id: string;
   section_id: string;
@@ -27,6 +45,10 @@ export interface EditorItem {
   options: MenuOption[];
   availability: MenuAvailability;
   formula_config: FormulaConfig | null;
+  /** Traductions (EN/ES/DE/IT) ; fr = colonnes source name/description. */
+  i18n: MenuItemI18n;
+  /** Noms alternatifs (chargés à part depuis menu_item_aliases). */
+  aliases: MenuItemAlias[];
   updated_at: string;
   created_at: string;
 }
@@ -40,6 +62,8 @@ export interface EditorSection {
   is_visible: boolean;
   created_at: string;
   items: EditorItem[];
+  /** Traductions de la section (EN/ES/DE/IT) ; fr = colonnes source name/description. */
+  i18n: MenuItemI18n;
   /** Sous-catégories (1 seul niveau de profondeur, comme l'app). */
   children: EditorSection[];
 }
@@ -72,12 +96,20 @@ const SELECT = `id, name, version, display_order, created_at,
 /** L'arbre complet des cartes du resto (souvent une seule, « Notre carte »). */
 export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]> {
   const supabase = await getSupabaseServer();
-  const { data } = await supabase
-    .from('restaurant_menus')
-    .select(SELECT)
-    .eq('restaurant_id', restaurantId);
+  const [{ data }, { data: aliasData }] = await Promise.all([
+    supabase.from('restaurant_menus').select(SELECT).eq('restaurant_id', restaurantId),
+    supabase.from('menu_item_aliases').select('id, alias_label, menu_item_id').eq('restaurant_id', restaurantId),
+  ]);
 
-  type RawItem = EditorItem & { parent_section_id?: string | null; i18n?: I18nMap };
+  // Noms alternatifs regroupés par plat (attachés à chaque EditorItem).
+  const aliasMap = new Map<string, MenuItemAlias[]>();
+  for (const a of (aliasData ?? []) as { id: string; alias_label: string; menu_item_id: string }[]) {
+    const arr = aliasMap.get(a.menu_item_id);
+    if (arr) arr.push({ id: a.id, alias_label: a.alias_label });
+    else aliasMap.set(a.menu_item_id, [{ id: a.id, alias_label: a.alias_label }]);
+  }
+
+  type RawItem = EditorItem & { parent_section_id?: string | null };
   type RawSection = {
     id: string;
     name: string;
@@ -104,6 +136,8 @@ export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]
       it.formula_config && typeof it.formula_config === 'object'
         ? (it.formula_config as unknown as FormulaConfig)
         : null,
+    i18n: (it.i18n as MenuItemI18n) ?? {},
+    aliases: aliasMap.get(it.id) ?? [],
   });
 
   return ((data ?? []) as unknown as RawMenu[])
@@ -130,6 +164,7 @@ export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]
           is_visible: s.is_visible,
           created_at: s.created_at,
           items: (s.menu_items ?? []).map(normItem).sort(byOrder),
+          i18n: (s.i18n as MenuItemI18n) ?? {},
           children: [],
         });
       }

@@ -1,8 +1,8 @@
-import QRCode from 'qrcode';
 import { requireOwnedRestaurant, isPremium } from '@/lib/pro/data';
 import { normalizeMenuTheme } from '../menu/themeConstants';
 import { CopyButton } from './ShareControls';
 import QrKit from './QrKit';
+import { buildStyledQrSvg } from './qrSvg';
 
 export const metadata = { title: 'Partage' };
 
@@ -10,22 +10,53 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://dishrank.fr';
 // Quiet zone = 4 modules (spec ISO 18004). Était à 1 → le PNG 512px cuisait une
 // marge trop fine ; 4 fiabilise le scan, surtout imprimé.
 const MARGIN = 4;
+const QR_DARK = '#1A1832';
+
+/**
+ * Préfixe Storage public autorisé pour le logo. GARDE ANTI-SSRF : `logo_url`
+ * vient de `menu_theme` (jsonb), que l'owner peut écrire EN DIRECT via PostgREST
+ * — la RLS l'y autorise et le trigger premium (101/117) ne valide que le tier,
+ * jamais le format de l'URL. Sans ce contrôle, le serveur fetcherait une URL
+ * arbitraire (métadonnées cloud, service interne…) et en ré-inlinerait la
+ * réponse en base64 dans la page → SSRF avec exfiltration. Même esprit que le
+ * garde `isBlockedHost` de osm/photos. L'UI valide déjà à l'écriture
+ * (`ownerStorageUrl`) : ceci est la défense en profondeur À LA LECTURE.
+ */
+const STORAGE_LOGO_PREFIX = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/dish-photos/`
+  : null;
+
+function isStorageLogoUrl(url: string): boolean {
+  return (
+    !!STORAGE_LOGO_PREFIX &&
+    url.startsWith(STORAGE_LOGO_PREFIX) &&
+    url.length < 500 &&
+    /\.webp(\?|$)/.test(url)
+  );
+}
+
+/** Poids max inliné (le data:URI part dans le HTML de la page). */
+const MAX_LOGO_BYTES = 2_000_000;
 
 /**
  * Récupère le logo (URL Storage cross-origin, .webp) côté serveur et l'inline en
  * data:URI base64 → embarqué dans le SVG. Deux bénéfices : (1) l'export PNG
  * (canvas → toBlob dans ShareControls) NE se « taint » PAS (data:URI = même
  * origine) et ne casse pas ; (2) l'impression n'a aucun fetch réseau à faire.
+ * N'accepte QUE le Storage public (cf. isStorageLogoUrl) et QUE du `image/*`.
  * Null-safe : tout échec retombe sur le QR nu.
  */
 async function fetchLogoDataUri(url: string | null): Promise<string | null> {
-  if (!url) return null;
+  if (!url || !isStorageLogoUrl(url)) return null;
   try {
     const res = await fetch(url, { cache: 'force-cache' });
     if (!res.ok) return null;
     const type = res.headers.get('content-type') ?? 'image/webp';
-    const b64 = Buffer.from(await res.arrayBuffer()).toString('base64');
-    return `data:${type};base64,${b64}`;
+    // Ne jamais ré-inliner autre chose qu'une image (2ᵉ verrou anti-exfiltration).
+    if (!type.startsWith('image/')) return null;
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > MAX_LOGO_BYTES) return null;
+    return `data:${type};base64,${Buffer.from(buf).toString('base64')}`;
   } catch {
     return null;
   }
@@ -36,23 +67,19 @@ async function fetchLogoDataUri(url: string | null): Promise<string | null> {
  * pas quand le SVG est dessiné sur un canvas en mode « image » — export PNG
  * cassé). Il est superposé en overlay `<img>` à l'écran/impression (DOM vivant,
  * OK) et redessiné séparément sur le canvas au téléchargement (cf. QrKit +
- * DownloadPngButton). Géométrie partagée : pastille blanche = 28% du côté (≈8%
- * de surface, bien sous les ~30% récupérables du niveau H), logo ≈ 76% de la
- * pastille, centré → ne touche jamais les 3 « yeux ».
+ * DownloadPngButton). Géométrie partagée : badge rond = 30% du côté (≈7% de
+ * surface, bien sous les ~30% récupérables du niveau H), logo centré → ne touche
+ * jamais les 3 « yeux ».
  */
-const QR_OPTS = {
-  type: 'svg' as const,
-  margin: MARGIN,
-  color: { dark: '#1A1832', light: '#FFFFFF' },
-};
 
 /**
  * Onglet « Partage » (ex-page QR). Regroupe tout ce qui sert à diffuser
  * l'établissement : le lien du menu public à copier/partager, et le kit QR de
  * table (chevalet imprimable + QR téléchargeable). Le QR pointe vers
  * `dishrank.fr/menu/<id>?src=qr` (scan compté serveur, jamais intercepté par
- * l'app). Le logo au centre (Premium) est purement déterministe (correction
- * d'erreur H + pastille) — aucune IA.
+ * l'app). QR stylisé (points arrondis + yeux arrondis, cf. buildStyledQrSvg) ;
+ * le logo au centre (Premium) est purement déterministe (correction d'erreur H
+ * + badge rond) — aucune IA.
  */
 export default async function PartagePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -70,9 +97,9 @@ export default async function PartagePage({ params }: { params: Promise<{ id: st
   // QR nu niveau M (toggle off / pas de logo) ; QR niveau H (~30% de récupération,
   // pour tolérer le logo au centre) généré seulement s'il y a un logo. Le logo
   // lui-même est superposé côté client, pas dans le SVG.
-  const svgPlain = await QRCode.toString(qrTarget, { ...QR_OPTS, errorCorrectionLevel: 'M' });
+  const svgPlain = buildStyledQrSvg(qrTarget, { level: 'M', margin: MARGIN, dark: QR_DARK });
   const svgHigh = logoDataUri
-    ? await QRCode.toString(qrTarget, { ...QR_OPTS, errorCorrectionLevel: 'H' })
+    ? buildStyledQrSvg(qrTarget, { level: 'H', margin: MARGIN, dark: QR_DARK })
     : null;
 
   const fileSlug = (resto.name || 'menu')
@@ -85,11 +112,16 @@ export default async function PartagePage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-6">
-      {/* À l'impression : n'afficher QUE le chevalet. style-src autorise l'inline. */}
-      <style>{`@media print {
+      {/* À l'impression : n'afficher QUE la grille de QR (plusieurs par feuille,
+          moins de gaspillage). style-src autorise l'inline. */}
+      <style>{`@page { margin: 8mm; }
+      @media print {
         body * { visibility: hidden !important; }
-        #qr-chevalet, #qr-chevalet * { visibility: visible !important; }
-        #qr-chevalet { position: absolute; inset: 0; margin: auto; }
+        #qr-print-sheet, #qr-print-sheet * { visibility: visible !important; }
+        #qr-print-sheet {
+          position: absolute; inset: 0;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
       }`}</style>
 
       {/* Lien à partager */}
@@ -125,8 +157,10 @@ export default async function PartagePage({ params }: { params: Promise<{ id: st
           svgHigh={svgHigh}
           logo={logoDataUri}
           fileSlug={fileSlug || 'menu'}
+          premium={premium}
           premiumNoLogo={premium && !logoUrl}
           apparenceHref={`/pro/r/${id}/menu/apparence`}
+          cockpitHref={`/pro/r/${id}`}
         />
       </section>
     </div>

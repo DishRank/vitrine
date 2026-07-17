@@ -11,8 +11,9 @@ import { normalizeMenuTheme, isDefaultTheme } from './menu/themeConstants';
  *    resto (on la référence telle quelle — dans le dossier du client, donc on
  *    vérifie qu'elle correspond bien à un avis publié de l'établissement).
  *  - logo : c'est LE logo unique du resto, stocké dans `menu_theme.logo_url`
- *    (le même que celui du menu). PREMIUM — le trigger 101 lève THEME_PREMIUM
- *    quand un thème non-défaut (logo inclus) est écrit par un resto gratuit.
+ *    (le même que celui du menu). GRATUIT depuis la mig.117 — le trigger ne gate
+ *    plus que les customisations de thème AU-DELÀ du logo (ambiance/accent/police
+ *    /photos). Le logo seul passe pour tous.
  *
  * Miroir de l'app (OwnerManageSheet cover + MenuThemeSheet logo) : même bucket,
  * même convention .webp, le picker d'avis copie juste la review.photo_url.
@@ -79,7 +80,8 @@ export async function setListingCoverAction(
 }
 
 /** Logo unique du resto (= `menu_theme.logo_url`, aussi affiché en tête du
- *  menu). `null` = retirer (gratuit). Ajouter/changer = PREMIUM. */
+ *  menu). Ajouter/changer/retirer = GRATUIT (mig.117). Le trigger reste le
+ *  garde-fou serveur (THEME_PREMIUM) pour toute autre customisation de thème. */
 export async function setListingLogoAction(
   restaurantId: string,
   logoUrl: string | null

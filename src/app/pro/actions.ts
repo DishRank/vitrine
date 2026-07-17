@@ -181,6 +181,46 @@ export async function requestPasswordResetAction(
   };
 }
 
+// ─── Connexion par lien magique (passwordless) ────────────────────────────────
+export async function sendMagicLinkAction(
+  _prev: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  if (!email) return { error: 'Email requis.' };
+  const next = safeNext(formData.get('next'));
+
+  const ip = await clientIp();
+  const [byIp, byEmail] = await Promise.all([
+    rateLimit(`pro:magic:ip:${ip}`, 5, 3_600_000),
+    rateLimit(`pro:magic:email:${email}`, 3, 3_600_000),
+  ]);
+  if (!byIp.ok || !byEmail.ok) return { error: RETRY_FR(Math.max(byIp.retryAfter, byEmail.retryAfter)) };
+
+  const origin = await emailLinkOrigin();
+  const supabase = await getSupabaseServer();
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      // Connexion uniquement : ne crée PAS de compte pour un email inconnu
+      // (l'inscription a sa propre page). GoTrue renvoie alors une erreur
+      // « signups not allowed » qu'on masque (anti-énumération).
+      shouldCreateUser: false,
+      emailRedirectTo: `${origin}/pro/callback?next=${encodeURIComponent(next)}`,
+      captchaToken: captchaToken(formData),
+    },
+  });
+  // Anti-énumération : succès identique que l'email existe ou non ; on ne
+  // remonte que les erreurs techniques (429, captcha…).
+  if (error && !/not allowed|not found|signup|otp_disabled/i.test(error.message ?? '')) {
+    return { error: mapAuthErrorFr(error) };
+  }
+  return {
+    ok: true,
+    message: 'Si un compte existe avec cet email, tu recevras un lien de connexion dans quelques instants.',
+  };
+}
+
 // ─── Nouveau mot de passe (session recovery ouverte via /pro/callback) ────────
 export async function updatePasswordAction(
   _prev: AuthActionState,

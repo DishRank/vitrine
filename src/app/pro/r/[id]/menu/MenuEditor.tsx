@@ -20,12 +20,15 @@ export default function MenuEditor({
   premium,
   initialTheme,
   menuLanguages,
+  initialEditItemId,
 }: {
   restaurantId: string;
   menu: EditorMenu | null;
   premium: boolean;
   initialTheme: MenuThemeConfig;
   menuLanguages: string[];
+  /** Plat à éditer d'emblée (deep-link `?edit=<id>` — ex. « Créer ce plat » depuis un avis). */
+  initialEditItemId?: string;
 }) {
   const [pending, start] = useTransition();
   const [addingSection, setAddingSection] = useState(false);
@@ -95,7 +98,14 @@ export default function MenuEditor({
           Votre carte est vide. Ajoutez une première catégorie (Entrées, Plats, Desserts…).
         </p>
       ) : (
-        <MenuBoard restaurantId={restaurantId} menu={menu} sources={formulaSources} />
+        <MenuBoard
+          restaurantId={restaurantId}
+          menu={menu}
+          sources={formulaSources}
+          menuLanguages={menuLanguages}
+          premium={premium}
+          initialEditItemId={initialEditItemId}
+        />
       )}
 
       {/* Ajouter une catégorie */}

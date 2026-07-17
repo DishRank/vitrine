@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { uploadMenuImage } from '../imageUpload';
+import ColorField from './ColorField';
 import { useAutoSave } from '@/app/pro/_components/useAutoSave';
 import { setSaveStatus } from '@/app/pro/_components/saveStatusStore';
 import {
@@ -9,6 +11,8 @@ import {
   MENU_THEME_ORDER,
   PRESET_LABEL,
   MENU_ACCENTS,
+  MENU_FONTS,
+  MENU_FONT_ORDER,
   isDefaultTheme,
   type MenuThemeConfig,
   type MenuThemePreset,
@@ -32,7 +36,9 @@ export default function ThemeEditor({
     setTheme((t) => ({ ...t, [k]: v }));
 
   const preset = MENU_THEME_PRESETS[theme.theme];
-  const fontFamily = theme.font === 'serif' ? 'Georgia, "Times New Roman", serif' : 'system-ui, sans-serif';
+  // Même stack que le menu live (MENU_FONTS) → l'aperçu montre la vraie police.
+  // Les vars CSS des webfonts sont chargées par le conteneur de la page apparence.
+  const fontFamily = MENU_FONTS[theme.font].stack;
 
   // Auto-save en arrière-plan (comme la fiche) : POST /api/pro/theme, pas de
   // refresh de route → l'aperçu en direct (état local) reste fluide.
@@ -65,8 +71,17 @@ export default function ThemeEditor({
   }, [status]);
   useEffect(() => () => setSaveStatus('idle'), []);
 
+  // Réinitialiser = l'APPARENCE seulement. Le logo appartient à la fiche : on le
+  // conserve (et on le ré-affiche), on ne le supprime pas d'ici.
   const reset = () => {
-    setTheme({ theme: 'ivory', accent: '#AE8324', font: 'serif', photos: true, logo_url: null });
+    setTheme((t) => ({
+      theme: 'ivory',
+      accent: '#AE8324',
+      font: 'serif',
+      photos: true,
+      logo_url: t.logo_url,
+      show_logo: true,
+    }));
   };
 
   const onLogo = async (file: File) => {
@@ -74,7 +89,8 @@ export default function ThemeEditor({
     setUploadError('');
     const r = await uploadMenuImage(file);
     setUploading(false);
-    if (r.ok && r.url) set('logo_url', r.url);
+    // Ajouter un logo depuis l'apparence ⇒ on veut le voir : on l'active aussi.
+    if (r.ok && r.url) setTheme((t) => ({ ...t, logo_url: r.url as string, show_logo: true }));
     else setUploadError(r.error || "Échec de l'envoi du logo.");
   };
 
@@ -88,9 +104,9 @@ export default function ThemeEditor({
           <div className="rounded-xl border border-[var(--primary)]/30 bg-[var(--primary-container)] p-4 text-sm">
             <p className="font-bold text-[var(--primary)]">Personnalisation Premium</p>
             <p className="mt-1 text-[var(--text2)]">
-              Vous pouvez explorer les options ci-dessous, mais l&apos;enregistrement d&apos;une
-              apparence personnalisée nécessite le forfait Premium. Votre menu reste sur l&apos;ambiance
-              ivoire par défaut.
+              Le logo est inclus gratuitement — vous pouvez l&apos;ajouter dès maintenant.
+              L&apos;ambiance, la couleur et la police nécessitent le forfait Premium : votre menu
+              reste sur l&apos;ambiance ivoire par défaut.
             </p>
           </div>
         ) : null}
@@ -115,48 +131,84 @@ export default function ThemeEditor({
 
         <section className={disabled ? 'opacity-60 pointer-events-none' : ''}>
           <h3 className="mb-2 text-sm font-extrabold">Couleur d&apos;accent</h3>
-          <div className="flex flex-wrap gap-2">
-            {MENU_ACCENTS.map((c) => (
-              <button
-                key={c}
-                onClick={() => set('accent', c)}
-                aria-label={c}
-                className={`h-9 w-9 rounded-full border-2 ${theme.accent === c ? 'border-[var(--text)]' : 'border-transparent'}`}
-                style={{ background: c }}
-              />
-            ))}
-          </div>
+          <ColorField value={theme.accent} onChange={(c) => set('accent', c)} presets={MENU_ACCENTS} />
         </section>
 
         <section className={disabled ? 'opacity-60 pointer-events-none' : ''}>
           <h3 className="mb-2 text-sm font-extrabold">Police</h3>
-          <div className="flex gap-2">
-            {(['serif', 'modern'] as const).map((f) => (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {MENU_FONT_ORDER.map((f) => (
               <button
                 key={f}
                 onClick={() => set('font', f)}
-                className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold ${theme.font === f ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-[var(--border2)]'}`}
-                style={{ fontFamily: f === 'serif' ? 'Georgia, serif' : 'system-ui, sans-serif' }}
+                title={MENU_FONTS[f].label}
+                className={`rounded-lg border-2 px-3 py-2.5 text-sm font-semibold transition-colors ${theme.font === f ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-[var(--border2)] hover:border-[var(--primary)]'}`}
+                style={{ fontFamily: MENU_FONTS[f].stack }}
               >
-                {f === 'serif' ? 'Élégante (serif)' : 'Moderne'}
+                {MENU_FONTS[f].label}
               </button>
             ))}
           </div>
         </section>
 
-        <section className={disabled ? 'opacity-60 pointer-events-none' : ''}>
-          <h3 className="mb-2 text-sm font-extrabold">Logo (en tête du menu)</h3>
-          <div className="flex items-center gap-3">
-            {theme.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={theme.logo_url} alt="" className="h-12 w-12 rounded-lg object-contain bg-[var(--surface-var)]" />
-            ) : null}
-            <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onLogo(f); e.target.value = ''; }} />
-            <button onClick={() => fileRef.current?.click()} disabled={uploading} className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold hover:border-[var(--primary)] disabled:opacity-50">
-              {uploading ? 'Envoi…' : theme.logo_url ? 'Changer' : 'Ajouter un logo'}
-            </button>
-            {theme.logo_url ? <button onClick={() => set('logo_url', null)} className="text-sm font-semibold text-red-500 hover:underline">Retirer</button> : null}
-          </div>
+        {/* Logo — c'est LE logo du restaurant (celui de la fiche), pas un second
+            visuel. Ici on choisit seulement de l'afficher ou non sur le menu ;
+            s'il n'existe pas encore on peut l'ajouter (ça remplit la fiche aussi). */}
+        <section>
+          <h3 className="mb-2 text-sm font-extrabold">Logo</h3>
+          {theme.logo_url ? (
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--border2)] p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={theme.logo_url}
+                alt=""
+                className="h-12 w-12 shrink-0 rounded-lg bg-[var(--surface-var)] object-contain"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">Afficher le logo en tête du menu</span>
+                <span className="block text-xs text-[var(--text3)]">
+                  C&apos;est le logo de votre établissement.{' '}
+                  <Link
+                    href={`/pro/r/${restaurantId}/fiche`}
+                    className="font-semibold text-[var(--primary)] hover:underline"
+                  >
+                    Le changer ou le retirer
+                  </Link>
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={theme.show_logo}
+                onChange={(e) => set('show_logo', e.target.checked)}
+                className="h-4 w-4 shrink-0 accent-[var(--primary)]"
+              />
+            </label>
+          ) : (
+            <div className="rounded-xl border border-dashed border-[var(--border2)] p-3">
+              <p className="text-sm text-[var(--text2)]">
+                Vous n&apos;avez pas encore de logo. Ajoutez-le pour l&apos;afficher en tête de votre
+                menu — il servira aussi sur votre fiche.
+              </p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) onLogo(f);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="mt-2 rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold hover:border-[var(--primary)] disabled:opacity-50"
+              >
+                {uploading ? 'Envoi…' : 'Ajouter un logo'}
+              </button>
+            </div>
+          )}
           {uploadError ? <p className="mt-2 text-sm font-medium text-red-500">{uploadError}</p> : null}
         </section>
 
@@ -172,24 +224,22 @@ export default function ThemeEditor({
           </p>
         </section>
 
-        {premium ? (
-          <div className="flex items-center gap-3 pt-2 text-sm">
-            <span className="text-[var(--text3)]">
-              Vos changements sont enregistrés automatiquement.
-            </span>
-            {!isDefaultTheme(theme) ? (
-              <button onClick={reset} className="font-semibold text-[var(--text2)] hover:text-[var(--text)]">Réinitialiser</button>
-            ) : null}
-            {status === 'error' && error ? <span className="font-medium text-red-500">{error}</span> : null}
-          </div>
-        ) : null}
+        <div className="flex items-center gap-3 pt-2 text-sm">
+          <span className="text-[var(--text3)]">
+            Vos changements sont enregistrés automatiquement.
+          </span>
+          {!isDefaultTheme(theme) ? (
+            <button onClick={reset} className="font-semibold text-[var(--text2)] hover:text-[var(--text)]">Réinitialiser</button>
+          ) : null}
+          {status === 'error' && error ? <span className="font-medium text-red-500">{error}</span> : null}
+        </div>
       </div>
 
       {/* Aperçu en direct */}
       <div className="lg:sticky lg:top-4 self-start">
         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text3)]">Aperçu</p>
         <div className="rounded-2xl border border-[var(--border2)] p-4" style={{ background: preset.bg, fontFamily }}>
-          {theme.logo_url ? (
+          {theme.logo_url && theme.show_logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={theme.logo_url} alt="" className="mx-auto mb-3 h-14 w-14 rounded-lg object-contain" />
           ) : null}

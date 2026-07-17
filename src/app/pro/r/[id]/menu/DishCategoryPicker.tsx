@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_BY_SLUG, GROUP_LABELS, searchCategories } from '@/lib/pro/categories';
 
+/** Lot du scroll infini : nombre de catégories affichées d'emblée, puis chargées
+ *  par paquets en scrollant (les 290 catégories ne rentrent pas d'un coup). */
+const PAGE_SIZE = 24;
+
 /**
  * Picker « Catégories » d'un plat (menu_items.category_slugs, max 3) — sur les
  * 260 catégories de l'app (tous groupes). Relie le plat aux notes de la
@@ -27,10 +31,18 @@ export default function DishCategoryPicker({
 
   const full = selected.length >= max;
   const excluded = useMemo(() => new Set(selected), [selected]);
-  const results = useMemo(
-    () => (full ? [] : searchCategories(query, excluded).slice(0, 10)),
-    [query, excluded, full]
+  const filtered = useMemo(
+    () => (full ? [] : searchCategories(query, excluded)),
+    [full, query, excluded]
   );
+  // Scroll infini fenêtré : on affiche un lot, la suite se charge en scrollant.
+  // (Sans ça, l'ancien cap à 10 donnait « on dirait qu'il n'y a pas beaucoup de
+  // catégories » alors qu'il y en a ~290.)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const results = full ? [] : filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+  // Repartir du 1er lot à chaque nouvelle recherche ou (ré)ouverture.
+  useEffect(() => setVisibleCount(PAGE_SIZE), [query, open]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -56,6 +68,9 @@ export default function DishCategoryPicker({
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setOpen(true);
+      if (hasMore && hi >= results.length - 3) {
+        setVisibleCount((v) => Math.min(v + PAGE_SIZE, filtered.length));
+      }
       setHi((i) => Math.min(i + 1, results.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -125,7 +140,15 @@ export default function DishCategoryPicker({
       </div>
 
       {open && results.length > 0 ? (
-        <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-[var(--border2)] bg-[var(--surface)] py-1 shadow-lg">
+        <ul
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            if (hasMore && el.scrollTop + el.clientHeight >= el.scrollHeight - 32) {
+              setVisibleCount((v) => Math.min(v + PAGE_SIZE, filtered.length));
+            }
+          }}
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-[var(--border2)] bg-[var(--surface)] py-1 shadow-lg"
+        >
           {results.map((c, i) => (
             <li key={c.slug}>
               <button

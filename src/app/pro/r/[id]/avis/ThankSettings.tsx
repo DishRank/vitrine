@@ -1,16 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useAutoSave, type SaveStatus } from '../../../_components/useAutoSave';
+import { useEffect, useState } from 'react';
+import { useAutoSave } from '../../../_components/useAutoSave';
+import { setSaveStatus } from '../../../_components/saveStatusStore';
 import { DEFAULT_THANK } from '@/lib/pro/thanks';
-
-const STATUS_TEXT: Record<SaveStatus, string> = {
-  idle: '',
-  pending: 'Modification…',
-  saving: 'Enregistrement…',
-  saved: 'Enregistré ✓',
-  error: 'Échec — nouvelle tentative…',
-};
 
 /**
  * Réglages « remerciements automatiques » en haut de l'onglet Avis. Message par
@@ -41,6 +34,13 @@ export default function ThankSettings({
     return { ok: res.ok && !!j.ok, error: j.error };
   };
   const { status, schedule, flush } = useAutoSave(save);
+  // Pousse le statut dans le store partagé → il s'affiche dans l'en-tête de
+  // page (SaveStatusSlot), comme la fiche et le menu — « Enregistré ✓ » en haut,
+  // uniforme sur toutes les pages.
+  useEffect(() => {
+    setSaveStatus(status);
+  }, [status]);
+  useEffect(() => () => setSaveStatus('idle'), []);
 
   return (
     <section className="mb-4 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 sm:p-5">
@@ -79,18 +79,9 @@ export default function ThankSettings({
           placeholder={DEFAULT_THANK}
           className="w-full rounded-xl border border-[var(--border2)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text)] placeholder-[var(--text3)] outline-none focus:border-[var(--primary)]"
         />
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <p className="text-xs text-[var(--text3)]">
-            Vide = « {DEFAULT_THANK} »
-          </p>
-          <span
-            className={`text-xs font-semibold ${
-              status === 'saved' ? 'text-[var(--accent-success)]' : status === 'error' ? 'text-red-500' : 'text-[var(--text3)]'
-            }`}
-          >
-            {STATUS_TEXT[status]}
-          </span>
-        </div>
+        <p className="mt-1 text-xs text-[var(--text3)]">
+          Vide = « {DEFAULT_THANK} »
+        </p>
       </div>
     </section>
   );

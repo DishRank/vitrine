@@ -5,8 +5,15 @@ import MenuEditor from './MenuEditor';
 
 export const metadata = { title: 'Menu' };
 
-export default async function MenuPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MenuPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ edit?: string }>;
+}) {
   const { id } = await params;
+  const { edit } = await searchParams;
   const resto = await requireOwnedRestaurant(id);
   const premium = isPremium(resto);
   const menus = await getEditorMenus(id);
@@ -20,6 +27,7 @@ export default async function MenuPage({ params }: { params: Promise<{ id: strin
       premium={premium}
       initialTheme={initialTheme}
       menuLanguages={resto.menu_languages ?? []}
+      initialEditItemId={typeof edit === 'string' ? edit : undefined}
     />
   );
 }

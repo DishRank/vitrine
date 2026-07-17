@@ -8,6 +8,7 @@ import ThemeToggle from '@/app/pro/_components/ThemeToggle';
 import Modal from '@/app/pro/_components/Modal';
 import ClaimClient from '@/app/pro/claim/ClaimClient';
 import DigestToggle from '@/app/pro/compte/DigestToggle';
+import PasswordResetButton from '@/app/pro/compte/PasswordResetButton';
 import { signOutAction } from '@/app/pro/actions';
 import AnimatedOutlet from './AnimatedOutlet';
 
@@ -17,6 +18,11 @@ export interface ShellResto {
   photo_url: string | null;
   subscription_tier: string | null;
 }
+
+// Styles de la sheet « Mon compte » (mêmes cartes que la page /pro/compte).
+const accountCard = 'rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4';
+const accountLinkRow =
+  'flex items-center justify-between rounded-lg px-2 py-2 -mx-2 text-sm font-semibold text-[var(--text2)] transition-colors hover:bg-[var(--bg)] hover:text-[var(--text)]';
 
 /**
  * Shell « dashboard » de l'espace pro : sidebar fixe (nav de l'établissement
@@ -176,17 +182,49 @@ export default function ProShell({
           par le layout serveur : ouverture instantanée, zéro navigation. */}
       <Modal open={accountOpen} onClose={() => setAccountOpen(false)} title="Mon compte" maxWidth="max-w-lg">
         <div className="space-y-4">
-          <section className="rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4">
+          <section className={accountCard}>
             <h3 className="mb-1 text-sm font-extrabold">Compte</h3>
             <p className="text-sm text-[var(--text2)]">
-              Connecté en tant que <strong>{email ?? '—'}</strong>.
+              Connecté en tant que <strong className="text-[var(--text)]">{email ?? '—'}</strong>.
             </p>
           </section>
-          <section className="rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4">
+
+          <section className={accountCard}>
+            <h3 className="mb-1 text-sm font-extrabold">Sécurité</h3>
+            <p className="mb-3 text-sm text-[var(--text2)]">
+              Recevez par email un lien sécurisé pour définir un nouveau mot de passe.
+            </p>
+            <PasswordResetButton email={email ?? ''} />
+          </section>
+
+          <section className={accountCard}>
             <h3 className="mb-3 text-sm font-extrabold">Notifications par email</h3>
             <DigestToggle initialOptOut={digestOptOut} />
           </section>
-          <section className="rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4">
+
+          <section className={accountCard}>
+            <h3 className="mb-2 text-sm font-extrabold">Aide &amp; ressources</h3>
+            <div className="flex flex-col">
+              <a href="mailto:contact@dishrank.fr" className={accountLinkRow}>
+                <span>Contacter le support</span>
+                <span aria-hidden className="text-[var(--text3)]">✉</span>
+              </a>
+              <a href="/" target="_blank" rel="noopener noreferrer" className={accountLinkRow}>
+                <span>Découvrir DishRank</span>
+                <span aria-hidden className="text-[var(--text3)]">↗</span>
+              </a>
+              <a href="/?page=terms" target="_blank" rel="noopener noreferrer" className={accountLinkRow}>
+                <span>Conditions d&apos;utilisation</span>
+                <span aria-hidden className="text-[var(--text3)]">↗</span>
+              </a>
+              <a href="/?page=privacy" target="_blank" rel="noopener noreferrer" className={accountLinkRow}>
+                <span>Confidentialité</span>
+                <span aria-hidden className="text-[var(--text3)]">↗</span>
+              </a>
+            </div>
+          </section>
+
+          <section className={accountCard}>
             <h3 className="mb-1 text-sm font-extrabold">Données personnelles</h3>
             <p className="text-sm text-[var(--text2)]">
               Pour exporter ou supprimer vos données, écrivez-nous à{' '}
@@ -196,6 +234,24 @@ export default function ProShell({
               .
             </p>
           </section>
+
+          <div className="flex items-center justify-between gap-3">
+            <Link
+              href="/pro/compte"
+              onClick={() => setAccountOpen(false)}
+              className="text-xs font-semibold text-[var(--primary)] hover:underline"
+            >
+              Ouvrir la page complète →
+            </Link>
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] transition-colors hover:border-red-500 hover:text-red-500"
+              >
+                Se déconnecter
+              </button>
+            </form>
+          </div>
         </div>
       </Modal>
     </div>

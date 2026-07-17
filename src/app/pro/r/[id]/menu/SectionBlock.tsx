@@ -12,9 +12,10 @@ import {
   setItemFlagAction,
   type MenuActionState,
 } from './menuActions';
-import type { EditorSection, EditorItem } from './menuData';
+import type { EditorSection, EditorItem, MenuItemI18n } from './menuData';
 import type { FormulaSources } from './menuSources';
 import type { DragData } from './menuDnd';
+import FlagIcon from '@/components/FlagIcon';
 import { ALLERGEN_LABEL, DIET_LABEL, formatPrice } from './vocab';
 import ItemForm from './ItemForm';
 import FormulaForm from './FormulaForm';
@@ -28,12 +29,19 @@ export default function SectionBlock({
   menuId,
   section,
   sources,
+  menuLanguages,
+  premium,
+  initialEditItemId,
   isChild = false,
 }: {
   restaurantId: string;
   menuId: string;
   section: EditorSection;
   sources: FormulaSources;
+  menuLanguages: string[];
+  premium: boolean;
+  /** Deep-link `?edit=<id>` : ouvre la modale d'édition si le plat est ici. */
+  initialEditItemId?: string;
   /** Sous-catégorie : pas de « + Sous-catégorie » (profondeur bornée à 1). */
   isChild?: boolean;
 }) {
@@ -46,6 +54,17 @@ export default function SectionBlock({
   const [editFormulaId, setEditFormulaId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<{ title: string; message: React.ReactNode; action: () => void } | null>(null);
   const [err, setErr] = useState('');
+
+  // Deep-link « Créer ce plat » (?edit=<id>) : ouvre la modale d'édition si le
+  // plat est dans CETTE catégorie (une seule y correspond). On nettoie l'URL
+  // sans re-fetch (history.replaceState) → le param a joué son rôle.
+  useEffect(() => {
+    if (initialEditItemId && section.items.some((it) => it.id === initialEditItemId && it.kind === 'item')) {
+      setEditItemId(initialEditItemId);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEditItemId]);
 
   // La catégorie est déplaçable (poignée dans l'en-tête) parmi ses sœurs…
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -190,7 +209,17 @@ export default function SectionBlock({
         <div className="space-y-3 border-t border-[var(--border2)] bg-[var(--bg)]/50 p-4 pl-5 sm:pl-6">
           <SortableContext items={childIds} strategy={verticalListSortingStrategy}>
             {section.children.map((child) => (
-              <SectionBlock key={child.id} restaurantId={restaurantId} menuId={menuId} section={child} sources={sources} isChild />
+              <SectionBlock
+                key={child.id}
+                restaurantId={restaurantId}
+                menuId={menuId}
+                section={child}
+                sources={sources}
+                menuLanguages={menuLanguages}
+                premium={premium}
+                initialEditItemId={initialEditItemId}
+                isChild
+              />
             ))}
           </SortableContext>
           {addingSub ? (
@@ -203,11 +232,24 @@ export default function SectionBlock({
 
       {/* ── Modales d'édition (centrées, sans décaler la liste) ─────────────── */}
       <Modal open={addingItem} onClose={() => setAddingItem(false)} title="Ajouter un plat" maxWidth="max-w-2xl">
-        <ItemForm restaurantId={restaurantId} sectionId={section.id} onDone={() => setAddingItem(false)} />
+        <ItemForm
+          restaurantId={restaurantId}
+          sectionId={section.id}
+          onDone={() => setAddingItem(false)}
+          menuLanguages={menuLanguages}
+          premium={premium}
+        />
       </Modal>
       <Modal open={!!editingItem} onClose={() => setEditItemId(null)} title="Modifier le plat" maxWidth="max-w-2xl">
         {editingItem ? (
-          <ItemForm restaurantId={restaurantId} sectionId={section.id} item={editingItem} onDone={() => setEditItemId(null)} />
+          <ItemForm
+            restaurantId={restaurantId}
+            sectionId={section.id}
+            item={editingItem}
+            onDone={() => setEditItemId(null)}
+            menuLanguages={menuLanguages}
+            premium={premium}
+          />
         ) : null}
       </Modal>
 
@@ -221,7 +263,13 @@ export default function SectionBlock({
       </Modal>
 
       <Modal open={editingSection} onClose={() => setEditingSection(false)} title="Renommer la catégorie" maxWidth="max-w-md">
-        <SectionForm restaurantId={restaurantId} section={section} onDone={() => setEditingSection(false)} />
+        <SectionForm
+          restaurantId={restaurantId}
+          section={section}
+          menuLanguages={menuLanguages}
+          premium={premium}
+          onDone={() => setEditingSection(false)}
+        />
       </Modal>
 
       <ConfirmDialog
@@ -374,34 +422,137 @@ function AddSubSectionForm({
   );
 }
 
-/** Formulaire de renommage/description de catégorie (dans une modale). */
+// Traduction manuelle par catégorie (onglets). fr = source (colonnes name/description).
+const TRANSLATABLE = ['en', 'es', 'de', 'it'];
+const LANG_LABEL: Record<string, string> = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' };
+
+/** Formulaire de renommage/description de catégorie (dans une modale). Onglets de
+ *  langue (parité plat) : le français est la source ; chaque langue activée a son
+ *  onglet pour éditer/corriger la traduction du nom et de la description de la
+ *  sous-catégorie. Restreint à EN pour un resto gratuit (es/de/it premium). */
 function SectionForm({
   restaurantId,
   section,
+  menuLanguages,
+  premium,
   onDone,
 }: {
   restaurantId: string;
   section: EditorSection;
+  menuLanguages: string[];
+  premium: boolean;
   onDone: () => void;
 }) {
   const [state, action] = useActionState<MenuActionState, FormData>(
     upsertSectionAction.bind(null, restaurantId),
     {}
   );
+  const editable = (premium ? menuLanguages : menuLanguages.filter((l) => l === 'en')).filter((l) =>
+    TRANSLATABLE.includes(l)
+  );
+  const [tab, setTab] = useState<string>('fr');
+  const [i18n, setI18n] = useState<MenuItemI18n>(() => ({ ...(section.i18n ?? {}) }));
+  // Édition manuelle d'une locale → on retire `_auto`/`_h` : l'entrée devient
+  // « manuelle », l'auto-trad ne la réécrit plus jamais (contrat mig 085).
+  const setLoc = (loc: string, field: 'name' | 'description', value: string) =>
+    setI18n((prev) => {
+      const cur = prev[loc] ?? {};
+      return {
+        ...prev,
+        [loc]: {
+          name: field === 'name' ? value : cur.name,
+          description: field === 'description' ? value : cur.description,
+        },
+      };
+    });
   useEffect(() => {
     if (state.ok) onDone();
   }, [state.ok, onDone]);
+  const pill = (on: boolean) =>
+    `rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+      on
+        ? 'border-[var(--primary)] bg-[var(--primary-container)] text-[var(--primary)]'
+        : 'border-[var(--border2)] text-[var(--text2)] hover:border-[var(--primary)]'
+    }`;
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="id" value={section.id} />
+
+      {/* Onglets de langue — traduction manuelle de la catégorie (nom + description). */}
+      {editable.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" onClick={() => setTab('fr')} className={pill(tab === 'fr')}>
+            <FlagIcon code="fr" size={15} style={{ verticalAlign: '-2px', marginRight: 5 }} />
+            Français <span className="font-normal opacity-60">· source</span>
+          </button>
+          {editable.map((l) => {
+            const filled = !!i18n[l]?.name?.trim();
+            return (
+              <button key={l} type="button" onClick={() => setTab(l)} className={pill(tab === l)}>
+                <FlagIcon code={l} size={15} style={{ verticalAlign: '-2px', marginRight: 5 }} />
+                {LANG_LABEL[l]}{' '}
+                {filled ? (
+                  <span className="font-bold text-[var(--accent-success)]">✓</span>
+                ) : (
+                  <span className="font-normal opacity-60">· à traduire</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
       <div>
-        <label className={labelCls}>Nom de la catégorie</label>
-        <input name="name" type="text" required maxLength={80} defaultValue={section.name} className={inputCls} autoFocus />
+        <label className={labelCls}>{tab === 'fr' ? 'Nom de la catégorie' : `Nom · ${LANG_LABEL[tab]}`}</label>
+        {/* Source FR — toujours soumise (name="name") ; masquée hors onglet fr. Pas
+            de `required` (un champ caché requis bloquerait le submit ; le serveur valide). */}
+        <input
+          name="name"
+          type="text"
+          maxLength={80}
+          defaultValue={section.name}
+          className={inputCls}
+          autoFocus
+          style={tab === 'fr' ? undefined : { display: 'none' }}
+        />
+        {tab !== 'fr' ? (
+          <input
+            key={tab}
+            type="text"
+            maxLength={200}
+            value={i18n[tab]?.name ?? ''}
+            onChange={(e) => setLoc(tab, 'name', e.target.value)}
+            placeholder={section.name || 'Traduction du nom…'}
+            className={inputCls}
+          />
+        ) : null}
       </div>
       <div>
-        <label className={labelCls}>Description (optionnel)</label>
-        <input name="description" type="text" maxLength={200} defaultValue={section.description ?? ''} placeholder="Ex. Faites maison, servies avec…" className={inputCls} />
+        <label className={labelCls}>{tab === 'fr' ? 'Description (optionnel)' : `Description · ${LANG_LABEL[tab]}`}</label>
+        <input
+          name="description"
+          type="text"
+          maxLength={200}
+          defaultValue={section.description ?? ''}
+          placeholder="Ex. Faites maison, servies avec…"
+          className={inputCls}
+          style={tab === 'fr' ? undefined : { display: 'none' }}
+        />
+        {tab !== 'fr' ? (
+          <input
+            key={tab}
+            type="text"
+            maxLength={1000}
+            value={i18n[tab]?.description ?? ''}
+            onChange={(e) => setLoc(tab, 'description', e.target.value)}
+            placeholder={section.description || 'Traduction de la description…'}
+            className={inputCls}
+          />
+        ) : null}
       </div>
+
+      <input type="hidden" name="i18n" value={JSON.stringify(i18n)} />
+
       <FormError error={state.error} />
       <div className="flex items-center gap-2">
         <button type="submit" className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white hover:opacity-90">Enregistrer</button>

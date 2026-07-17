@@ -54,9 +54,10 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * cassait silencieusement le téléchargement.
  *
  * Si `logo` (data: URI) est fourni, on le redessine SÉPARÉMENT sur le canvas
- * (pastille blanche arrondie + logo « contain »), car une <image> imbriquée dans
- * le SVG ne se rasterise pas en mode image. Géométrie alignée sur l'overlay de
- * QrKit : pastille = 28% du côté, padding = 12% de la pastille.
+ * (badge rond blanc + ombre + anneau + logo « contain »), car une <image>
+ * imbriquée dans le SVG ne se rasterise pas en mode image. Géométrie alignée sur
+ * l'overlay de QrKit : badge rond = 30% du côté, anneau à 86% du badge, logo ≈
+ * 62% du badge.
  */
 export function DownloadPngButton({
   svg,
@@ -93,23 +94,33 @@ export function DownloadPngButton({
           ctx.drawImage(qrImg, 0, 0, size, size);
 
           if (logo) {
-            const box = size * 0.28;
-            const bx = (size - box) / 2;
-            const rx = box * 0.16;
+            const c = size / 2;
+            const R = (size * 0.3) / 2; // badge rond = 30% du côté
+            // Badge blanc + ombre douce
+            ctx.save();
+            ctx.shadowColor = 'rgba(26,24,50,0.28)';
+            ctx.shadowBlur = size * 0.018;
+            ctx.shadowOffsetY = size * 0.004;
             ctx.fillStyle = '#FFFFFF';
             ctx.beginPath();
-            if (typeof ctx.roundRect === 'function') ctx.roundRect(bx, bx, box, box, rx);
-            else ctx.rect(bx, bx, box, box);
+            ctx.arc(c, c, R, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
+            // Anneau de marque
+            ctx.beginPath();
+            ctx.arc(c, c, R * 0.86, 0, Math.PI * 2);
+            ctx.lineWidth = size * 0.005;
+            ctx.strokeStyle = '#6C5CE7';
+            ctx.stroke();
             try {
               const logoImg = await loadImage(logo);
-              const avail = box * 0.76; // 12% de padding de chaque côté
+              const avail = R * 2 * 0.62; // logo ≈ 62% du diamètre du badge
               const scale = Math.min(avail / logoImg.width, avail / logoImg.height);
               const w = logoImg.width * scale;
               const h = logoImg.height * scale;
               ctx.drawImage(logoImg, (size - w) / 2, (size - h) / 2, w, h);
             } catch {
-              /* logo indisponible → on garde le QR + pastille blanche */
+              /* logo indisponible → on garde le QR + badge blanc */
             }
           }
 

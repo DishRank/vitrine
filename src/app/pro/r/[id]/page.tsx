@@ -47,7 +47,8 @@ export default async function CockpitPage({ params }: { params: Promise<{ id: st
   const menuCount = menuRes.count ?? 0;
   const hasMenu = menuCount > 0;
   const hasDescription = !!(resto.description && resto.description.trim());
-  const setupDone = hasDescription && hasMenu;
+  const hasCover = !!(resto.photo_url && resto.photo_url.trim());
+  const setupDone = hasDescription && hasCover && hasMenu;
   const hasFirstScan = scans > 0 || menuViews > 0;
 
   const base = `/pro/r/${id}`;
@@ -101,7 +102,7 @@ export default async function CockpitPage({ params }: { params: Promise<{ id: st
         <p className="mt-0.5 text-sm text-[var(--text2)]">{statusLine}</p>
       </div>
 
-      <SetupGuide id={id} hasDescription={hasDescription} hasMenu={hasMenu} hasFirstScan={hasFirstScan} />
+      <SetupGuide id={id} hasDescription={hasDescription} hasCover={hasCover} hasMenu={hasMenu} hasFirstScan={hasFirstScan} />
 
       {/* Chiffres clés */}
       <section>

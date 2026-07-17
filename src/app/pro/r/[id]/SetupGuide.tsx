@@ -17,16 +17,21 @@ import { useEffect, useState } from 'react';
 export default function SetupGuide({
   id,
   hasDescription,
+  hasCover,
   hasMenu,
   hasFirstScan,
 }: {
   id: string;
   hasDescription: boolean;
+  hasCover: boolean;
   hasMenu: boolean;
   hasFirstScan: boolean;
 }) {
   const base = `/pro/r/${id}`;
-  const setupDone = hasDescription && hasMenu;
+  // La fiche n'est « complète » qu'avec une description ET une photo de
+  // couverture (gratuite) — l'image vitrine rend la fiche vivante.
+  const ficheDone = hasDescription && hasCover;
+  const setupDone = ficheDone && hasMenu;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -64,9 +69,9 @@ export default function SetupGuide({
   // ── A) setup incomplet → guide à étapes ────────────────────────────────────
   const steps = [
     {
-      done: hasDescription,
+      done: ficheDone,
       label: 'Complétez votre fiche',
-      hint: "Description, types de cuisine, contact — pas besoin d'être parfait, vous compléterez plus tard.",
+      hint: "Description, types de cuisine, contact et une photo de couverture — pas besoin d'être parfait, vous compléterez plus tard.",
       href: `${base}/fiche`,
       cta: 'Compléter ma fiche',
     },

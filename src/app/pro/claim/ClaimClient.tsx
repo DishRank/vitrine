@@ -7,12 +7,13 @@ import {
   requestClaimCodeAction,
   verifyClaimCodeAction,
   submitManualClaimAction,
+  getMyClaimAction,
   type RestaurantHit,
 } from './claimActions';
 import { mapClaimError } from './claimErrors';
 import { inputCls, labelCls } from '../_components/fields';
 
-type Step = 'search' | 'intro' | 'email' | 'code' | 'manual' | 'verified' | 'pending';
+type Step = 'search' | 'intro' | 'email' | 'code' | 'manual' | 'verified' | 'pending' | 'rejected';
 
 const btn =
   'rounded-xl bg-[var(--primary)] px-4 py-3 text-[15px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50';
@@ -33,6 +34,7 @@ export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
   const [sentTo, setSentTo] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
 
   const search = () =>
     start(async () => {
@@ -47,7 +49,17 @@ export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
     }
     setPicked(r);
     setError('');
-    setStep('intro');
+    // Résout une demande EXISTANTE (en attente / refusée + motif) au lieu de
+    // repartir de l'étape email — parité avec l'app (useMyClaim).
+    start(async () => {
+      const claim = await getMyClaimAction(r.id);
+      if (claim?.status === 'verified') setStep('verified');
+      else if (claim?.status === 'pending') setStep('pending');
+      else if (claim?.status === 'rejected') {
+        setRejectionReason(claim.rejection_reason);
+        setStep('rejected');
+      } else setStep('intro');
+    });
   };
 
   const request = (withEmail?: string) =>
@@ -117,6 +129,30 @@ export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
           est validée.
         </p>
         <button onClick={() => { onDone?.(); router.push('/pro'); }} className={`${btn} mt-5 w-full`}>
+          Retour à mes établissements
+        </button>
+      </div>
+    );
+  }
+
+  if (step === 'rejected') {
+    return (
+      <div className={`${card} text-center`}>
+        <div className="text-5xl">🙁</div>
+        <h2 className="mt-3 text-xl font-extrabold">Demande refusée</h2>
+        <p className="mt-1 text-sm text-[var(--text2)]">
+          Votre demande pour {picked?.name} n&apos;a pas été validée.
+        </p>
+        {rejectionReason ? (
+          <div className="mt-4 rounded-xl bg-[var(--surface-var)] p-3 text-left">
+            <p className="text-xs font-bold text-[var(--text2)]">Motif du refus</p>
+            <p className="mt-1 text-sm text-[var(--text)] whitespace-pre-line">{rejectionReason}</p>
+          </div>
+        ) : null}
+        <button onClick={() => { setError(''); setStep('intro'); }} className={`${btn} mt-5 w-full`}>
+          Refaire une demande
+        </button>
+        <button onClick={() => { onDone?.(); router.push('/pro'); }} className={`${linkBtn} mt-3 block w-full text-center`}>
           Retour à mes établissements
         </button>
       </div>

@@ -58,10 +58,16 @@ export default function MenuBoard({
   restaurantId,
   menu,
   sources,
+  menuLanguages,
+  premium,
+  initialEditItemId,
 }: {
   restaurantId: string;
   menu: EditorMenu;
   sources: FormulaSources;
+  menuLanguages: string[];
+  premium: boolean;
+  initialEditItemId?: string;
 }) {
   const [sections, setSections] = useState<EditorSection[]>(menu.sections);
   const [active, setActive] = useState<DragData | null>(null);
@@ -181,7 +187,16 @@ export default function MenuBoard({
       <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
           {sections.map((s) => (
-            <SectionBlock key={s.id} restaurantId={restaurantId} menuId={menu.id} section={s} sources={sources} />
+            <SectionBlock
+              key={s.id}
+              restaurantId={restaurantId}
+              menuId={menu.id}
+              section={s}
+              sources={sources}
+              menuLanguages={menuLanguages}
+              premium={premium}
+              initialEditItemId={initialEditItemId}
+            />
           ))}
         </div>
       </SortableContext>

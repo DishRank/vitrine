@@ -12,6 +12,9 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { unstable_cache } from 'next/cache';
+// Source unique des clés de police (évite la divergence silencieuse avec le
+// validateur d'écriture de themeConstants — cf. audit). Fichier client-safe.
+import { MENU_FONTS, type MenuThemeFont } from '@/app/pro/r/[id]/menu/themeConstants';
 
 // ── Types (miroir léger de lib/menuTypes.ts côté app) ──────────────────────
 
@@ -24,6 +27,7 @@ export interface MenuVariant {
 export interface MenuOptionChoice {
   label: string;
   price_delta?: number;
+  i18n?: Record<string, { label?: string }>;
 }
 export interface MenuOption {
   id: string;
@@ -37,6 +41,7 @@ export interface FormulaConfig {
   prices: { label: string; price: number }[];
   slots: {
     name: string;
+    i18n?: Record<string, { name?: string }>;
     source: { section_id?: string | null; item_ids?: string[] };
     supplements?: { item_id: string; price_delta: number }[];
   }[];
@@ -100,7 +105,7 @@ async function fetchMenuTreeRaw(restaurantId: string): Promise<MenuTree[]> {
   const { data, error } = await supabase
     .from('restaurant_menus')
     .select(
-      `id, slug, name, i18n, display_order, is_active, version,
+      `id, slug, name, i18n, display_order, is_active, status, version,
        menu_sections(id, parent_section_id, name, description, i18n, display_order, is_visible, created_at,
          menu_items(id, section_id, kind, name, description, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, variants, options, availability, formula_config, i18n, created_at))`
     )
@@ -109,13 +114,16 @@ async function fetchMenuTreeRaw(restaurantId: string): Promise<MenuTree[]> {
 
   return (data as unknown as (MenuTree & {
     is_active: boolean;
+    status: string;
     created_at?: string;
     menu_sections: (MenuSection & {
       is_visible: boolean;
       menu_items: (MenuItem & { is_visible: boolean })[];
     })[];
   })[])
-    .filter((m) => m.is_active)
+    // Public : uniquement publié ET visible (défense en profondeur en plus de
+    // la RLS ; la vitrine lit en service_role qui by-passe la RLS).
+    .filter((m) => m.is_active && m.status === 'published')
     .sort((a, b) => a.display_order - b.display_order)
     .map((m) => {
       const visibleSections = (m.menu_sections ?? [])
@@ -156,18 +164,32 @@ export function fetchMenuTree(restaurantId: string): Promise<MenuTree[]> {
   })();
 }
 
-// ── Traduction du menu = PREMIUM (frontière v2 §2.1) ────────────────────────
-// Appliquée AU RENDU, même patron que le thème : pour un resto free (ou
-// premium expiré) on VIDE les feuilles i18n → tout le contenu restaurateur
-// retombe sur le français source, y compris variantes et options. Les libellés
+// ── Frontière langues du menu ────────────────────────────────────────────────
+// Français (source) + Anglais = GRATUIT ; Espagnol / Allemand / Italien =
+// PREMIUM. Appliquée AU RENDU, même patron que le thème : pour un resto free (ou
+// premium expiré) on ne garde QUE les feuilles i18n des langues gratuites (fr/en)
+// et on retire es/de/it → ce contenu retombe sur le français source. Les libellés
 // de PLATEFORME (MENU_UI : allergènes, « épuisé », boutons…) restent dans la
 // langue du visiteur — ils sont à nous, pas au resto. Appliqué APRÈS le Data
 // Cache (qui ignore le tier) → dégradation propre à l'expiration, sans trigger.
+export const FREE_MENU_LOCALES = ['fr', 'en'] as const;
+export const PREMIUM_MENU_LOCALES = ['es', 'de', 'it'] as const;
+
+// Ne conserve que les clés de langue GRATUITES d'un objet i18n (par locale) ;
+// agnostique à la forme des valeurs (name/description, label, name…).
+function keepFreeLocales<T>(i18n: Record<string, T> | null | undefined): Record<string, T> {
+  if (!i18n) return {};
+  const out: Record<string, T> = {};
+  for (const code of Object.keys(i18n)) {
+    if ((FREE_MENU_LOCALES as readonly string[]).includes(code)) out[code] = i18n[code];
+  }
+  return out;
+}
 
 function gateSection(s: MenuSection): MenuSection {
   return {
     ...s,
-    i18n: {},
+    i18n: keepFreeLocales(s.i18n),
     items: s.items.map(gateItem),
     children: s.children.map(gateSection),
   };
@@ -176,15 +198,19 @@ function gateSection(s: MenuSection): MenuSection {
 function gateItem(it: MenuItem): MenuItem {
   return {
     ...it,
-    i18n: {},
-    variants: it.variants.map((v) => ({ ...v, i18n: undefined })),
-    options: it.options.map((o) => ({ ...o, i18n: undefined })),
+    i18n: keepFreeLocales(it.i18n),
+    variants: it.variants.map((v) => ({ ...v, i18n: keepFreeLocales(v.i18n) })),
+    options: it.options.map((o) => ({
+      ...o,
+      i18n: keepFreeLocales(o.i18n),
+      choices: o.choices.map((c) => ({ ...c, i18n: keepFreeLocales(c.i18n) })),
+    })),
   };
 }
 
 export function gateMenuTranslations(menus: MenuTree[], isPremium: boolean): MenuTree[] {
   if (isPremium) return menus;
-  return menus.map((m) => ({ ...m, i18n: {}, sections: m.sections.map(gateSection) }));
+  return menus.map((m) => ({ ...m, i18n: keepFreeLocales(m.i18n), sections: m.sections.map(gateSection) }));
 }
 
 // ── Notes communautaires par plat (l'allusion « organique » à l'app) ────────
@@ -205,17 +231,44 @@ export function fetchMenuRatings(restaurantId: string): Promise<Record<string, D
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
       if (!url || !key) return {};
       const supabase = createClient(url, key);
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('dish_name, rating')
-        .eq('restaurant_id', restaurantId)
-        .eq('pending_moderation', false)
-        .limit(4000);
+      // Résolution avis → plat (mig 112/113) : menu_item_id (lien explicite) →
+      // nom exact → alias. Le nom l'emporte sur l'alias. Clé de sortie = nom
+      // normalisé du plat (ratingKey) → le consommateur reste inchangé.
+      const [{ data, error }, { data: items }, { data: aliases }] = await Promise.all([
+        supabase
+          .from('reviews')
+          .select('dish_name, rating, menu_item_id')
+          .eq('restaurant_id', restaurantId)
+          .eq('pending_moderation', false)
+          .limit(4000),
+        supabase.from('menu_items').select('id, name').eq('restaurant_id', restaurantId),
+        supabase.from('menu_item_aliases').select('alias_norm, menu_item_id').eq('restaurant_id', restaurantId),
+      ]);
       if (error || !data) return {};
+
+      const nameById = new Map<string, string>(); // item id → clé nom normalisée
+      const visibleNames = new Set<string>();
+      for (const it of (items ?? []) as { id: string; name: string }[]) {
+        const k = ratingKey(it.name);
+        nameById.set(it.id, k);
+        visibleNames.add(k);
+      }
+      const aliasToKey = new Map<string, string>(); // alias_norm → clé nom du plat cible
+      for (const a of (aliases ?? []) as { alias_norm: string; menu_item_id: string }[]) {
+        const k = nameById.get(a.menu_item_id);
+        if (k) aliasToKey.set(a.alias_norm, k);
+      }
+
       const agg: Record<string, { sum: number; count: number }> = {};
-      for (const r of data as { dish_name: string | null; rating: number | null }[]) {
-        const nm = (r.dish_name ?? '').trim().toLowerCase();
-        if (!nm || r.rating == null) continue;
+      for (const r of data as { dish_name: string | null; rating: number | null; menu_item_id: string | null }[]) {
+        if (r.rating == null) continue;
+        let nm: string | undefined;
+        if (r.menu_item_id) nm = nameById.get(r.menu_item_id);
+        if (!nm) {
+          const raw = ratingKey(r.dish_name ?? '');
+          if (!raw) continue;
+          nm = visibleNames.has(raw) ? raw : aliasToKey.get(raw) ?? raw;
+        }
         (agg[nm] ??= { sum: 0, count: 0 }).sum += Number(r.rating);
         agg[nm].count += 1;
       }
@@ -326,12 +379,47 @@ export function menuLocales(menus: MenuTree[]): MenuLocale[] {
   return MENU_LOCALES.filter((l) => l === 'fr' || present.has(l));
 }
 
+// ── Pictos régimes / allergènes (indépendants de la langue) ──────────────────
+// Un visuel reconnaissable en un coup d'œil (badge emoji + libellé) pour lire /
+// filtrer plus vite. Emoji = zéro asset, CSP-safe, universel.
+export const DIET_ICON: Record<string, string> = {
+  vegetarien: '🥕',
+  vegan: '🌱',
+  halal: '☪️',
+  sans_gluten: '🌾',
+  sans_lactose: '🥛',
+  bio: '🍃',
+  fait_maison: '🏠',
+  de_saison: '🍂',
+  local: '📍',
+  epice: '🌶️',
+  nouveau: '✨',
+  casher: '✡️',
+};
+export const ALLERGEN_ICON: Record<string, string> = {
+  gluten: '🌾',
+  crustaces: '🦐',
+  oeufs: '🥚',
+  poissons: '🐟',
+  arachides: '🥜',
+  soja: '🫛',
+  lait: '🥛',
+  fruits_coque: '🌰',
+  celeri: '🥬',
+  moutarde: '🟡',
+  sesame: '⬤',
+  sulfites: '🍷',
+  lupin: '🌼',
+  mollusques: '🐚',
+};
+
 // ── Thème d'apparence (feature premium, migration 091) ──────────────────────
 // Copie synchronisée de constants/menuTheme.ts côté app. Le thème n'est
 // APPLIQUÉ que si le resto est premium (sinon défaut ivoire) → dégradation
 // propre à l'expiration, sans trigger DB.
 
-export type MenuThemePreset = 'ivory' | 'linen' | 'charcoal' | 'night';
+export type MenuThemePreset =
+  | 'ivory' | 'linen' | 'sage' | 'blush' | 'charcoal' | 'night' | 'forest' | 'wine';
 export interface ResolvedMenuTheme {
   bg: string;
   card: string;
@@ -340,7 +428,7 @@ export interface ResolvedMenuTheme {
   line: string;
   accent: string;
   dark: boolean;
-  font: 'serif' | 'modern';
+  font: MenuThemeFont;
   photos: boolean;
   logoUrl: string | null;
 }
@@ -348,8 +436,12 @@ export interface ResolvedMenuTheme {
 const MENU_PRESETS: Record<MenuThemePreset, Omit<ResolvedMenuTheme, 'accent' | 'font' | 'photos' | 'logoUrl'>> = {
   ivory: { bg: '#FBF8F3', card: '#FFFFFF', text: '#2A241E', sub: '#8C8478', line: '#EBE4D8', dark: false },
   linen: { bg: '#F5EEE3', card: '#FFFDF9', text: '#3A2E22', sub: '#90806A', line: '#E5DAC8', dark: false },
+  sage: { bg: '#F1F4EC', card: '#FFFFFF', text: '#2C3327', sub: '#7C8570', line: '#E0E6D6', dark: false },
+  blush: { bg: '#FBF3F1', card: '#FFFFFF', text: '#3A2A2A', sub: '#9A8480', line: '#F0E1DD', dark: false },
   charcoal: { bg: '#211D1B', card: '#2A2523', text: '#F2ECE3', sub: '#A89C8D', line: '#37312C', dark: true },
   night: { bg: '#14161F', card: '#1C1F2B', text: '#ECEEF5', sub: '#9AA0B0', line: '#262A38', dark: true },
+  forest: { bg: '#12201A', card: '#1B2C24', text: '#E8F0E9', sub: '#93A89B', line: '#24382F', dark: true },
+  wine: { bg: '#1E1315', card: '#2A1B1E', text: '#F2E7E5', sub: '#B39A9A', line: '#3A2429', dark: true },
 };
 
 export function isRestaurantPremium(
@@ -371,12 +463,20 @@ export function detectPlatformFromUA(ua: string | null | undefined): StorePlatfo
   return 'desktop';
 }
 
-/** Thème effectif. Les PHOTOS de plats sont GRATUITES (frontière v2 §2.1 —
- *  défaut true, seule une désactivation explicite les masque) ; le reste du
- *  thème (ambiance, accent, police, logo) reste PREMIUM — défaut ivoire sinon. */
+/** Thème effectif. Les PHOTOS de plats et le LOGO sont GRATUITS (frontière
+ *  révisée 2026-07-15 — photos : défaut true, seule une désactivation explicite
+ *  les masque ; logo : celui de la FICHE, affiché s'il existe et que l'owner l'a
+ *  laissé activé via `show_logo`) ; le reste du thème (ambiance, accent, police)
+ *  reste PREMIUM — défaut ivoire sinon. */
 export function resolveMenuTheme(raw: unknown, isPremium: boolean): ResolvedMenuTheme {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const photos = o.photos !== false;
+  // `show_logo` (défaut true) = l'owner choisit d'afficher ou non SON logo (celui
+  // de la fiche) en tête du menu. Clé absente ⇒ true : rétrocompat, les thèmes
+  // déjà stockés avec un logo continuent de l'afficher.
+  const showLogo = o.show_logo !== false;
+  const logoUrl =
+    showLogo && typeof o.logo_url === 'string' && o.logo_url ? (o.logo_url as string) : null;
   if (!isPremium) {
     return {
       ...MENU_PRESETS.ivory,
@@ -386,18 +486,16 @@ export function resolveMenuTheme(raw: unknown, isPremium: boolean): ResolvedMenu
       // d'affichage appartient au thème (premium) — sans ça, un resto
       // rétrogradé avec `photos:false` stocké ne pourrait plus les réactiver.
       photos: true,
-      logoUrl: null,
+      // Le logo, lui, est gratuit : on le conserve même sans premium.
+      logoUrl,
     };
   }
-  const key: MenuThemePreset = (['ivory', 'linen', 'charcoal', 'night'] as const).includes(
-    o.theme as MenuThemePreset
-  )
+  const key: MenuThemePreset = o.theme != null && (o.theme as MenuThemePreset) in MENU_PRESETS
     ? (o.theme as MenuThemePreset)
     : 'ivory';
   const accent =
     typeof o.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.accent) ? (o.accent as string) : '#AE8324';
-  const font = o.font === 'modern' ? 'modern' : 'serif';
-  const logoUrl = typeof o.logo_url === 'string' && o.logo_url ? (o.logo_url as string) : null;
+  const font: MenuThemeFont = typeof o.font === 'string' && o.font in MENU_FONTS ? (o.font as MenuThemeFont) : 'serif';
   return { ...MENU_PRESETS[key], accent, font, photos, logoUrl };
 }
 
@@ -436,6 +534,8 @@ export const MENU_UI: Record<
     filterAll: string;
     filterSignature: string;
     noResults: string;
+    formulas: string;
+    avoidAllergens: string;
     allergens: Record<string, string>;
     diets: Record<string, string>;
   }
@@ -461,6 +561,8 @@ export const MENU_UI: Record<
     filterAll: 'Tout',
     filterSignature: 'Signature',
     noResults: 'Aucun plat ne correspond',
+    formulas: 'Nos formules',
+    avoidAllergens: 'Éviter un allergène',
     ratedBy: 'Noté par la communauté',
     likedTitle: 'Un plat vous a plu ?',
     rateInvite: 'Notez-le sur DishRank',
@@ -474,6 +576,7 @@ export const MENU_UI: Record<
     diets: {
       vegetarien: 'Végétarien', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Sans gluten', bio: 'Bio',
       fait_maison: 'Fait maison', epice: 'Épicé', nouveau: 'Nouveau',
+      casher: 'Casher', sans_lactose: 'Sans lactose', de_saison: 'De saison', local: 'Local',
     },
   },
   en: {
@@ -497,6 +600,8 @@ export const MENU_UI: Record<
     filterAll: 'All',
     filterSignature: 'Signature',
     noResults: 'No matching dish',
+    formulas: 'Set menus',
+    avoidAllergens: 'Avoid an allergen',
     ratedBy: 'Rated by the community',
     likedTitle: 'Enjoyed a dish?',
     rateInvite: 'Rate it on DishRank',
@@ -510,6 +615,7 @@ export const MENU_UI: Record<
     diets: {
       vegetarien: 'Vegetarian', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Gluten-free', bio: 'Organic',
       fait_maison: 'Homemade', epice: 'Spicy', nouveau: 'New',
+      casher: 'Kosher', sans_lactose: 'Lactose-free', de_saison: 'Seasonal', local: 'Local',
     },
   },
   es: {
@@ -533,6 +639,8 @@ export const MENU_UI: Record<
     filterAll: 'Todo',
     filterSignature: 'Especialidad',
     noResults: 'Ningún plato coincide',
+    formulas: 'Menús',
+    avoidAllergens: 'Evitar un alérgeno',
     ratedBy: 'Puntuado por la comunidad',
     likedTitle: '¿Te gustó un plato?',
     rateInvite: 'Puntúalo en DishRank',
@@ -546,6 +654,7 @@ export const MENU_UI: Record<
     diets: {
       vegetarien: 'Vegetariano', vegan: 'Vegano', halal: 'Halal', sans_gluten: 'Sin gluten', bio: 'Ecológico',
       fait_maison: 'Casero', epice: 'Picante', nouveau: 'Nuevo',
+      casher: 'Kosher', sans_lactose: 'Sin lactosa', de_saison: 'De temporada', local: 'Local',
     },
   },
   de: {
@@ -569,6 +678,8 @@ export const MENU_UI: Record<
     filterAll: 'Alle',
     filterSignature: 'Spezialität',
     noResults: 'Kein passendes Gericht',
+    formulas: 'Menüs',
+    avoidAllergens: 'Allergen meiden',
     ratedBy: 'Von der Community bewertet',
     likedTitle: 'Ein Gericht genossen?',
     rateInvite: 'Bewerte es auf DishRank',
@@ -582,6 +693,7 @@ export const MENU_UI: Record<
     diets: {
       vegetarien: 'Vegetarisch', vegan: 'Vegan', halal: 'Halal', sans_gluten: 'Glutenfrei', bio: 'Bio',
       fait_maison: 'Hausgemacht', epice: 'Scharf', nouveau: 'Neu',
+      casher: 'Koscher', sans_lactose: 'Laktosefrei', de_saison: 'Saisonal', local: 'Regional',
     },
   },
   it: {
@@ -605,6 +717,8 @@ export const MENU_UI: Record<
     filterAll: 'Tutto',
     filterSignature: 'Specialità',
     noResults: 'Nessun piatto corrisponde',
+    formulas: 'Menù fissi',
+    avoidAllergens: 'Evitare un allergene',
     ratedBy: 'Votato dalla comunità',
     likedTitle: 'Ti è piaciuto un piatto?',
     rateInvite: 'Votalo su DishRank',
@@ -618,6 +732,7 @@ export const MENU_UI: Record<
     diets: {
       vegetarien: 'Vegetariano', vegan: 'Vegano', halal: 'Halal', sans_gluten: 'Senza glutine', bio: 'Bio',
       fait_maison: 'Fatto in casa', epice: 'Piccante', nouveau: 'Novità',
+      casher: 'Kosher', sans_lactose: 'Senza lattosio', de_saison: 'Di stagione', local: 'Locale',
     },
   },
 };

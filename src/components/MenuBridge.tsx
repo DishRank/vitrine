@@ -28,7 +28,7 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import { headers } from 'next/headers';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/downloadLinks';
@@ -49,6 +49,9 @@ import {
   menuLocales,
   MENU_UI,
   MENU_LOCALES,
+  PREMIUM_MENU_LOCALES,
+  DIET_ICON,
+  ALLERGEN_ICON,
   type MenuTree,
   type MenuItem,
   type MenuSection,
@@ -57,6 +60,10 @@ import {
   type ResolvedMenuTheme,
   type StorePlatform,
 } from '@/lib/menu';
+import { MENU_FONTS } from '@/app/pro/r/[id]/menu/themeConstants';
+// Vars CSS des webfonts d'affichage (module partagé avec l'aperçu éditeur) →
+// posées sur <html> pour que var(--font-*) résolve sur cette route autonome.
+import { MENU_FONT_VARS } from '@/app/pro/r/[id]/menu/menuFonts';
 
 interface VenueInfo {
   name: string;
@@ -66,6 +73,18 @@ interface VenueInfo {
   subscription_tier: string | null;
   subscription_expires_at: string | null;
   menu_theme: unknown;
+  menu_languages: string[] | null;
+  // Infos pratiques (affichées en tête du menu public).
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  google_rating: number | null;
+  google_review_count: number | null;
+  phone: string | null;
+  website: string | null;
+  reservation_url: string | null;
+  cuisines: string[] | null;
+  price_level: number | null;
 }
 
 // Restaurant ids are UUIDs. Reject anything else so a hostile path can't bend
@@ -85,7 +104,7 @@ async function fetchVenue(id: string): Promise<VenueInfo | null> {
     const { data } = await supabase
       .from('restaurants')
       .select(
-        'name, city, description, photo_url, subscription_tier, subscription_expires_at, menu_theme'
+        'name, city, description, photo_url, subscription_tier, subscription_expires_at, menu_theme, menu_languages, address, latitude, longitude, google_rating, google_review_count, phone, website, reservation_url, cuisines, price_level'
       )
       .eq('id', id)
       .maybeSingle();
@@ -109,6 +128,12 @@ interface MenuBridgeProps {
 
 export async function buildMenuMetadata(id: string): Promise<Metadata> {
   const venue = await fetchVenue(id);
+  // Resto inexistant (RLS restaurants = `true` → null ⇒ vraiment absent) : la
+  // page fera un vrai notFound(). On sert des métadonnées « introuvable »
+  // propres — pas de pitch d'install sur une page 404.
+  if (!venue) {
+    return { title: 'Page introuvable · DishRank', robots: { index: false, follow: false } };
+  }
   const name = venue?.name?.trim();
   // Titre neutre : la page sert le menu s'il existe, sinon la fiche — ne jamais
   // promettre un « menu » qui pourrait ne pas exister (resto sans menu numérique).
@@ -136,17 +161,25 @@ export async function buildMenuMetadata(id: string): Promise<Metadata> {
 // requête (resolveMenuTheme). Défaut = ivoire chaud. Le violet DishRank n'est
 // jamais thémé : réservé à la petite mention app.
 const BRAND = '#6C5CE7';
-// Polices d'affichage (nom resto, titres de section) — 100 % système, CSP-safe.
-const SERIF =
-  "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif";
-const MODERN =
-  "'Avenir Next', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+// Police de CORPS (noms de plats, textes courants) — 100 % système, CSP-safe.
 const SANS =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
+// Police d'AFFICHAGE (nom resto, titres de section) = choix premium résolu par
+// MENU_FONTS (source unique app↔vitrine). Les webfonts pointent la var CSS
+// injectée par next/font (cf. imports) ; repli système (serif) sinon.
 function displayFont(theme: ResolvedMenuTheme): string {
-  return theme.font === 'serif' ? SERIF : MODERN;
+  return MENU_FONTS[theme.font]?.stack ?? MENU_FONTS.serif.stack;
 }
+
+// Libellés des actions d'infos pratiques (local — évite un aller-retour MENU_UI).
+const INFO_LABELS: Record<string, { directions: string; call: string; website: string; book: string }> = {
+  fr: { directions: 'Itinéraire', call: 'Appeler', website: 'Site', book: 'Réserver' },
+  en: { directions: 'Directions', call: 'Call', website: 'Website', book: 'Book' },
+  es: { directions: 'Cómo llegar', call: 'Llamar', website: 'Web', book: 'Reservar' },
+  de: { directions: 'Route', call: 'Anrufen', website: 'Website', book: 'Reservieren' },
+  it: { directions: 'Indicazioni', call: 'Chiamare', website: 'Sito', book: 'Prenotare' },
+};
 
 function priceStr(n: number): string {
   return `${Number.isInteger(n) ? n : n.toFixed(2).replace('.', ',')} €`;
@@ -241,6 +274,70 @@ function RatingMark({
       ★ {rating.avg.toFixed(1)}
       <span style={{ color: theme.sub, fontWeight: 500 }}> · {rating.count}</span>
     </span>
+  );
+}
+
+// Badges régime + allergènes : picto reconnaissable + libellé. Régimes en
+// teinte accent (positif) ; allergènes en pastille neutre « contient » (title
+// accessible) ; note de service (midi/soir) avec une horloge.
+function TagBadges({
+  diets,
+  allergens,
+  serviceNote,
+  ui,
+  theme,
+}: {
+  diets: string[];
+  allergens: string[];
+  serviceNote: string | null;
+  ui: { diets: Record<string, string>; allergens: Record<string, string>; allergensTitle: string };
+  theme: ResolvedMenuTheme;
+}) {
+  if (!diets.length && !allergens.length && !serviceNote) return null;
+  const pill: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '3px 9px',
+    borderRadius: 999,
+    fontSize: 11.5,
+    lineHeight: 1.25,
+    whiteSpace: 'nowrap',
+  };
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 9 }}>
+      {serviceNote ? (
+        <span style={{ ...pill, background: theme.line, color: theme.sub, fontWeight: 600 }}>
+          <span aria-hidden>🕐</span>
+          {serviceNote}
+        </span>
+      ) : null}
+      {diets.map((d) => (
+        <span
+          key={d}
+          style={{ ...pill, background: theme.accent + '22', color: theme.text, fontWeight: 600 }}
+        >
+          <span aria-hidden>{DIET_ICON[d] ?? '•'}</span>
+          {ui.diets[d] ?? d}
+        </span>
+      ))}
+      {allergens.map((a) => (
+        <span
+          key={a}
+          title={`${ui.allergensTitle} : ${ui.allergens[a] ?? a}`}
+          style={{
+            ...pill,
+            background: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.045)',
+            color: theme.sub,
+            fontWeight: 500,
+            border: `1px solid ${theme.line}`,
+          }}
+        >
+          <span aria-hidden>{ALLERGEN_ICON[a] ?? '⚠'}</span>
+          {ui.allergens[a] ?? a}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -397,9 +494,11 @@ function ItemRow({
                 {o.required ? ` (${ui.required})` : ''} :
               </span>{' '}
               {o.choices
-                .map((ch) =>
-                  ch.price_delta ? `${ch.label} (+${priceStr(ch.price_delta)})` : ch.label
-                )
+                .map((ch) => {
+                  const chLabel =
+                    locale !== 'fr' && ch.i18n?.[locale]?.label ? ch.i18n[locale].label : ch.label;
+                  return ch.price_delta ? `${chLabel} (+${priceStr(ch.price_delta)})` : chLabel;
+                })
                 .join(' · ')}
             </p>
           ))}
@@ -430,7 +529,9 @@ function ItemRow({
               .filter(Boolean);
             return (
               <p key={i} style={{ margin: '6px 0 0', fontSize: 12.5, color: theme.sub, lineHeight: 1.5 }}>
-                <span style={{ fontWeight: 700, color: theme.text }}>{slot.name}</span>
+                <span style={{ fontWeight: 700, color: theme.text }}>
+                  {(locale !== 'fr' && slot.i18n?.[locale]?.name) || slot.name}
+                </span>
                 {names.length > 0 ? ` — ${ui.choiceOf} : ${names.join(' · ')}` : ''}
                 {supplements.length > 0 ? ` (${ui.supplement} ${supplements.join(', ')})` : ''}
               </p>
@@ -439,18 +540,13 @@ function ItemRow({
         </div>
       ) : null}
 
-      {(item.allergens.length > 0 || item.diet_tags.length > 0 || serviceNote) && (
-        <p style={{ margin: '8px 0 0', fontSize: 11, color: theme.sub, letterSpacing: 0.2 }}>
-          {item.diet_tags.map((d) => MENU_UI[locale].diets[d] ?? d).join(' · ')}
-          {item.diet_tags.length > 0 && (item.allergens.length > 0 || serviceNote) ? ' — ' : ''}
-          {item.allergens.length > 0
-            ? `${MENU_UI[locale].allergensTitle} : ${item.allergens
-                .map((a) => MENU_UI[locale].allergens[a] ?? a)
-                .join(', ')}`
-            : ''}
-          {serviceNote ? `${item.allergens.length > 0 ? ' — ' : ''}${serviceNote}` : ''}
-        </p>
-      )}
+      <TagBadges
+        diets={item.diet_tags}
+        allergens={item.allergens}
+        serviceNote={serviceNote}
+        ui={ui}
+        theme={theme}
+      />
     </>
   );
 
@@ -460,6 +556,8 @@ function ItemRow({
       data-s={searchText}
       data-sig={item.is_signature ? '1' : '0'}
       data-diet={item.diet_tags.join(' ')}
+      data-allergens={item.allergens.join(' ')}
+      data-kind={item.kind}
       style={{
         padding: '14px 0',
         borderBottom: `1px solid ${theme.line}`,
@@ -472,7 +570,15 @@ function ItemRow({
           <img
             src={thumb}
             alt={name}
-            style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
+            data-zoom={thumb}
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 10,
+              objectFit: 'cover',
+              flexShrink: 0,
+              cursor: 'zoom-in',
+            }}
           />
           <div style={{ flex: 1, minWidth: 0 }}>{body}</div>
         </div>
@@ -503,8 +609,10 @@ function SectionBlock({
   const name = loc(section.name, section.i18n, locale, 'name') ?? section.name;
   const desc = loc(section.description, section.i18n, locale, 'description');
   const display = displayFont(theme);
-  if (section.items.length === 0 && section.children.every((child) => child.items.length === 0))
-    return null;
+  // Les formules sont remontées dans le bloc « Nos formules » en tête de menu →
+  // on ne les répète pas dans leur section.
+  const rowItems = section.items.filter((it) => it.kind !== 'formula');
+  if (rowItems.length === 0 && section.children.length === 0) return null;
   return (
     <section data-ms="" style={{ marginTop: depth === 0 ? 40 : 24 }}>
       {depth === 0 ? (
@@ -554,7 +662,7 @@ function SectionBlock({
         </p>
       ) : null}
       <div>
-        {section.items.map((item) => (
+        {rowItems.map((item) => (
           <ItemRow
             key={item.id}
             item={item}
@@ -582,6 +690,78 @@ function SectionBlock({
   );
 }
 
+// Bloc « Nos formules » — remonté EN TÊTE de chaque menu et mis en avant
+// (encadré teinté accent). Les items formule sont retirés de leurs sections.
+function FormulasBlock({
+  formulas,
+  title,
+  locale,
+  itemById,
+  ratings,
+  theme,
+  restaurantId,
+}: {
+  formulas: MenuItem[];
+  title: string;
+  locale: MenuLocale;
+  itemById: Map<string, MenuItem>;
+  ratings: Record<string, DishRating>;
+  theme: ResolvedMenuTheme;
+  restaurantId: string;
+}) {
+  if (formulas.length === 0) return null;
+  return (
+    <section
+      data-ms=""
+      style={{
+        marginTop: 34,
+        background: theme.accent + '14',
+        border: `1px solid ${theme.accent}55`,
+        borderRadius: 18,
+        padding: '4px 18px 14px',
+      }}
+    >
+      <div style={{ textAlign: 'center', margin: '16px 0 2px' }}>
+        <h2
+          style={{
+            fontFamily: displayFont(theme),
+            fontSize: 22,
+            fontWeight: 600,
+            margin: 0,
+            color: theme.text,
+            letterSpacing: 0.3,
+          }}
+        >
+          <span style={{ color: theme.accent }}>✦</span> {title}
+        </h2>
+      </div>
+      <div>
+        {formulas.map((item) => (
+          <ItemRow
+            key={item.id}
+            item={item}
+            locale={locale}
+            itemById={itemById}
+            rating={ratings[ratingKey(item.name)] ?? null}
+            theme={theme}
+            restaurantId={restaurantId}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// Toutes les formules d'un menu (sections + sous-sections).
+function menuFormulas(menu: MenuTree): MenuItem[] {
+  const out: MenuItem[] = [];
+  for (const s of menu.sections) {
+    out.push(...s.items.filter((it) => it.kind === 'formula'));
+    for (const c of s.children) out.push(...c.items.filter((it) => it.kind === 'formula'));
+  }
+  return out;
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function MenuBridge({ id, src, allowAppRedirect, lang }: MenuBridgeProps) {
@@ -600,6 +780,10 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
     fetchMenuTree(id),
     fetchMenuRatings(id),
   ]);
+  // Resto inexistant (UUID valide mais aucune ligne, RLS restaurants = `true`
+  // donc null ⇒ vraiment absent) → vrai 404, pas la carte d'installation
+  // générique « Découvre ce lieu sur DishRank ».
+  if (!venue) notFound();
   const name = venue?.name?.trim() || null;
   const city = venue?.city?.trim() || null;
   const description = venue?.description?.trim() || null;
@@ -610,12 +794,55 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
   const isPremium = isRestaurantPremium(venue?.subscription_tier, venue?.subscription_expires_at);
   const theme = resolveMenuTheme(venue?.menu_theme, isPremium);
 
+  // Langue PREMIUM (es/de/it) demandée par ?lang= sur un resto NON premium :
+  // fr + en sont gratuits, les autres sont bloquées → on redirige vers l'anglais
+  // (avant tout log, pour ne pas double-compter le scan). Évite un menu à moitié
+  // traduit accessible en contournant le sélecteur par l'URL.
+  if (lang && (PREMIUM_MENU_LOCALES as readonly string[]).includes(lang) && !isPremium) {
+    redirect(`/menu/${id}?lang=en${src === 'qr' ? '&src=qr' : ''}`);
+  }
+
   // Traduction du menu = PREMIUM (v2 §2.1) : feuilles i18n vidées au rendu
   // pour un resto free/expiré — le contenu retombe en français, les libellés
   // MENU_UI restent dans la langue du visiteur.
   const menus = gateMenuTranslations(menusRaw, isPremium);
   const hasMenu = menus.length > 0;
   const display = displayFont(theme);
+
+  // Infos pratiques du resto (server-rendered en tête du menu) : lien carte,
+  // note Google, cuisine/prix, actions appeler/site/réserver.
+  const mapsQuery =
+    venue.latitude != null && venue.longitude != null
+      ? `${venue.latitude},${venue.longitude}`
+      : venue.address
+        ? encodeURIComponent(`${venue.address}${venue.city ? ', ' + venue.city : ''}`)
+        : null;
+  const mapsUrl = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${mapsQuery}` : null;
+  const infoBtn = (primary: boolean): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 14px',
+    borderRadius: 999,
+    fontSize: 12.5,
+    fontWeight: 700,
+    textDecoration: 'none',
+    fontFamily: 'inherit',
+    whiteSpace: 'nowrap',
+    border: `1px solid ${primary ? theme.accent : theme.line}`,
+    background: primary ? theme.accent : theme.card,
+    color: primary ? (theme.dark ? '#141018' : '#fff') : theme.sub,
+  });
+  const hasVenueInfo = !!(
+    (venue.cuisines && venue.cuisines.length) ||
+    venue.price_level ||
+    venue.google_rating ||
+    mapsUrl ||
+    venue.phone ||
+    venue.website ||
+    venue.reservation_url
+  );
+  const infoL = INFO_LABELS[locale] ?? INFO_LABELS.fr;
 
   // Plateforme (SSR via User-Agent) : n'affiche que le bouton store pertinent.
   const platform = detectPlatformFromUA(hdrs.get('user-agent'));
@@ -647,17 +874,41 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
   // + présence d'un plat signature. Langues proposées par le sélecteur = les 5
   // (le contenu retombe en fr si non traduit, les libellés se localisent).
   const dietSet = new Set<string>();
+  const allergenSet = new Set<string>();
   let hasSignature = false;
   for (const it of itemById.values()) {
     it.diet_tags.forEach((d) => dietSet.add(d));
+    it.allergens.forEach((a) => allergenSet.add(a));
     if (it.is_signature) hasSignature = true;
   }
-  const dietFilters = [...dietSet].map((slug) => ({ slug, label: ui.diets[slug] ?? slug }));
-  // Langues du sélecteur = uniquement celles réellement traduites (fr + i18n).
-  const offeredLocales = menuLocales(menus);
+  const dietFilters = [...dietSet].map((slug) => ({
+    slug,
+    label: ui.diets[slug] ?? slug,
+    icon: DIET_ICON[slug] ?? '',
+  }));
+  const allergenFilters = [...allergenSet].map((slug) => ({
+    slug,
+    label: ui.allergens[slug] ?? slug,
+    icon: ALLERGEN_ICON[slug] ?? '⚠',
+  }));
+  // Onglets multi-menus (nom localisé) — le switch se fait côté client.
+  const menuTabs = menus.map((m) => ({
+    id: m.id,
+    name: loc(m.name, m.i18n, locale, 'name') ?? m.name,
+  }));
+  // Sélecteur public = français (source) + langues À LA FOIS activées par l'owner
+  // (menu_languages) ET réellement traduites (i18n présent). Un resto gratuit qui
+  // active une langue sans la traduire (traduction = premium) n'obtient donc PAS
+  // de bouton de langue « vide ». L'owner peut quand même prévisualiser via
+  // ?lang=xx (honoré indépendamment de cette liste).
+  const enabledLangs = venue.menu_languages ?? [];
+  const translatedLangs = menuLocales(menus);
+  const offeredLocales = MENU_LOCALES.filter(
+    (l) => l === 'fr' || (enabledLangs.includes(l) && translatedLangs.includes(l)),
+  );
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={MENU_FONT_VARS}>
       <head>
         <link rel="icon" type="image/webp" href="/img/icon.webp" />
       </head>
@@ -754,6 +1005,76 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                   {description}
                 </p>
               ) : null}
+              {/* Infos pratiques : cuisine · prix · note Google + actions. */}
+              {hasVenueInfo ? (
+                <div style={{ marginTop: 16 }}>
+                  {venue.cuisines?.length || venue.price_level || venue.google_rating ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 8,
+                        fontSize: 13,
+                        color: theme.sub,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {venue.cuisines?.length ? <span>{venue.cuisines.slice(0, 3).join(' · ')}</span> : null}
+                      {venue.price_level ? (
+                        <span style={{ color: theme.text }}>
+                          {'€'.repeat(Math.min(4, Math.max(1, venue.price_level)))}
+                        </span>
+                      ) : null}
+                      {venue.google_rating ? (
+                        <span style={{ color: theme.text }}>
+                          <span style={{ color: theme.accent }}>★</span> {venue.google_rating.toFixed(1)}
+                          {venue.google_review_count ? (
+                            <span style={{ color: theme.sub, fontWeight: 500 }}> · {venue.google_review_count}</span>
+                          ) : null}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                      gap: 8,
+                      marginTop: 12,
+                    }}
+                  >
+                    {mapsUrl ? (
+                      <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={infoBtn(false)}>
+                        📍 {infoL.directions}
+                      </a>
+                    ) : null}
+                    {venue.phone ? (
+                      <a href={`tel:${venue.phone}`} style={infoBtn(false)}>
+                        📞 {infoL.call}
+                      </a>
+                    ) : null}
+                    {venue.website ? (
+                      <a href={venue.website} target="_blank" rel="noopener noreferrer" style={infoBtn(false)}>
+                        🌐 {infoL.website}
+                      </a>
+                    ) : null}
+                    {venue.reservation_url ? (
+                      <a href={venue.reservation_url} target="_blank" rel="noopener noreferrer" style={infoBtn(true)}>
+                        📅 {infoL.book}
+                      </a>
+                    ) : null}
+                  </div>
+                  {venue.address ? (
+                    <p style={{ fontSize: 12, color: theme.sub, margin: '10px 0 0', lineHeight: 1.5 }}>
+                      {venue.address}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
               {/* petit ornement (accent) — pas de bouton app en tête */}
               <div
                 style={{ color: theme.accent, fontSize: 15, letterSpacing: 6, marginTop: 14, opacity: 0.6 }}
@@ -768,12 +1089,15 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
               locale={locale}
               locales={offeredLocales}
               dietFilters={dietFilters}
+              allergenFilters={allergenFilters}
+              menuTabs={menuTabs}
               hasSignature={hasSignature}
               ui={{
                 search: ui.searchPlaceholder,
                 all: ui.filterAll,
                 signature: ui.filterSignature,
                 noResults: ui.noResults,
+                avoidAllergens: ui.avoidAllergens,
               }}
               theme={{
                 bg: theme.bg,
@@ -786,22 +1110,16 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
               }}
             >
               {menus.map((menu: MenuTree) => (
-                <div key={menu.id} data-menu="">
-                  {menus.length > 1 ? (
-                    <p
-                      style={{
-                        textAlign: 'center',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: theme.accent,
-                        textTransform: 'uppercase',
-                        letterSpacing: 3,
-                        margin: '44px 0 0',
-                      }}
-                    >
-                      {loc(menu.name, menu.i18n, locale, 'name') ?? menu.name}
-                    </p>
-                  ) : null}
+                <div key={menu.id} data-menu="" data-menu-id={menu.id}>
+                  <FormulasBlock
+                    formulas={menuFormulas(menu)}
+                    title={ui.formulas}
+                    locale={locale}
+                    itemById={itemById}
+                    ratings={ratings}
+                    theme={theme}
+                    restaurantId={id}
+                  />
                   {menu.sections.map((section) => (
                     <SectionBlock
                       key={section.id}

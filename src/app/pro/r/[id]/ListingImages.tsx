@@ -34,13 +34,11 @@ export default function ListingImages({
   initialPhotoUrl,
   initialLogoUrl,
   reviewPhotos,
-  premium,
 }: {
   restaurantId: string;
   initialPhotoUrl: string | null;
   initialLogoUrl: string | null;
   reviewPhotos: ReviewPhoto[];
-  premium: boolean;
 }) {
   const [photoUrl, setPhotoUrl] = useState(initialPhotoUrl);
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
@@ -136,9 +134,6 @@ export default function ListingImages({
       <div>
         <div className="mb-2 flex items-center gap-2">
           <p className="text-[13px] font-semibold text-[var(--text2)]">Logo</p>
-          {!premium ? (
-            <span className="rounded-full bg-[var(--primary-container)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary)]">Premium</span>
-          ) : null}
         </div>
         <div className="flex items-center gap-3">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--border2)] bg-[var(--surface-var)]">
@@ -151,17 +146,13 @@ export default function ListingImages({
           </div>
           <input ref={logoFileRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) setCrop({ file: f, aspect: 1, outputWidth: 512, quality: 0.9, kind: 'logo', title: 'Recadrer le logo', fit: 'contain' }); e.target.value = ''; }} />
           <div className="flex flex-col items-start gap-1">
-            {premium ? (
-              <button
-                type="button"
-                onClick={() => logoFileRef.current?.click()}
-                className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--primary)]"
-              >
-                {logoUrl ? 'Changer le logo' : 'Ajouter un logo'}
-              </button>
-            ) : (
-              <p className="text-sm text-[var(--text2)]">L’ajout d’un logo fait partie du forfait Premium.</p>
-            )}
+            <button
+              type="button"
+              onClick={() => logoFileRef.current?.click()}
+              className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--primary)]"
+            >
+              {logoUrl ? 'Changer le logo' : 'Ajouter un logo'}
+            </button>
             {logoUrl ? (
               <button type="button" onClick={() => setAskRemove('logo')} className="text-xs font-semibold text-red-500 hover:underline">
                 Retirer

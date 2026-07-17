@@ -14,6 +14,8 @@ import {
   type MenuOption,
   type MenuOptionChoice,
   type FormulaConfig,
+  type LeafI18nLabel,
+  type LeafI18nName,
 } from './menuLeaves';
 import { CATEGORY_SLUGS } from '@/lib/pro/categories';
 
@@ -52,6 +54,23 @@ function revalidateMenu(restaurantId: string) {
 }
 
 const FAIL_OWNER: MenuActionState = { error: "Tu n'es pas le propriétaire de cet établissement." };
+
+/** Client Supabase issu de `assertOwner` (vitrine non typée). */
+type Supa = NonNullable<Awaited<ReturnType<typeof assertOwner>>>['supabase'];
+
+/** display_order pour ajouter EN BAS d'une catégorie : max(plats+formules de la
+ *  section) + 1, sinon 0. Sans ça, le défaut 0 remonterait la nouveauté en tête
+ *  dès que l'ordre a été personnalisé. */
+async function nextItemOrder(supabase: Supa, restaurantId: string, sectionId: string): Promise<number> {
+  const { data } = await supabase
+    .from('menu_items')
+    .select('display_order')
+    .eq('restaurant_id', restaurantId)
+    .eq('section_id', sectionId)
+    .order('display_order', { ascending: false })
+    .limit(1);
+  return ((data?.[0] as { display_order: number } | undefined)?.display_order ?? -1) + 1;
+}
 
 // ── Menu (carte) ──────────────────────────────────────────────────────────────
 
@@ -92,6 +111,9 @@ export async function upsertSectionAction(
   const parentSectionId = String(formData.get('parentSectionId') ?? '') || null;
   const name = String(formData.get('name') ?? '').trim();
   const description = String(formData.get('description') ?? '').trim() || null;
+  // Traductions manuelles + auto de la section (parité plat). Absent des formulaires
+  // d'ajout → {} (une nouvelle catégorie n'a pas encore de traduction).
+  const i18n = sanitizeI18n(parseJson(formData.get('i18n'), {}));
   if (!name) return { error: 'Le nom de la catégorie est requis.' };
   if (name.length > 200) return { error: 'Nom trop long (200 caractères max).' };
   if (description && description.length > 500) return { error: 'Description trop longue.' };
@@ -100,16 +122,38 @@ export async function upsertSectionAction(
   if (id) {
     const { error } = await supabase
       .from('menu_sections')
-      .update({ name, description })
+      .update({ name, description, i18n })
       .eq('id', id)
       .eq('restaurant_id', restaurantId);
     if (error) return { error: mapMenuError(error) };
   } else {
+    // Nouvelle catégorie → l'ajouter EN BAS de ses sœurs (racines du menu, ou
+    // sous-catégories du même parent) : display_order = max(sœurs) + 1. Sans ça,
+    // le défaut 0 la ferait remonter en tête dès que l'ordre a été personnalisé.
+    const base = supabase
+      .from('menu_sections')
+      .select('display_order')
+      .eq('menu_id', menuId)
+      .eq('restaurant_id', restaurantId);
+    const scoped = parentSectionId
+      ? base.eq('parent_section_id', parentSectionId)
+      : base.is('parent_section_id', null);
+    const { data: last } = await scoped.order('display_order', { ascending: false }).limit(1);
+    const nextOrder = ((last?.[0] as { display_order: number } | undefined)?.display_order ?? -1) + 1;
+
     // parent_section_id → sous-catégorie (le trigger DB borne la profondeur à 1
     // niveau : MAX_DEPTH si on essaie d'imbriquer plus).
     const { error } = await supabase
       .from('menu_sections')
-      .insert({ menu_id: menuId, restaurant_id: restaurantId, parent_section_id: parentSectionId, name, description });
+      .insert({
+        menu_id: menuId,
+        restaurant_id: restaurantId,
+        parent_section_id: parentSectionId,
+        name,
+        description,
+        i18n,
+        display_order: nextOrder,
+      });
     if (error) return { error: mapMenuError(error) };
   }
   await logProEvent(supabase, 'pro_menu_edit', restaurantId);
@@ -166,8 +210,36 @@ function parseJson<T>(raw: FormDataEntryValue | null, fallback: T): T {
   }
 }
 
+/** Assainit un i18n de feuille sur le champ `label` (variante/choix) : locales
+ *  cibles uniquement, trim, ≤100, entrées vides écartées. {} si rien. */
+function sanitizeLabelI18n(raw: unknown): LeafI18nLabel {
+  const out: LeafI18nLabel = {};
+  if (raw && typeof raw === 'object') {
+    for (const [loc, val] of Object.entries(raw as Record<string, unknown>)) {
+      if (!MENU_TARGET_SET.has(loc) || !val || typeof val !== 'object') continue;
+      const v = (val as Record<string, unknown>).label;
+      const s = typeof v === 'string' ? v.trim().slice(0, 100) : '';
+      if (s) out[loc] = { label: s };
+    }
+  }
+  return out;
+}
+/** Idem sur le champ `name` (groupe d'options). */
+function sanitizeNameI18n(raw: unknown): LeafI18nName {
+  const out: LeafI18nName = {};
+  if (raw && typeof raw === 'object') {
+    for (const [loc, val] of Object.entries(raw as Record<string, unknown>)) {
+      if (!MENU_TARGET_SET.has(loc) || !val || typeof val !== 'object') continue;
+      const v = (val as Record<string, unknown>).name;
+      const s = typeof v === 'string' ? v.trim().slice(0, 100) : '';
+      if (s) out[loc] = { name: s };
+    }
+  }
+  return out;
+}
+
 /** Assainit les variantes reçues du client (non fiable) : lignes incomplètes
- *  (libellé vide) écartées, prix borné. Le trigger DB reste juge. */
+ *  (libellé vide) écartées, prix borné, i18n préservé. Le trigger DB reste juge. */
 function sanitizeVariants(raw: unknown): MenuVariant[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -175,10 +247,12 @@ function sanitizeVariants(raw: unknown): MenuVariant[] {
     .map((v): MenuVariant => {
       const o = (v ?? {}) as Record<string, unknown>;
       const price = Number(o.price);
+      const i18n = sanitizeLabelI18n(o.i18n);
       return {
         id: typeof o.id === 'string' && o.id ? o.id.slice(0, 40) : newLeafId(),
         label: typeof o.label === 'string' ? o.label.trim().slice(0, 60) : '',
         price: Number.isFinite(price) && price >= 0 ? Math.min(price, 100000) : 0,
+        ...(Object.keys(i18n).length ? { i18n } : {}),
       };
     })
     .filter((v) => v.label);
@@ -199,15 +273,20 @@ function sanitizeOptions(raw: unknown): MenuOption[] {
           const ch = (c ?? {}) as Record<string, unknown>;
           const label = typeof ch.label === 'string' ? ch.label.trim().slice(0, 60) : '';
           const d = Number(ch.price_delta);
-          return Number.isFinite(d) && d > 0 ? { label, price_delta: Math.min(d, 100000) } : { label };
+          const ci18n = sanitizeLabelI18n(ch.i18n);
+          const base: MenuOptionChoice =
+            Number.isFinite(d) && d > 0 ? { label, price_delta: Math.min(d, 100000) } : { label };
+          return Object.keys(ci18n).length ? { ...base, i18n: ci18n } : base;
         })
         .filter((c) => c.label);
+      const oi18n = sanitizeNameI18n(o.i18n);
       return {
         id: typeof o.id === 'string' && o.id ? o.id.slice(0, 40) : newLeafId(),
         name: typeof o.name === 'string' ? o.name.trim().slice(0, 60) : '',
         required: !!o.required,
         max: 1,
         choices,
+        ...(Object.keys(oi18n).length ? { i18n: oi18n } : {}),
       };
     })
     .filter((o) => o.name && o.choices.length > 0);
@@ -244,6 +323,31 @@ function sanitizeFormula(raw: unknown): FormulaConfig {
     })
     .filter((s) => s.name);
   return { prices, slots };
+}
+
+/** Assainit l'i18n reçu (locales en/es/de/it) : name ≤200, description ≤1000,
+ *  entrées vides écartées. PRÉSERVE `_auto`/`_h` : le form ne les renvoie que pour
+ *  les locales NON éditées → l'auto-trad continue de les gérer ; une locale éditée
+ *  à la main arrive SANS `_auto` → l'edge ne la réécrit jamais (contrat mig 085). */
+function sanitizeI18n(
+  raw: unknown
+): Record<string, { name?: string; description?: string; _auto?: boolean; _h?: string }> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, { name?: string; description?: string; _auto?: boolean; _h?: string }> = {};
+  for (const [loc, val] of Object.entries(raw as Record<string, unknown>)) {
+    if (!MENU_TARGET_SET.has(loc) || !val || typeof val !== 'object') continue;
+    const o = val as Record<string, unknown>;
+    const name = typeof o.name === 'string' ? o.name.trim().slice(0, 200) : '';
+    const description = typeof o.description === 'string' ? o.description.trim().slice(0, 1000) : '';
+    if (!name && !description) continue;
+    const entry: { name?: string; description?: string; _auto?: boolean; _h?: string } = {};
+    if (name) entry.name = name;
+    if (description) entry.description = description;
+    if (o._auto === true) entry._auto = true;
+    if (typeof o._h === 'string') entry._h = o._h;
+    out[loc] = entry;
+  }
+  return out;
 }
 
 /** Crée/édite un plat (kind='item'). CAS sur l'édition : si `expectedUpdatedAt`
@@ -294,6 +398,10 @@ export async function upsertItemAction(
     ),
   ].slice(0, 3);
 
+  // Traductions manuelles + auto conservées (le form envoie l'i18n complet
+  // fusionné existant + éditions → aucune locale perdue).
+  const i18n = sanitizeI18n(parseJson(formData.get('i18n'), {}));
+
   if (!name) return { error: 'Le nom du plat est requis.' };
   if (name.length > 200) return { error: 'Nom trop long (200 caractères max).' };
   if (description && description.length > 1000) return { error: 'Description trop longue (1000 caractères max).' };
@@ -325,6 +433,7 @@ export async function upsertItemAction(
     variants,
     options,
     availability,
+    i18n,
   };
 
   if (id) {
@@ -340,12 +449,14 @@ export async function upsertItemAction(
     if (!data || data.length === 0)
       return { error: mapMenuError({ message: 'MENU_CONFLICT' }) };
   } else {
+    const nextOrder = await nextItemOrder(supabase, restaurantId, sectionId);
     const { error } = await supabase.from('menu_items').insert({
       ...formFields,
       restaurant_id: restaurantId,
       section_id: sectionId,
       kind: 'item',
       formula_config: null,
+      display_order: nextOrder,
     });
     if (error) return { error: mapMenuError(error) };
   }
@@ -399,6 +510,7 @@ export async function upsertFormulaAction(
     if (error) return { error: mapMenuError(error) };
     if (!data || data.length === 0) return { error: mapMenuError({ message: 'MENU_CONFLICT' }) };
   } else {
+    const nextOrder = await nextItemOrder(supabase, restaurantId, sectionId);
     const { error } = await supabase.from('menu_items').insert({
       ...fields,
       restaurant_id: restaurantId,
@@ -408,6 +520,7 @@ export async function upsertFormulaAction(
       diet_tags: [] as string[],
       category_slugs: [] as string[],
       availability: {} as Record<string, unknown>,
+      display_order: nextOrder,
     });
     if (error) return { error: mapMenuError(error) };
   }

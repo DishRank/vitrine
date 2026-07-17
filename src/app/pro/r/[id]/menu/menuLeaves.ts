@@ -8,15 +8,23 @@
 export const MENU_SERVICES = ['lunch', 'dinner'] as const;
 export type MenuService = (typeof MENU_SERVICES)[number];
 
+/** Feuilles de traduction des variantes/options (EN/ES/DE/IT). fr = champ source
+ *  (label/name). Même convention que menu_items.i18n : une entrée sans contenu
+ *  est omise ; le renderer retombe sur la source si la locale manque. */
+export type LeafI18nLabel = Record<string, { label?: string }>;
+export type LeafI18nName = Record<string, { name?: string }>;
+
 export interface MenuVariant {
   id: string;
   label: string;
   price: number;
+  i18n?: LeafI18nLabel;
 }
 
 export interface MenuOptionChoice {
   label: string;
   price_delta?: number;
+  i18n?: LeafI18nLabel;
 }
 
 export interface MenuOption {
@@ -25,6 +33,7 @@ export interface MenuOption {
   required?: boolean;
   max?: number;
   choices: MenuOptionChoice[];
+  i18n?: LeafI18nName;
 }
 
 export interface MenuAvailability {

@@ -1,13 +1,21 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   upsertReplyAction,
   deleteReplyAction,
   togglePinAction,
   type ReplyActionState,
 } from './replyActions';
+import {
+  linkReviewAction,
+  createDishFromReviewAction,
+  type LinkActionState,
+} from './linkActions';
+import DishSelect from './DishSelect';
 import { FormError, inputCls } from '../../../_components/fields';
+import ConfirmDialog from '../../../_components/ConfirmDialog';
 
 export interface ProReply {
   id: string;
@@ -16,6 +24,19 @@ export interface ProReply {
   created_at: string;
   is_pinned: boolean;
 }
+
+/** Plat visible du menu = cible d'association (groupé par catégorie). */
+export interface MenuItemRef {
+  id: string;
+  name: string;
+  section: string;
+}
+
+/** État d'association d'un avis à un plat de la carte. */
+export type ReviewAssoc =
+  | { state: 'linked'; linkedName: string }
+  | { state: 'matched' }
+  | { state: 'orphan' };
 
 export interface ProReview {
   id: string;
@@ -27,6 +48,8 @@ export interface ProReview {
   createdAt: string;
   authorName: string;
   reply: ProReply | null;
+  menuItemId: string | null;
+  assoc: ReviewAssoc;
 }
 
 const VERDICT: Record<string, { label: string; cls: string }> = {
@@ -49,13 +72,17 @@ export default function ReviewCard({
   review,
   canPin,
   thankTemplate,
+  menuItems,
 }: {
   restaurantId: string;
   review: ProReview;
   canPin: boolean;
   thankTemplate: string;
+  menuItems: MenuItemRef[];
 }) {
   const [editing, setEditing] = useState(false);
+  const [askDeleteReply, setAskDeleteReply] = useState(false);
+  const delFormRef = useRef<HTMLFormElement>(null);
   const [body, setBody] = useState('');
   const [upsertState, upsert] = useActionState<ReplyActionState, FormData>(
     upsertReplyAction.bind(null, restaurantId),
@@ -69,6 +96,25 @@ export default function ReviewCard({
     togglePinAction.bind(null, restaurantId),
     {}
   );
+  const [linkState, link] = useActionState<LinkActionState, FormData>(
+    linkReviewAction.bind(null, restaurantId),
+    {}
+  );
+  const [createState, create] = useActionState<LinkActionState, FormData>(
+    createDishFromReviewAction.bind(null, restaurantId),
+    {}
+  );
+
+  // Plats visibles groupés par catégorie (pour le <select> d'association).
+  const menuGroups = useMemo(() => {
+    const m = new Map<string, MenuItemRef[]>();
+    for (const it of menuItems) {
+      const arr = m.get(it.section);
+      if (arr) arr.push(it);
+      else m.set(it.section, [it]);
+    }
+    return [...m.entries()];
+  }, [menuItems]);
 
   // Après une mise à jour réussie, revalidatePath re-rend la carte avec la
   // nouvelle réponse ; on referme le mode édition (l'état local survivrait sinon).
@@ -78,6 +124,15 @@ export default function ReviewCard({
       setBody('');
     }
   }, [upsertState.ok]);
+
+  // « Créer ce plat » → on file sur l'onglet menu, éditeur ouvert sur le nouveau
+  // plat (pour renseigner prix / description / catégories tout de suite).
+  const router = useRouter();
+  useEffect(() => {
+    if (createState.ok && createState.itemId) {
+      router.push(`/pro/r/${restaurantId}/menu?edit=${createState.itemId}`);
+    }
+  }, [createState.ok, createState.itemId, restaurantId, router]);
 
   const reply = review.reply;
   const showForm = editing || !reply;
@@ -109,6 +164,56 @@ export default function ReviewCard({
       </div>
       {review.comment ? (
         <p className="mt-2 text-sm text-[var(--text)] whitespace-pre-line">{review.comment}</p>
+      ) : null}
+
+      {/* Association au plat du menu (mig 112) — le nom du client reste intact. */}
+      {review.assoc.state === 'linked' ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-[var(--surface-var)] px-3 py-2">
+          <span className="text-xs text-[var(--text2)]">
+            🔗 Rattaché à <b className="text-[var(--text)]">{review.assoc.linkedName}</b>
+          </span>
+          <form action={link}>
+            <input type="hidden" name="reviewId" value={review.id} />
+            <input type="hidden" name="menuItemId" value="" />
+            <button type="submit" className="text-xs font-semibold text-[var(--text3)] hover:text-red-500">
+              Dissocier
+            </button>
+          </form>
+          <FormError error={linkState.error} />
+        </div>
+      ) : review.assoc.state === 'orphan' ? (
+        <div className="mt-3 rounded-xl border border-dashed border-[var(--border2)] px-3 py-2.5">
+          <p className="text-xs text-[var(--text2)]">
+            « <b className="text-[var(--text)]">{review.dishName}</b> » n’est pas dans votre carte.
+            Rattachez cet avis à un plat pour qu’il compte dans sa note.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {menuGroups.length > 0 ? (
+              <form action={link} className="flex items-center gap-2">
+                <input type="hidden" name="reviewId" value={review.id} />
+                <DishSelect groups={menuGroups} />
+                <button
+                  type="submit"
+                  className="shrink-0 rounded-lg bg-[var(--primary)] px-3.5 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                >
+                  Rattacher
+                </button>
+              </form>
+            ) : null}
+            {review.dishName ? (
+              <form action={create}>
+                <input type="hidden" name="dishName" value={review.dishName} />
+                <button
+                  type="submit"
+                  className="rounded-lg border border-[var(--primary)] px-3.5 py-2 text-sm font-bold text-[var(--primary)] transition-colors hover:bg-[var(--primary-container)]"
+                >
+                  {menuGroups.length > 0 ? '+ Créer ce plat' : '+ Créer ce plat dans ma carte'}
+                </button>
+              </form>
+            ) : null}
+          </div>
+          <FormError error={linkState.error ?? createState.error} />
+        </div>
       ) : null}
 
       {/* Réponse existante */}
@@ -146,15 +251,27 @@ export default function ReviewCard({
               </form>
             ) : null}
             {!locked ? (
-              <form action={del}>
+              <form action={del} ref={delFormRef}>
                 <input type="hidden" name="replyId" value={reply.id} />
-                <button type="submit" className="text-xs font-semibold text-red-500 hover:underline">
+                <button
+                  type="button"
+                  onClick={() => setAskDeleteReply(true)}
+                  className="text-xs font-semibold text-red-500 hover:underline"
+                >
                   Supprimer
                 </button>
               </form>
             ) : null}
           </div>
           <FormError error={delState.error ?? pinState.error} />
+          <ConfirmDialog
+            open={askDeleteReply}
+            title="Supprimer la réponse"
+            message="Votre réponse publique à cet avis sera définitivement supprimée."
+            confirmLabel="Supprimer"
+            onConfirm={() => delFormRef.current?.requestSubmit()}
+            onClose={() => setAskDeleteReply(false)}
+          />
         </div>
       ) : null}
 

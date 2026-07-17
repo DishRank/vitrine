@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CUISINE_BY_SLUG, searchCuisines } from '@/lib/pro/cuisines';
 
+/** Lot du scroll infini : types affichés d'emblée, puis chargés par paquets en
+ *  scrollant (la taxonomie complète ne rentre pas d'un coup). */
+const PAGE_SIZE = 24;
+
 /**
  * Autocomplete « types de cuisine » — réutilise la taxonomie de l'app
  * (emoji + libellé). Multi-sélection (max), stockée dans un input caché
@@ -40,10 +44,17 @@ export default function CuisineAutocomplete({
 
   const full = selected.length >= max;
   const excluded = useMemo(() => new Set(selected), [selected]);
-  const results = useMemo(
-    () => (full ? [] : searchCuisines(query, excluded).slice(0, 8)),
-    [query, excluded, full]
+  const filtered = useMemo(
+    () => (full ? [] : searchCuisines(query, excluded)),
+    [full, query, excluded]
   );
+  // Scroll infini fenêtré : on affiche un lot, la suite se charge en scrollant
+  // (l'ancien cap à 8 donnait « on dirait qu'il n'y a pas beaucoup de types »).
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const results = full ? [] : filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+  // Repartir du 1er lot à chaque nouvelle recherche ou (ré)ouverture.
+  useEffect(() => setVisibleCount(PAGE_SIZE), [query, open]);
 
   // Fermer au clic extérieur.
   useEffect(() => {
@@ -73,6 +84,9 @@ export default function CuisineAutocomplete({
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setOpen(true);
+      if (hasMore && hi >= results.length - 3) {
+        setVisibleCount((v) => Math.min(v + PAGE_SIZE, filtered.length));
+      }
       setHi((i) => Math.min(i + 1, results.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -154,7 +168,15 @@ export default function CuisineAutocomplete({
       </p>
 
       {open && results.length > 0 ? (
-        <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-[var(--border2)] bg-[var(--surface)] py-1 shadow-lg">
+        <ul
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            if (hasMore && el.scrollTop + el.clientHeight >= el.scrollHeight - 32) {
+              setVisibleCount((v) => Math.min(v + PAGE_SIZE, filtered.length));
+            }
+          }}
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-[var(--border2)] bg-[var(--surface)] py-1 shadow-lg"
+        >
           {results.map((c, i) => (
             <li key={c.slug}>
               <button

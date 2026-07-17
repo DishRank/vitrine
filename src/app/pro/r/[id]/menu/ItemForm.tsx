@@ -3,26 +3,33 @@
 import { useActionState, useEffect, useState } from 'react';
 import { upsertItemAction, type MenuActionState } from './menuActions';
 import { ALLERGENS, DIETS } from './vocab';
-import type { EditorItem } from './menuData';
+import type { EditorItem, MenuItemI18n } from './menuData';
 import { newLeafId } from './menuLeaves';
 import DishCategoryPicker from './DishCategoryPicker';
+import ItemAliases from './ItemAliases';
+import FlagIcon from '@/components/FlagIcon';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
 
-/** États d'édition : prix en STRING (saisie tolérante), sérialisés en number. */
+/** États d'édition : prix en STRING (saisie tolérante), sérialisés en number.
+ *  `i18n` = traductions par locale du libellé (variante/choix) ou du nom (groupe
+ *  d'options) — édité sur les onglets de langue, comme le nom/description du plat. */
 interface VariantDraft {
   id: string;
   label: string;
   price: string;
+  i18n: Record<string, { label?: string }>;
 }
 interface ChoiceDraft {
   label: string;
   price_delta: string;
+  i18n: Record<string, { label?: string }>;
 }
 interface OptionDraft {
   id: string;
   name: string;
   required: boolean;
   choices: ChoiceDraft[];
+  i18n: Record<string, { name?: string }>;
 }
 
 const DAYS = [
@@ -43,6 +50,10 @@ const parseNum = (s: string): number => {
 const miniInput =
   'w-full rounded-lg border border-[var(--border2)] bg-[var(--bg)] px-2.5 py-1.5 text-sm text-[var(--text)] placeholder-[var(--text3)] outline-none focus:border-[var(--primary)]';
 
+// Traduction manuelle par plat (onglets). fr = source (colonnes name/description).
+const TRANSLATABLE = ['en', 'es', 'de', 'it'];
+const LANG_LABEL: Record<string, string> = { en: 'Anglais', es: 'Espagnol', de: 'Allemand', it: 'Italien' };
+
 /**
  * Formulaire de plat (kind='item') — parité app : nom, prix OU variantes,
  * description, allergènes, régimes, options/suppléments, disponibilité
@@ -55,22 +66,46 @@ export default function ItemForm({
   sectionId,
   item,
   onDone,
+  menuLanguages,
+  premium,
 }: {
   restaurantId: string;
   sectionId: string;
   item?: EditorItem;
   onDone: () => void;
+  menuLanguages: string[];
+  premium: boolean;
 }) {
   const [state, action] = useActionState<MenuActionState, FormData>(
     upsertItemAction.bind(null, restaurantId),
     {}
   );
 
+  // Onglets de traduction : langues éditables = celles activées (LanguagePanel),
+  // restreintes à EN pour un resto gratuit (fr+en gratuits ; es/de/it premium).
+  const editable = (premium ? menuLanguages : menuLanguages.filter((l) => l === 'en')).filter((l) =>
+    TRANSLATABLE.includes(l)
+  );
+  const [tab, setTab] = useState<string>('fr');
+  const [i18n, setI18n] = useState<MenuItemI18n>(() => ({ ...(item?.i18n ?? {}) }));
+  // Édition manuelle d'une locale → on retire `_auto`/`_h` : l'entrée devient
+  // « manuelle », l'auto-trad ne la réécrit plus jamais (contrat mig 085).
+  const setLoc = (loc: string, field: 'name' | 'description', value: string) =>
+    setI18n((prev) => {
+      const cur = prev[loc] ?? {};
+      const next: { name?: string; description?: string } = {
+        name: field === 'name' ? value : cur.name,
+        description: field === 'description' ? value : cur.description,
+      };
+      return { ...prev, [loc]: next };
+    });
+
   const [variants, setVariants] = useState<VariantDraft[]>(() =>
     (item?.variants ?? []).map((v) => ({
       id: v.id || newLeafId(),
       label: v.label,
       price: v.price != null ? String(v.price) : '',
+      i18n: { ...(v.i18n ?? {}) },
     }))
   );
   const [options, setOptions] = useState<OptionDraft[]>(() =>
@@ -78,12 +113,27 @@ export default function ItemForm({
       id: o.id || newLeafId(),
       name: o.name,
       required: !!o.required,
+      i18n: { ...(o.i18n ?? {}) },
       choices: (o.choices ?? []).map((c) => ({
         label: c.label,
         price_delta: c.price_delta != null ? String(c.price_delta) : '',
+        i18n: { ...(c.i18n ?? {}) },
       })),
     }))
   );
+  // Setters des traductions de feuilles (onglets de langue, tab ≠ fr).
+  const setVariantI18n = (id: string, loc: string, value: string) =>
+    setVariants((s) => s.map((v) => (v.id === id ? { ...v, i18n: { ...v.i18n, [loc]: { label: value } } } : v)));
+  const setOptionI18n = (id: string, loc: string, value: string) =>
+    setOptions((s) => s.map((o) => (o.id === id ? { ...o, i18n: { ...o.i18n, [loc]: { name: value } } } : o)));
+  const setChoiceI18n = (oid: string, ci: number, loc: string, value: string) =>
+    setOptions((s) =>
+      s.map((o) =>
+        o.id === oid
+          ? { ...o, choices: o.choices.map((c, i) => (i === ci ? { ...c, i18n: { ...c.i18n, [loc]: { label: value } } } : c)) }
+          : o
+      )
+    );
   const [services, setServices] = useState<string[]>(() => item?.availability?.services ?? []);
   const [days, setDays] = useState<number[]>(() => item?.availability?.days ?? []);
   const [seasonFrom, setSeasonFrom] = useState(() => item?.availability?.season?.from ?? '');
@@ -118,21 +168,30 @@ export default function ItemForm({
 
   const hasVariants = variants.length > 0;
 
-  // Payloads sérialisés (relus + revalidés par le Server Action).
-  const variantsPayload = variants.map((v) => ({ id: v.id, label: v.label.trim(), price: parseNum(v.price) }));
+  // Payloads sérialisés (relus + revalidés par le Server Action). `i18n` inclus
+  // (traductions des variantes/options) — le serveur assainit et écarte le vide.
+  const variantsPayload = variants.map((v) => ({
+    id: v.id,
+    label: v.label.trim(),
+    price: parseNum(v.price),
+    i18n: v.i18n,
+  }));
   const optionsPayload = options.map((o) => ({
     id: o.id,
     name: o.name.trim(),
     required: o.required,
     max: 1,
+    i18n: o.i18n,
     choices: o.choices.map((c) => {
       const d = parseNum(c.price_delta);
-      return d > 0 ? { label: c.label.trim(), price_delta: d } : { label: c.label.trim() };
+      const base = d > 0 ? { label: c.label.trim(), price_delta: d } : { label: c.label.trim() };
+      return { ...base, i18n: c.i18n };
     }),
   }));
   const availabilityPayload = { services, days, seasonFrom, seasonTo };
 
   return (
+    <div className="space-y-4">
     <form action={action} className="space-y-4">
       {item ? <input type="hidden" name="id" value={item.id} /> : null}
       {item ? <input type="hidden" name="expectedUpdatedAt" value={item.updated_at} /> : null}
@@ -141,10 +200,58 @@ export default function ItemForm({
       <input type="hidden" name="options" value={JSON.stringify(optionsPayload)} />
       <input type="hidden" name="availability" value={JSON.stringify(availabilityPayload)} />
 
+      {/* Onglets de langue — traduction manuelle du plat (nom + description). Le
+          français est la source ; chaque langue activée a son onglet. */}
+      {editable.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" onClick={() => setTab('fr')} className={pill(tab === 'fr')}>
+            <FlagIcon code="fr" size={15} style={{ verticalAlign: '-2px', marginRight: 5 }} />
+            Français <span className="font-normal opacity-60">· source</span>
+          </button>
+          {editable.map((l) => {
+            const filled = !!i18n[l]?.name?.trim();
+            return (
+              <button key={l} type="button" onClick={() => setTab(l)} className={pill(tab === l)}>
+                <FlagIcon code={l} size={15} style={{ verticalAlign: '-2px', marginRight: 5 }} />
+                {LANG_LABEL[l]}{' '}
+                {filled ? (
+                  <span className="font-bold text-[var(--accent-success)]">✓</span>
+                ) : (
+                  <span className="font-normal opacity-60">· à traduire</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-[1fr_140px]">
         <div>
-          <label className={labelCls}>Nom du plat</label>
-          <input name="name" type="text" required maxLength={120} defaultValue={item?.name ?? ''} placeholder="Ramen tonkotsu" className={inputCls} autoFocus />
+          <label className={labelCls}>{tab === 'fr' ? 'Nom du plat' : `Nom · ${LANG_LABEL[tab]}`}</label>
+          {/* Source FR — toujours soumise (name="name") ; masquée hors onglet fr.
+              Pas de `required` : un champ caché requis bloquerait le submit ; le
+              serveur valide le nom. */}
+          <input
+            name="name"
+            type="text"
+            maxLength={120}
+            defaultValue={item?.name ?? ''}
+            placeholder="Ramen tonkotsu"
+            className={inputCls}
+            autoFocus
+            style={tab === 'fr' ? undefined : { display: 'none' }}
+          />
+          {tab !== 'fr' ? (
+            <input
+              key={tab}
+              type="text"
+              maxLength={200}
+              value={i18n[tab]?.name ?? ''}
+              onChange={(e) => setLoc(tab, 'name', e.target.value)}
+              placeholder={item?.name || 'Traduction du nom…'}
+              className={inputCls}
+            />
+          ) : null}
         </div>
         <div>
           <label className={labelCls}>Prix (€)</label>
@@ -159,9 +266,30 @@ export default function ItemForm({
       </div>
 
       <div>
-        <label className={labelCls}>Description</label>
-        <textarea name="description" rows={2} maxLength={400} defaultValue={item?.description ?? ''} placeholder="Bouillon de porc mijoté 12 h, nouilles fraîches, œuf mollet…" className={inputCls} />
+        <label className={labelCls}>{tab === 'fr' ? 'Description' : `Description · ${LANG_LABEL[tab]}`}</label>
+        <textarea
+          name="description"
+          rows={2}
+          maxLength={400}
+          defaultValue={item?.description ?? ''}
+          placeholder="Bouillon de porc mijoté 12 h, nouilles fraîches, œuf mollet…"
+          className={inputCls}
+          style={tab === 'fr' ? undefined : { display: 'none' }}
+        />
+        {tab !== 'fr' ? (
+          <textarea
+            key={tab}
+            rows={2}
+            maxLength={1000}
+            value={i18n[tab]?.description ?? ''}
+            onChange={(e) => setLoc(tab, 'description', e.target.value)}
+            placeholder={item?.description || 'Traduction de la description…'}
+            className={inputCls}
+          />
+        ) : null}
       </div>
+
+      <input type="hidden" name="i18n" value={JSON.stringify(i18n)} />
 
       <details open={advOpen} onToggle={(e) => setAdvOpen(e.currentTarget.open)} className={detailsCls}>
         <summary className={summaryCls}>Variantes &amp; options <span className="font-normal text-[var(--text3)]">· facultatif</span></summary>
@@ -170,34 +298,51 @@ export default function ItemForm({
       <div>
         <label className={labelCls}>Variantes (verre/bouteille, 25/50 cl…)</label>
         <div className="space-y-2">
-          {variants.map((v) => (
-            <div key={v.id} className="flex items-center gap-2">
-              <input
-                value={v.label}
-                onChange={(e) => setVariants((s) => s.map((x) => (x.id === v.id ? { ...x, label: e.target.value } : x)))}
-                maxLength={40}
-                placeholder="Verre / 25 cl…"
-                className={`${miniInput} flex-1`}
-              />
-              <input
-                value={v.price}
-                onChange={(e) => setVariants((s) => s.map((x) => (x.id === v.id ? { ...x, price: e.target.value } : x)))}
-                inputMode="decimal"
-                placeholder="€"
-                className={`${miniInput} w-20`}
-              />
-              <button type="button" onClick={() => setVariants((s) => s.filter((x) => x.id !== v.id))} aria-label="Retirer" className="px-1.5 text-[var(--text3)] hover:text-red-500">
-                ✕
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => setVariants((s) => [...s, { id: newLeafId(), label: '', price: '' }])}
-            className="text-sm font-semibold text-[var(--primary)] hover:underline"
-          >
-            + Ajouter une variante
-          </button>
+          {variants.map((v) =>
+            tab === 'fr' ? (
+              <div key={v.id} className="flex items-center gap-2">
+                <input
+                  value={v.label}
+                  onChange={(e) => setVariants((s) => s.map((x) => (x.id === v.id ? { ...x, label: e.target.value } : x)))}
+                  maxLength={40}
+                  placeholder="Verre / 25 cl…"
+                  className={`${miniInput} flex-1`}
+                />
+                <input
+                  value={v.price}
+                  onChange={(e) => setVariants((s) => s.map((x) => (x.id === v.id ? { ...x, price: e.target.value } : x)))}
+                  inputMode="decimal"
+                  placeholder="€"
+                  className={`${miniInput} w-20`}
+                />
+                <button type="button" onClick={() => setVariants((s) => s.filter((x) => x.id !== v.id))} aria-label="Retirer" className="px-1.5 text-[var(--text3)] hover:text-red-500">
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div key={v.id} className="flex items-center gap-2">
+                <span className="w-2/5 truncate text-sm text-[var(--text3)]" title={v.label}>{v.label || '—'}</span>
+                <input
+                  value={v.i18n[tab]?.label ?? ''}
+                  onChange={(e) => setVariantI18n(v.id, tab, e.target.value)}
+                  maxLength={60}
+                  placeholder={`Traduction · ${LANG_LABEL[tab]}`}
+                  className={`${miniInput} flex-1`}
+                />
+              </div>
+            )
+          )}
+          {tab === 'fr' ? (
+            <button
+              type="button"
+              onClick={() => setVariants((s) => [...s, { id: newLeafId(), label: '', price: '', i18n: {} }])}
+              className="text-sm font-semibold text-[var(--primary)] hover:underline"
+            >
+              + Ajouter une variante
+            </button>
+          ) : variants.length === 0 ? (
+            <p className="text-xs text-[var(--text3)]">Aucune variante à traduire.</p>
+          ) : null}
         </div>
       </div>
 
@@ -207,78 +352,110 @@ export default function ItemForm({
         <div className="space-y-3">
           {options.map((o) => (
             <div key={o.id} className="rounded-xl border border-[var(--border2)] bg-[var(--surface)] p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  value={o.name}
-                  onChange={(e) => setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, name: e.target.value } : x)))}
-                  maxLength={40}
-                  placeholder="Cuisson, Suppléments…"
-                  className={`${miniInput} flex-1`}
-                />
-                <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[var(--text2)]">
+              {tab === 'fr' ? (
+                <div className="flex items-center gap-2">
                   <input
-                    type="checkbox"
-                    checked={o.required}
-                    onChange={(e) => setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, required: e.target.checked } : x)))}
-                    className="h-4 w-4 accent-[var(--primary)]"
+                    value={o.name}
+                    onChange={(e) => setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, name: e.target.value } : x)))}
+                    maxLength={40}
+                    placeholder="Cuisson, Suppléments…"
+                    className={`${miniInput} flex-1`}
                   />
-                  Obligatoire
-                </label>
-                <button type="button" onClick={() => setOptions((s) => s.filter((x) => x.id !== o.id))} aria-label="Retirer le groupe" className="px-1.5 text-[var(--text3)] hover:text-red-500">
-                  ✕
-                </button>
-              </div>
-              <div className="space-y-1.5 pl-1">
-                {o.choices.map((c, ci) => (
-                  <div key={ci} className="flex items-center gap-2">
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[var(--text2)]">
                     <input
-                      value={c.label}
-                      onChange={(e) =>
-                        setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, choices: x.choices.map((cc, i) => (i === ci ? { ...cc, label: e.target.value } : cc)) } : x)))
-                      }
-                      maxLength={40}
-                      placeholder="Saignant, Extra fromage…"
-                      className={`${miniInput} flex-1`}
+                      type="checkbox"
+                      checked={o.required}
+                      onChange={(e) => setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, required: e.target.checked } : x)))}
+                      className="h-4 w-4 accent-[var(--primary)]"
                     />
-                    <div className="flex w-24 items-center gap-1">
-                      <span className="text-xs text-[var(--text3)]">+</span>
+                    Obligatoire
+                  </label>
+                  <button type="button" onClick={() => setOptions((s) => s.filter((x) => x.id !== o.id))} aria-label="Retirer le groupe" className="px-1.5 text-[var(--text3)] hover:text-red-500">
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="w-2/5 truncate text-sm font-semibold text-[var(--text3)]" title={o.name}>{o.name || '—'}</span>
+                  <input
+                    value={o.i18n[tab]?.name ?? ''}
+                    onChange={(e) => setOptionI18n(o.id, tab, e.target.value)}
+                    maxLength={60}
+                    placeholder={`Traduction · ${LANG_LABEL[tab]}`}
+                    className={`${miniInput} flex-1`}
+                  />
+                </div>
+              )}
+              <div className="space-y-1.5 pl-1">
+                {o.choices.map((c, ci) =>
+                  tab === 'fr' ? (
+                    <div key={ci} className="flex items-center gap-2">
                       <input
-                        value={c.price_delta}
+                        value={c.label}
                         onChange={(e) =>
-                          setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, choices: x.choices.map((cc, i) => (i === ci ? { ...cc, price_delta: e.target.value } : cc)) } : x)))
+                          setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, choices: x.choices.map((cc, i) => (i === ci ? { ...cc, label: e.target.value } : cc)) } : x)))
                         }
-                        inputMode="decimal"
-                        placeholder="€"
-                        className={`${miniInput} w-full`}
+                        maxLength={40}
+                        placeholder="Saignant, Extra fromage…"
+                        className={`${miniInput} flex-1`}
+                      />
+                      <div className="flex w-24 items-center gap-1">
+                        <span className="text-xs text-[var(--text3)]">+</span>
+                        <input
+                          value={c.price_delta}
+                          onChange={(e) =>
+                            setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, choices: x.choices.map((cc, i) => (i === ci ? { ...cc, price_delta: e.target.value } : cc)) } : x)))
+                          }
+                          inputMode="decimal"
+                          placeholder="€"
+                          className={`${miniInput} w-full`}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, choices: x.choices.filter((_, i) => i !== ci) } : x)))}
+                        aria-label="Retirer le choix"
+                        className="px-1 text-[var(--text3)] hover:text-red-500"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div key={ci} className="flex items-center gap-2">
+                      <span className="w-2/5 truncate text-sm text-[var(--text3)]" title={c.label}>{c.label || '—'}</span>
+                      <input
+                        value={c.i18n[tab]?.label ?? ''}
+                        onChange={(e) => setChoiceI18n(o.id, ci, tab, e.target.value)}
+                        maxLength={60}
+                        placeholder={`Traduction · ${LANG_LABEL[tab]}`}
+                        className={`${miniInput} flex-1`}
                       />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, choices: x.choices.filter((_, i) => i !== ci) } : x)))}
-                      aria-label="Retirer le choix"
-                      className="px-1 text-[var(--text3)] hover:text-red-500"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, choices: [...x.choices, { label: '', price_delta: '' }] } : x)))}
-                  className="text-xs font-semibold text-[var(--primary)] hover:underline"
-                >
-                  + Ajouter un choix
-                </button>
+                  )
+                )}
+                {tab === 'fr' ? (
+                  <button
+                    type="button"
+                    onClick={() => setOptions((s) => s.map((x) => (x.id === o.id ? { ...x, choices: [...x.choices, { label: '', price_delta: '', i18n: {} }] } : x)))}
+                    className="text-xs font-semibold text-[var(--primary)] hover:underline"
+                  >
+                    + Ajouter un choix
+                  </button>
+                ) : null}
               </div>
             </div>
           ))}
+          {tab === 'fr' ? (
           <button
             type="button"
-            onClick={() => setOptions((s) => [...s, { id: newLeafId(), name: '', required: false, choices: [{ label: '', price_delta: '' }] }])}
+            onClick={() => setOptions((s) => [...s, { id: newLeafId(), name: '', required: false, i18n: {}, choices: [{ label: '', price_delta: '', i18n: {} }] }])}
             className="text-sm font-semibold text-[var(--primary)] hover:underline"
           >
             + Ajouter un groupe d&apos;options
           </button>
+          ) : options.length === 0 ? (
+            <p className="text-xs text-[var(--text3)]">Aucune option à traduire.</p>
+          ) : null}
         </div>
       </div>
         </div>
@@ -384,5 +561,11 @@ export default function ItemForm({
         </button>
       </div>
     </form>
+
+      {/* Noms alternatifs (mig 112) — écritures immédiates, hors du <form>. */}
+      {item ? (
+        <ItemAliases restaurantId={restaurantId} itemId={item.id} initialAliases={item.aliases} />
+      ) : null}
+    </div>
   );
 }
