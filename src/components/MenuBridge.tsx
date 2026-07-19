@@ -64,6 +64,7 @@ import { MENU_FONTS } from '@/app/pro/r/[id]/menu/themeConstants';
 // Vars CSS des webfonts d'affichage (module partagé avec l'aperçu éditeur) →
 // posées sur <html> pour que var(--font-*) résolve sur cette route autonome.
 import { MENU_FONT_VARS } from '@/app/pro/r/[id]/menu/menuFonts';
+import MenuLiveSync from './MenuLiveSync';
 
 interface VenueInfo {
   name: string;
@@ -930,6 +931,9 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
           textAlign: hasMenu ? undefined : 'center',
         }}
       >
+        {/* Menu « vivant » : un plat basculé en « épuisé » depuis l'app disparaît
+            chez le client DÉJÀ installé à table, sans qu'il recharge. */}
+        <MenuLiveSync restaurantId={id} />
         {hasMenu ? (
           // ── MENU-FIRST : le menu numérique complet ────────────────────────
           <div style={{ maxWidth: 560, margin: '0 auto', padding: '0 20px' }}>
