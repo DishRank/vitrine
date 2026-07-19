@@ -39,6 +39,14 @@ export const MENU_FONT_ORDER: MenuThemeFont[] = [
 
 export interface MenuThemeConfig {
   theme: MenuThemePreset;
+  /**
+   * Fond LIBRE (#RRGGBB) — prioritaire sur `theme` quand présent. null/absent ⇒
+   * ambiance preset (comportement historique, zéro migration). Le reste de la
+   * palette (card/text/sub/line/dark) n'est JAMAIS stocké : il est recalculé au
+   * rendu par `deriveMenuPalette` → aucun chemin d'écriture ne peut produire un
+   * menu illisible. Priorité figée partout : bg valide > preset > ivoire.
+   */
+  bg: string | null;
   accent: string;
   font: MenuThemeFont;
   photos: boolean;
@@ -81,24 +89,195 @@ export const MENU_ACCENTS: string[] = [
 ];
 
 export const DEFAULT_MENU_THEME: MenuThemeConfig = {
-  theme: 'ivory', accent: '#AE8324', font: 'serif', photos: true, logo_url: null, show_logo: true,
+  theme: 'ivory', bg: null, accent: '#AE8324', font: 'serif', photos: true, logo_url: null, show_logo: true,
 };
+
+// ── Maths couleur & dérivation de palette ────────────────────────────────────
+// ⚠️ Copie MIROIR de app/constants/menuTheme.ts (dépôts séparés) : toute
+// divergence de formule ⇒ aperçu mobile ≠ menu réel. Garder les deux identiques.
+
+interface RGB { r: number; g: number; b: number }
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
+function hexToRgb(hex: string): RGB {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  const int = m ? parseInt(m[1], 16) : 0;
+  return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 };
+}
+const to2 = (n: number) => Math.round(Math.min(255, Math.max(0, n))).toString(16).padStart(2, '0');
+const rgbToHex = ({ r, g, b }: RGB) => `#${to2(r)}${to2(g)}${to2(b)}`.toUpperCase();
+
+const lin = (c: number) => { const s = c / 255; return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };
+const unlin = (c: number) => 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(Math.max(0, c), 1 / 2.4) - 0.055);
+
+/** Luminance relative WCAG. */
+function luminance(hex: string): number {
+  const { r, g, b } = hexToRgb(hex);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+/** Ratio de contraste WCAG (1 → 21). */
+export function contrastRatio(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+// OKLab (Björn Ottosson) : un même écart de L = un même écart de clarté PERÇUE
+// sur les 360° de teinte. En HSL, un fond jaune et un bleu de même L divergent
+// d'un facteur ~3 en contraste réel — d'où OKLab et pas HSL.
+function rgbToOklab(hex: string): { L: number; a: number; b: number } {
+  const { r, g, b } = hexToRgb(hex);
+  const R = lin(r), G = lin(g), B = lin(b);
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  return {
+    L: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    a: 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    b: 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  };
+}
+function oklabToRgb(L: number, a: number, bb: number): RGB {
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * bb;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * bb;
+  const s_ = L - 0.0894841775 * a - 1.291485548 * bb;
+  const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+  return {
+    r: unlin(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    g: unlin(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    b: unlin(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+  };
+}
+/** Même teinte, clarté OKLab cible. La chroma est réduite par dichotomie si la
+ *  couleur sort du gamut sRGB — sans ça, clamper les canaux fait DÉRIVER la
+ *  teinte et l'owner ne reconnaît plus sa couleur. */
+function withLightness(hex: string, targetL: number): string {
+  const { a, b } = rgbToOklab(hex);
+  let lo = 0, hi = 1;
+  let best = oklabToRgb(targetL, 0, 0);
+  for (let i = 0; i < 14; i++) {
+    const f = (lo + hi) / 2;
+    const c = oklabToRgb(targetL, a * f, b * f);
+    const ok = c.r >= -0.5 && c.r <= 255.5 && c.g >= -0.5 && c.g <= 255.5 && c.b >= -0.5 && c.b <= 255.5;
+    if (ok) { best = c; lo = f; } else hi = f;
+  }
+  return rgbToHex(best);
+}
+function mix(a: string, b: string, t: number): string {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  return rgbToHex({ r: A.r + (B.r - A.r) * t, g: A.g + (B.g - A.g) * t, b: A.b + (B.b - A.b) * t });
+}
+
+/** Encre à poser SUR l'accent — décidée par la luminance de l'ACCENT lui-même
+ *  (et non par la clarté du fond, erreur historique des 4 ternaires du rendu). */
+export function accentInk(accent: string): string {
+  const a = HEX_RE.test(accent) ? accent : '#AE8324';
+  return contrastRatio(a, '#FFFFFF') >= contrastRatio(a, '#000000') ? '#FFFFFF' : '#141018';
+}
+
+/**
+ * Palette lisible dérivée d'un fond LIBRE. Le fond n'est JAMAIS modifié (WYSIWYG).
+ * Théorème de polarité : sur n'importe quel fond sRGB, l'encre du meilleur pôle
+ * (noir ou blanc) atteint ≥ 4.58:1 — la lisibilité est garantie par construction,
+ * le clamp ne fait que la ramener après teintage. Renvoie null si hex invalide.
+ */
+export function deriveMenuPalette(bg: string): MenuPreset | null {
+  if (!HEX_RE.test(bg)) return null;
+  const BG = bg.toUpperCase();
+  const dark = contrastRatio(BG, '#FFFFFF') >= contrastRatio(BG, '#000000');
+  const pole = dark ? '#FFFFFF' : '#000000';
+  const Lbg = rgbToOklab(BG).L;
+
+  // Encre principale : le pôle garantit ≥ 4.58:1 sur le fond ; on la teinte
+  // légèrement du fond pour l'harmonie, puis on la ramène vers le pôle pur
+  // tant que AA n'est pas atteint.
+  let text = withLightness(BG, dark ? 0.96 : 0.24);
+  for (let i = 0; i < 14 && contrastRatio(text, BG) < 4.5; i++) text = mix(text, pole, 0.3);
+
+  // Plan « carte » : on s'ÉLOIGNE du pôle de l'encre (encre claire ⇒ carte plus
+  // sombre que le fond, et inversement). Conséquence : contraste texte/carte ≥
+  // texte/fond, donc AA acquis SANS clamp. Élever la carte VERS le pôle (réflexe
+  // « élévation » habituel) casse la lisibilité sur les fonds mi-saturés.
+  const away = dark ? -1 : 1;
+  // Escalade la clarté jusqu'à ce que la carte soit PERCEPTIBLE sur le fond :
+  // sans ça la tuile du logo, les surfaces de la barre d'outils et la feuille de
+  // notation se fondent dans le fond sur les couleurs extrêmes.
+  const makeCard = (dir: number) => {
+    let c = BG;
+    for (let k = 1; k <= 6; k++) {
+      c = withLightness(BG, clamp01(Lbg + dir * 0.055 * k));
+      if (contrastRatio(c, BG) >= 1.05) break;
+    }
+    return c;
+  };
+  let card = makeCard(away);
+  if (contrastRatio(card, BG) < 1.05) {
+    // Pas de place dans ce sens (fond quasi noir/blanc) → sens opposé, et on
+    // renforce l'encre pour tenir AA sur cette carte.
+    card = makeCard(-away);
+    for (let i = 0; i < 14 && contrastRatio(text, card) < 4.5; i++) text = mix(text, pole, 0.3);
+  }
+
+  // Filet : séparateur répété de toute la carte — visible mais discret.
+  const line = mix(BG, text, dark ? 0.16 : 0.13);
+
+  // Encre secondaire : atténuée, mais ≥ 3:1 sur le fond, la carte ET le filet
+  // (les badges peignent `sub` SUR `line` — couple le plus fragile).
+  let sub = mix(text, BG, 0.45);
+  for (
+    let i = 0;
+    i < 14 &&
+    (contrastRatio(sub, BG) < 3 || contrastRatio(sub, card) < 3 || contrastRatio(sub, line) < 3);
+    i++
+  ) {
+    sub = mix(sub, text, 0.25);
+  }
+
+  return { bg: BG, card, text, sub, line, dark };
+}
+
+/** Preset le plus proche d'un fond libre — écrit dans `theme` comme repli pour
+ *  les consommateurs pas encore à jour (ils affichent une ambiance voisine,
+ *  jamais de l'ivoire hors sujet). */
+export function nearestPreset(bg: string): MenuThemePreset {
+  if (!HEX_RE.test(bg)) return 'ivory';
+  const t = rgbToOklab(bg);
+  const dark = contrastRatio(bg, '#FFFFFF') >= contrastRatio(bg, '#000000');
+  let best: MenuThemePreset = dark ? 'charcoal' : 'ivory';
+  let bestD = Infinity;
+  for (const k of MENU_THEME_ORDER) {
+    const p = MENU_THEME_PRESETS[k];
+    if (p.dark !== dark) continue;
+    const o = rgbToOklab(p.bg);
+    const d = (o.L - t.L) ** 2 + (o.a - t.a) ** 2 + (o.b - t.b) ** 2;
+    if (d < bestD) { bestD = d; best = k; }
+  }
+  return best;
+}
 
 export function normalizeMenuTheme(raw: unknown): MenuThemeConfig {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const theme = MENU_THEME_ORDER.includes(o.theme as MenuThemePreset) ? (o.theme as MenuThemePreset) : 'ivory';
+  // Fond libre : validé strictement, jamais muté. Rien de DÉRIVÉ n'est accepté
+  // ici (card/text/... arrivés par une route détournée sont activement jetés).
+  const bg = typeof o.bg === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.bg) ? o.bg.toUpperCase() : null;
   const accent = typeof o.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.accent) ? (o.accent as string) : '#AE8324';
   const font: MenuThemeFont = typeof o.font === 'string' && o.font in MENU_FONTS ? (o.font as MenuThemeFont) : 'serif';
   const photos = o.photos !== false;
   const logo_url = typeof o.logo_url === 'string' && o.logo_url ? (o.logo_url as string) : null;
   const show_logo = o.show_logo !== false; // clé absente ⇒ true (rétrocompat)
-  return { theme, accent, font, photos, logo_url, show_logo };
+  return { theme, bg, accent, font, photos, logo_url, show_logo };
 }
 
 /** Le thème est-il « par défaut » (= vide côté serveur) ? Sert à autoriser le
  *  reset gratuit vs l'écriture premium (trigger 101). */
 export function isDefaultTheme(t: MenuThemeConfig): boolean {
+  // `t.bg == null` est OBLIGATOIRE : sans lui, un thème dont SEUL le fond change
+  // reste « défaut » → l'API écrit {} en base, l'owner voit « Enregistré », et
+  // le fond a disparu au rechargement (perte silencieuse).
   return (
-    t.theme === 'ivory' && t.accent === '#AE8324' && t.font === 'serif' && t.photos && !t.logo_url && t.show_logo
+    t.theme === 'ivory' && t.bg == null && t.accent === '#AE8324' && t.font === 'serif' &&
+    t.photos && !t.logo_url && t.show_logo
   );
 }

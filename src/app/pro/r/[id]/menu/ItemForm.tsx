@@ -167,6 +167,9 @@ export default function ItemForm({
     }`;
 
   const hasVariants = variants.length > 0;
+  // La photo du plat se gère dans la liste (PhotoControl) ; on lie ici l'option
+  // « mise en avant » à sa présence : pas de photo ⇒ case désactivée.
+  const hasPhoto = !!item?.photo_url;
 
   // Payloads sérialisés (relus + revalidés par le Server Action). `i18n` inclus
   // (traductions des variantes/options) — le serveur assainit et écarte le vide.
@@ -549,6 +552,27 @@ export default function ItemForm({
           Plat signature ⭐
         </label>
       </div>
+
+      {/* Photo mise en avant (mig. 121) : opt-in pour afficher la photo du
+          restaurateur EN PREMIER dans la galerie du plat de l'app, avec un badge.
+          Désactivée tant que le plat n'a pas de photo. */}
+      <label className={`flex items-start gap-2 text-sm ${hasPhoto ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
+        <input
+          type="checkbox"
+          name="feature_photo"
+          defaultChecked={item?.feature_photo ?? false}
+          disabled={!hasPhoto}
+          className="mt-0.5 h-4 w-4 accent-[var(--primary)] disabled:opacity-50"
+        />
+        <span>
+          <span className="font-semibold">Afficher ma photo en premier dans l’app</span>
+          <span className="block text-xs font-normal text-[var(--text3)]">
+            {hasPhoto
+              ? 'Votre photo passe devant celles des clients, avec un badge « photo du restaurant ».'
+              : 'Ajoutez d’abord une photo à ce plat (bouton « Ajouter une photo » dans la liste) pour activer cette option.'}
+          </span>
+        </span>
+      </label>
 
       <FormError error={state.error} />
 

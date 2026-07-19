@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { signUpAction, type AuthActionState } from '../actions';
 import { checkPassword, PASSWORD_RULES_FR, type PasswordCheck } from '@/lib/pro/authErrors';
-import { SubmitButton, FormError, FormSuccess, inputCls, labelCls } from '../_components/fields';
+import { SubmitButton, FormError, FormSuccess, PasswordInput, inputCls, labelCls } from '../_components/fields';
 import Turnstile from '../_components/Turnstile';
 
 export default function SignupForm({
@@ -50,10 +50,11 @@ export default function SignupForm({
       </div>
       <div>
         <label htmlFor="password" className={labelCls}>Mot de passe</label>
-        <input
-          id="password" name="password" type="password" required autoComplete="new-password"
-          placeholder="••••••••" className={inputCls}
-          value={pw} onChange={(e) => setPw(e.target.value)}
+        <PasswordInput
+          id="password"
+          autoComplete="new-password"
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
         />
         {pw ? (
           <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5">

@@ -238,7 +238,13 @@ async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
   if (!authenticated && !PRO_PUBLIC_PATHS.has(pathname)) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = '/pro/login';
-    loginUrl.search = pathname === '/pro' ? '' : `?next=${encodeURIComponent(pathname)}`;
+    // On conserve la QUERY dans `next` : un deep-link partagé (ex.
+    // `…/avis?avis=negatifs`) ouvert déconnecté doit rouvrir SUR le filtre après
+    // login, pas sur la page nue. Reste un chemin relatif interne (commence
+    // toujours par `/pro`), donc `safeNext`/le callback le valident sans risque
+    // d'open-redirect.
+    const nextTarget = `${pathname}${req.nextUrl.search}`;
+    loginUrl.search = pathname === '/pro' ? '' : `?next=${encodeURIComponent(nextTarget)}`;
     return redirectPreservingSession(loginUrl);
   }
 

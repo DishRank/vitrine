@@ -49,7 +49,7 @@ export default function AbonnementPanel({
         return;
       }
       const MAP: Record<string, string> = {
-        coming_soon: 'La souscription en ligne arrive très bientôt — le premium est offert 6 mois au lancement.',
+        coming_soon: 'La souscription en ligne arrive très bientôt — le premium est offert 1 an au lancement.',
         already_comped: 'Premium déjà offert sur cet établissement.',
         already_premium: 'Votre abonnement est déjà actif.',
         no_subscription: 'Aucun abonnement à gérer.',
@@ -63,7 +63,7 @@ export default function AbonnementPanel({
   // ── Premium OFFERT (comp founder / admin) ────────────────────────────────────
   if (comped) {
     // « À vie » = Partenaire Fondateur SANS échéance uniquement. Toute comp AVEC
-    // une échéance (lancement 6 mois, ou ancienne comp fondateur datée) montre sa
+    // une échéance (lancement 1 an, ou ancienne comp fondateur datée) montre sa
     // date d'expiration — jamais « à vie ».
     const founderLifetime = source === 'founder_comp' && !expiresAt;
     return (
@@ -145,7 +145,7 @@ export default function AbonnementPanel({
         </button>
         {!billingEnabled ? (
           <p className="mt-2 text-sm font-semibold text-[var(--primary)]">
-            🎁 Le Premium est offert 6 mois au lancement — contactez-nous pour l&apos;activer sur votre établissement.
+            🎁 Le Premium est offert 1 an au lancement — contactez-nous pour l&apos;activer sur votre établissement.
           </p>
         ) : null}
         {errEl}

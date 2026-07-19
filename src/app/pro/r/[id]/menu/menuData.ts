@@ -34,6 +34,8 @@ export interface EditorItem {
   price: number | null;
   currency: string;
   photo_url: string | null;
+  /** Opt-in : afficher la photo du restaurateur EN PREMIER dans l'app (mig. 121). */
+  feature_photo: boolean;
   display_order: number;
   is_visible: boolean;
   is_available: boolean;
@@ -91,7 +93,7 @@ const byOrder = <T extends { display_order: number; created_at: string }>(a: T, 
 
 const SELECT = `id, name, version, display_order, created_at,
   menu_sections(id, name, description, i18n, parent_section_id, display_order, is_visible, created_at,
-    menu_items(id, section_id, kind, name, description, i18n, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, category_slugs, variants, options, availability, formula_config, updated_at, created_at))`;
+    menu_items(id, section_id, kind, name, description, i18n, price, currency, photo_url, feature_photo, display_order, is_visible, is_available, is_signature, allergens, diet_tags, category_slugs, variants, options, availability, formula_config, updated_at, created_at))`;
 
 /** L'arbre complet des cartes du resto (souvent une seule, « Notre carte »). */
 export async function getEditorMenus(restaurantId: string): Promise<EditorMenu[]> {

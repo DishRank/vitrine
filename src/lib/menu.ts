@@ -14,7 +14,15 @@ import { createClient } from '@supabase/supabase-js';
 import { unstable_cache } from 'next/cache';
 // Source unique des clés de police (évite la divergence silencieuse avec le
 // validateur d'écriture de themeConstants — cf. audit). Fichier client-safe.
-import { MENU_FONTS, type MenuThemeFont } from '@/app/pro/r/[id]/menu/themeConstants';
+import {
+  MENU_FONTS,
+  MENU_THEME_PRESETS,
+  deriveMenuPalette,
+  accentInk,
+  contrastRatio,
+  type MenuThemeFont,
+  type MenuThemePreset,
+} from '@/app/pro/r/[id]/menu/themeConstants';
 
 // ── Types (miroir léger de lib/menuTypes.ts côté app) ──────────────────────
 
@@ -418,8 +426,11 @@ export const ALLERGEN_ICON: Record<string, string> = {
 // APPLIQUÉ que si le resto est premium (sinon défaut ivoire) → dégradation
 // propre à l'expiration, sans trigger DB.
 
-export type MenuThemePreset =
-  | 'ivory' | 'linen' | 'sage' | 'blush' | 'charcoal' | 'night' | 'forest' | 'wine';
+// `MenuThemePreset` + les 8 ambiances viennent désormais de themeConstants
+// (source unique, client-safe) : plus de 3e copie des couleurs ici. Re-export
+// pour ne casser aucun import existant de `lib/menu`.
+export type { MenuThemePreset };
+
 export interface ResolvedMenuTheme {
   bg: string;
   card: string;
@@ -427,22 +438,15 @@ export interface ResolvedMenuTheme {
   sub: string;
   line: string;
   accent: string;
+  /** Encre à poser SUR l'accent — dérivée de la luminance de l'ACCENT lui-même
+   *  (et NON de la clarté du fond, erreur historique des ternaires du rendu qui
+   *  devient franchement fausse dès qu'un fond libre est en jeu). */
+  accentOn: string;
   dark: boolean;
   font: MenuThemeFont;
   photos: boolean;
   logoUrl: string | null;
 }
-
-const MENU_PRESETS: Record<MenuThemePreset, Omit<ResolvedMenuTheme, 'accent' | 'font' | 'photos' | 'logoUrl'>> = {
-  ivory: { bg: '#FBF8F3', card: '#FFFFFF', text: '#2A241E', sub: '#8C8478', line: '#EBE4D8', dark: false },
-  linen: { bg: '#F5EEE3', card: '#FFFDF9', text: '#3A2E22', sub: '#90806A', line: '#E5DAC8', dark: false },
-  sage: { bg: '#F1F4EC', card: '#FFFFFF', text: '#2C3327', sub: '#7C8570', line: '#E0E6D6', dark: false },
-  blush: { bg: '#FBF3F1', card: '#FFFFFF', text: '#3A2A2A', sub: '#9A8480', line: '#F0E1DD', dark: false },
-  charcoal: { bg: '#211D1B', card: '#2A2523', text: '#F2ECE3', sub: '#A89C8D', line: '#37312C', dark: true },
-  night: { bg: '#14161F', card: '#1C1F2B', text: '#ECEEF5', sub: '#9AA0B0', line: '#262A38', dark: true },
-  forest: { bg: '#12201A', card: '#1B2C24', text: '#E8F0E9', sub: '#93A89B', line: '#24382F', dark: true },
-  wine: { bg: '#1E1315', card: '#2A1B1E', text: '#F2E7E5', sub: '#B39A9A', line: '#3A2429', dark: true },
-};
 
 export function isRestaurantPremium(
   tier: string | null | undefined,
@@ -463,11 +467,10 @@ export function detectPlatformFromUA(ua: string | null | undefined): StorePlatfo
   return 'desktop';
 }
 
-/** Thème effectif. Les PHOTOS de plats et le LOGO sont GRATUITS (frontière
- *  révisée 2026-07-15 — photos : défaut true, seule une désactivation explicite
- *  les masque ; logo : celui de la FICHE, affiché s'il existe et que l'owner l'a
- *  laissé activé via `show_logo`) ; le reste du thème (ambiance, accent, police)
- *  reste PREMIUM — défaut ivoire sinon. */
+/** Thème effectif. Les PHOTOS de plats et le LOGO sont GRATUITS (photos : le
+ *  toggle afficher/masquer est libre, mig. 122 ; logo : celui de la FICHE,
+ *  affiché s'il existe et que l'owner l'a laissé activé via `show_logo`) ; le
+ *  reste du thème (ambiance, accent, police) reste PREMIUM — défaut ivoire sinon. */
 export function resolveMenuTheme(raw: unknown, isPremium: boolean): ResolvedMenuTheme {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const photos = o.photos !== false;
@@ -479,24 +482,31 @@ export function resolveMenuTheme(raw: unknown, isPremium: boolean): ResolvedMenu
     showLogo && typeof o.logo_url === 'string' && o.logo_url ? (o.logo_url as string) : null;
   if (!isPremium) {
     return {
-      ...MENU_PRESETS.ivory,
+      ...MENU_THEME_PRESETS.ivory,
       accent: '#AE8324',
+      accentOn: accentInk('#AE8324'),
       font: 'serif',
-      // Free = comportement par défaut : photos TOUJOURS affichées. Le toggle
-      // d'affichage appartient au thème (premium) — sans ça, un resto
-      // rétrogradé avec `photos:false` stocké ne pourrait plus les réactiver.
-      photos: true,
-      // Le logo, lui, est gratuit : on le conserve même sans premium.
+      // Photos GRATUITES (mig. 122) : on respecte le choix afficher/masquer même
+      // sans premium. Logo aussi gratuit. Seule l'AMBIANCE (preset/accent/police)
+      // reste premium → forcée au défaut ci-dessus.
+      photos,
       logoUrl,
     };
   }
-  const key: MenuThemePreset = o.theme != null && (o.theme as MenuThemePreset) in MENU_PRESETS
+  const key: MenuThemePreset = o.theme != null && (o.theme as MenuThemePreset) in MENU_THEME_PRESETS
     ? (o.theme as MenuThemePreset)
     : 'ivory';
   const accent =
     typeof o.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.accent) ? (o.accent as string) : '#AE8324';
   const font: MenuThemeFont = typeof o.font === 'string' && o.font in MENU_FONTS ? (o.font as MenuThemeFont) : 'serif';
-  return { ...MENU_PRESETS[key], accent, font, photos, logoUrl };
+  // Fond LIBRE (premium) : la palette est DÉRIVÉE à chaque rendu, jamais lue du
+  // stockage → aucun chemin d'écriture (API, app, PostgREST direct, SQL brut) ne
+  // peut faire arriver un menu illisible chez les clients du resto.
+  // Filet de sécurité : si la palette dérivée ne tenait pas AA (impossible par
+  // construction, mais l'éditeur est contournable), on retombe sur le preset.
+  const free = typeof o.bg === 'string' ? deriveMenuPalette(o.bg) : null;
+  const base = free && contrastRatio(free.text, free.bg) >= 4.5 ? free : MENU_THEME_PRESETS[key];
+  return { ...base, accent, accentOn: accentInk(accent), font, photos, logoUrl };
 }
 
 /** Libellés UI de la page menu (autonome — la route vit hors [locale]). */

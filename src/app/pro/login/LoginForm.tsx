@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useActionState } from 'react';
 import { signInAction, sendMagicLinkAction, type AuthActionState } from '../actions';
-import { SubmitButton, FormError, inputCls, labelCls } from '../_components/fields';
+import { SubmitButton, FormError, PasswordInput, inputCls, labelCls } from '../_components/fields';
 import OAuthButtons from '../_components/OAuthButtons';
 import Turnstile from '../_components/Turnstile';
 
@@ -63,10 +63,7 @@ export default function LoginForm({
                 Mot de passe oublié ?
               </Link>
             </div>
-            <input
-              id="password" name="password" type="password" required autoComplete="current-password"
-              placeholder="••••••••" className={inputCls}
-            />
+            <PasswordInput id="password" autoComplete="current-password" />
           </div>
           <Turnstile siteKey={turnstileSiteKey} nonce={nonce} resetKey={pwState.error} />
           <FormError error={pwState.error} />

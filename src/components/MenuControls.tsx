@@ -31,6 +31,8 @@ interface Theme {
   sub: string;
   line: string;
   accent: string;
+  /** Encre lisible SUR l'accent (dérivée de la luminance de l'accent). */
+  accentOn: string;
   dark: boolean;
 }
 interface Tag {
@@ -177,7 +179,7 @@ export default function MenuControls({
     borderRadius: 999,
     border: `1px solid ${active ? theme.accent : theme.line}`,
     background: active ? theme.accent : 'transparent',
-    color: active ? (theme.dark ? '#141018' : '#fff') : theme.sub,
+    color: active ? theme.accentOn : theme.sub,
     fontSize: 12.5,
     fontWeight: 700,
     cursor: 'pointer',
@@ -228,7 +230,7 @@ export default function MenuControls({
                     borderRadius: 12,
                     border: 'none',
                     background: active ? theme.accent : theme.card,
-                    color: active ? (theme.dark ? '#141018' : '#fff') : theme.text,
+                    color: active ? theme.accentOn : theme.text,
                     fontSize: 13.5,
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -323,7 +325,7 @@ export default function MenuControls({
                 borderRadius: 12,
                 border: `1px solid ${filtersOpen || activeFilterCount > 0 ? theme.accent : theme.line}`,
                 background: activeFilterCount > 0 ? theme.accent : theme.card,
-                color: activeFilterCount > 0 ? (theme.dark ? '#141018' : '#fff') : theme.sub,
+                color: activeFilterCount > 0 ? theme.accentOn : theme.sub,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}

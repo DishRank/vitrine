@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Modal from '@/app/pro/_components/Modal';
 
 /**
  * Sélecteur de couleur d'accent — parité avec l'app mobile (components/ui/
@@ -58,18 +59,28 @@ function hexToHsv(hex: string): { h: number; s: number; v: number } {
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 const isHex = (s: string) => /^#[0-9a-fA-F]{6}$/.test(s);
 const FALLBACK = '#AE8324';
+// Roue chromatique — identité visuelle de la pastille « couleur libre ».
+const RAINBOW =
+  'conic-gradient(from 180deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ec4899, #ef4444)';
 
 export default function ColorField({
   value,
   onChange,
   presets,
+  active,
+  label = 'Couleur personnalisée',
 }: {
   value: string;
   onChange: (hex: string) => void;
   presets: string[];
+  /** Force l'état « personnalisé » (sinon déduit : la valeur n'est pas un preset).
+   *  Utile quand la valeur affichée est un repli — ex. le fond, qui montre celui
+   *  de l'ambiance tant qu'aucun fond libre n'est choisi. */
+  active?: boolean;
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const isCustom = !presets.some((p) => p.toLowerCase() === value.toLowerCase());
+  const isCustom = active ?? !presets.some((p) => p.toLowerCase() === value.toLowerCase());
 
   // HSV interne = source de vérité pendant le drag (aller dans un coin ne perd
   // pas la teinte). Re-synchro seulement sur changement externe (preset/hex).
@@ -163,35 +174,41 @@ export default function ColorField({
             style={{ background: c }}
           />
         ))}
-        {/* Pastille « perso » — déplie le carré HSV + teinte + hex. */}
+
+        {/* Couleur libre — pastille « roue chromatique », dans la MÊME rangée que
+            les presets. L'anneau arc-en-ciel dit « n'importe quelle couleur » ;
+            son centre affiche la couleur choisie dans la palette (donc on voit
+            que c'est ELLE qui vient d'ici). Clic → modale (HSV + teinte + hexa). */}
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-label="Couleur personnalisée"
-          title="Couleur personnalisée"
-          className={`flex h-9 w-9 items-center justify-center rounded-full border-2 ${isCustom || open ? 'border-[var(--text)]' : 'border-[var(--border2)]'}`}
-          style={{ background: isCustom ? swatch : 'var(--surface-var)' }}
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          aria-label={label}
+          title={label}
+          className="h-9 w-9 shrink-0 rounded-full p-[3px] transition-transform hover:scale-110"
+          style={{ background: RAINBOW, boxShadow: isCustom ? '0 0 0 2px var(--text)' : undefined }}
         >
-          {isCustom ? (
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <circle cx="13.5" cy="6.5" r="1.5" /><circle cx="17.5" cy="10.5" r="1.5" /><circle cx="8.5" cy="7.5" r="1.5" /><circle cx="6.5" cy="12.5" r="1.5" />
-              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.6 1.5-1.5 0-.4-.2-.8-.5-1.1-.3-.3-.5-.7-.5-1.1 0-.9.6-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.9-4.5-8.3-10-8.3z" />
-            </svg>
-          )}
+          <span
+            className="flex h-full w-full items-center justify-center rounded-full"
+            style={{ background: isCustom ? swatch : 'var(--surface)' }}
+          >
+            {isCustom ? null : (
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--text2)" strokeWidth="3" strokeLinecap="round" aria-hidden>
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            )}
+          </span>
         </button>
       </div>
 
-      {open ? (
-        <div className="mt-3 w-full max-w-[300px] rounded-xl border border-[var(--border2)] bg-[var(--surface)] p-3">
+      {/* Sélecteur visuel dans une MODALE (carré HSV + teinte + hexa). */}
+      <Modal open={open} onClose={() => setOpen(false)} title={label} maxWidth="max-w-sm">
+        <div className="space-y-3">
           {/* Carré saturation (X) × luminosité (Y) */}
           <div
             ref={svRef}
             onPointerDown={startDrag((x, y) => applySv(x, y))}
-            className="relative h-40 w-full rounded-lg"
+            className="relative h-52 w-full rounded-lg"
             style={{
               cursor: 'crosshair',
               touchAction: 'none',
@@ -213,7 +230,7 @@ export default function ColorField({
           <div
             ref={hueRef}
             onPointerDown={startDrag((x) => applyHue(x))}
-            className="relative mt-3 h-4 w-full rounded-full"
+            className="relative h-4 w-full rounded-full"
             style={{
               cursor: 'pointer',
               touchAction: 'none',
@@ -231,28 +248,35 @@ export default function ColorField({
               }}
             />
           </div>
-          {/* Champ hex */}
-          <div className="mt-3 flex items-center gap-2">
-            <span className="h-8 w-8 shrink-0 rounded-lg border border-[var(--border2)]" style={{ background: swatch }} />
+          {/* Code hexa + validation */}
+          <div className="flex items-center gap-2 pt-1">
+            <span
+              aria-hidden
+              className="h-9 w-9 shrink-0 rounded-lg border border-[var(--border2)]"
+              style={{ background: swatch }}
+            />
             <input
               value={hexDraft}
               onChange={(e) => onHex(e.target.value)}
-              onBlur={() => { if (!isHex(hexDraft)) setHexDraft(value); }}
+              onBlur={() => {
+                if (!isHex(hexDraft)) setHexDraft(value);
+              }}
               spellCheck={false}
               maxLength={7}
               placeholder="#RRGGBB"
-              className="w-full rounded-lg border border-[var(--border2)] bg-[var(--bg)] px-3 py-1.5 text-sm font-semibold uppercase tracking-wide text-[var(--text)] outline-none focus:border-[var(--primary)]"
+              aria-label="Code couleur hexadécimal"
+              className="w-full rounded-lg border border-[var(--border2)] bg-[var(--bg)] px-3 py-2 text-sm font-semibold uppercase tracking-wide text-[var(--text)] outline-none focus:border-[var(--primary)]"
             />
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="shrink-0 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-sm font-bold text-white hover:opacity-90"
+              className="shrink-0 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-bold text-white hover:opacity-90"
             >
               Terminé
             </button>
           </div>
         </div>
-      ) : null}
+      </Modal>
     </div>
   );
 }

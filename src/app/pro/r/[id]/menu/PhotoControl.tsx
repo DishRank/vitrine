@@ -6,7 +6,9 @@ import { setItemPhotoAction } from './mediaActions';
 import { getThumbnailUrl } from './thumb';
 
 /** Ajout / changement / retrait de la photo d'un plat. Upload navigateur
- *  (full + _thumb) puis persistance de photo_url via Server Action. */
+ *  (full + _thumb) puis persistance de photo_url via Server Action. (L'option
+ *  « afficher ma photo en premier dans l'app » vit dans le FORMULAIRE du plat —
+ *  ItemForm — pas ici.) */
 export default function PhotoControl({
   restaurantId,
   itemId,

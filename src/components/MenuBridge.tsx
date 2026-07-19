@@ -392,7 +392,11 @@ function ItemRow({
             flex: 1,
             minWidth: 0,
             margin: 0,
-            fontFamily: SANS,
+            // Nom du plat = police d'AFFICHAGE choisie (standard des cartes de
+            // resto). C'est ce qui rend le choix de police réellement visible :
+            // le nom du resto + les titres de section seuls ne changeaient qu'une
+            // fraction de la page. Description/prix restent en SANS (lisibilité).
+            fontFamily: displayFont(theme),
             fontSize: 16,
             fontWeight: 600,
             color: theme.text,
@@ -476,7 +480,7 @@ function ItemRow({
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
           {item.variants.map((v) => (
             <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
-              <span style={{ color: theme.sub }}>
+              <span style={{ color: theme.sub, fontFamily: displayFont(theme) }}>
                 {locale !== 'fr' && v.i18n?.[locale]?.label ? v.i18n[locale].label : v.label}
               </span>
               <span style={{ color: theme.text, fontWeight: 700 }}>{priceStr(v.price)}</span>
@@ -510,7 +514,7 @@ function ItemRow({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {item.formula_config.prices.map((p, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                <span style={{ color: theme.text, fontWeight: 600 }}>{p.label}</span>
+                <span style={{ color: theme.text, fontWeight: 600, fontFamily: displayFont(theme) }}>{p.label}</span>
                 <span style={{ color: theme.text, fontWeight: 800 }}>{priceStr(p.price)}</span>
               </div>
             ))}
@@ -529,7 +533,7 @@ function ItemRow({
               .filter(Boolean);
             return (
               <p key={i} style={{ margin: '6px 0 0', fontSize: 12.5, color: theme.sub, lineHeight: 1.5 }}>
-                <span style={{ fontWeight: 700, color: theme.text }}>
+                <span style={{ fontWeight: 700, color: theme.text, fontFamily: displayFont(theme) }}>
                   {(locale !== 'fr' && slot.i18n?.[locale]?.name) || slot.name}
                 </span>
                 {names.length > 0 ? ` — ${ui.choiceOf} : ${names.join(' · ')}` : ''}
@@ -831,7 +835,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
     whiteSpace: 'nowrap',
     border: `1px solid ${primary ? theme.accent : theme.line}`,
     background: primary ? theme.accent : theme.card,
-    color: primary ? (theme.dark ? '#141018' : '#fff') : theme.sub,
+    color: primary ? theme.accentOn : theme.sub,
   });
   const hasVenueInfo = !!(
     (venue.cuisines && venue.cuisines.length) ||
@@ -1106,6 +1110,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                 sub: theme.sub,
                 line: theme.line,
                 accent: theme.accent,
+                accentOn: theme.accentOn,
                 dark: theme.dark,
               }}
             >

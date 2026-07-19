@@ -15,7 +15,7 @@ export default async function ProWorkspaceLayout({ children }: { children: React
   const [{ data }, profileRes] = await Promise.all([
     supabase
       .from('restaurants')
-      .select('id, name, photo_url, subscription_tier')
+      .select('id, name, photo_url, subscription_tier, address, city, subscription_expires_at')
       .eq('owner_id', user.id)
       .order('name'),
     supabase.from('profiles').select('email_digest_opt_out').eq('id', user.id).maybeSingle(),

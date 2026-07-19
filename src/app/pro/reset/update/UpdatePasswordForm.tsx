@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { updatePasswordAction, type AuthActionState } from '../../actions';
 import { checkPassword, PASSWORD_RULES_FR, type PasswordCheck } from '@/lib/pro/authErrors';
-import { SubmitButton, FormError, inputCls, labelCls } from '../../_components/fields';
+import { SubmitButton, FormError, PasswordInput, labelCls } from '../../_components/fields';
 
 export default function UpdatePasswordForm() {
   const [state, action] = useActionState<AuthActionState, FormData>(updatePasswordAction, {});
@@ -14,10 +14,11 @@ export default function UpdatePasswordForm() {
     <form action={action} className="space-y-4">
       <div>
         <label htmlFor="password" className={labelCls}>Nouveau mot de passe</label>
-        <input
-          id="password" name="password" type="password" required autoComplete="new-password"
-          placeholder="••••••••" className={inputCls}
-          value={pw} onChange={(e) => setPw(e.target.value)}
+        <PasswordInput
+          id="password"
+          autoComplete="new-password"
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
         />
         {pw ? (
           <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-0.5">
@@ -34,10 +35,7 @@ export default function UpdatePasswordForm() {
       </div>
       <div>
         <label htmlFor="confirm" className={labelCls}>Confirmer le mot de passe</label>
-        <input
-          id="confirm" name="confirm" type="password" required autoComplete="new-password"
-          placeholder="••••••••" className={inputCls}
-        />
+        <PasswordInput id="confirm" name="confirm" autoComplete="new-password" />
       </div>
       <FormError error={state.error} />
       <SubmitButton>Enregistrer le mot de passe</SubmitButton>

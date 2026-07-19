@@ -369,6 +369,7 @@ export async function upsertItemAction(
   const price = priceRaw === '' ? null : Number(priceRaw);
   const isVisible = formData.get('is_visible') === 'on';
   const isSignature = formData.get('is_signature') === 'on';
+  const featurePhoto = formData.get('feature_photo') === 'on'; // mig. 121
   const allergens = formData.getAll('allergens').map(String).filter((a) => ALLERGEN_KEYS.has(a));
   const dietTags = formData.getAll('diet_tags').map(String).filter((d) => DIET_KEYS.has(d));
   const expectedUpdatedAt = String(formData.get('expectedUpdatedAt') ?? '') || null;
@@ -427,6 +428,7 @@ export async function upsertItemAction(
     price: finalPrice,
     is_visible: isVisible,
     is_signature: isSignature,
+    feature_photo: featurePhoto,
     allergens,
     diet_tags: dietTags,
     category_slugs: categorySlugs,

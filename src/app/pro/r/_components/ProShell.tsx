@@ -9,6 +9,7 @@ import Modal from '@/app/pro/_components/Modal';
 import ClaimClient from '@/app/pro/claim/ClaimClient';
 import DigestToggle from '@/app/pro/compte/DigestToggle';
 import PasswordResetButton from '@/app/pro/compte/PasswordResetButton';
+import SaveStatusSlot from '@/app/pro/r/[id]/_components/SaveStatusSlot';
 import { signOutAction } from '@/app/pro/actions';
 import AnimatedOutlet from './AnimatedOutlet';
 
@@ -17,6 +18,11 @@ export interface ShellResto {
   name: string | null;
   photo_url: string | null;
   subscription_tier: string | null;
+  // Pour l'en-tête resto désormais rendu DANS la topbar (adresse + badge Premium
+  // exact avec l'expiration) plutôt que répété sur chaque page.
+  address: string | null;
+  city: string | null;
+  subscription_expires_at: string | null;
 }
 
 // Styles de la sheet « Mon compte » (mêmes cartes que la page /pro/compte).
@@ -60,6 +66,15 @@ export default function ProShell({
   const activeId = m?.[1] ?? restaurants[0]?.id ?? null;
   const suffix = m?.[2] ?? '';
   const pendingCount = activeId ? (pending[activeId] ?? 0) : 0;
+
+  // En-tête resto affiché DANS la topbar (au lieu d'être répété sur chaque page).
+  const activeResto = restaurants.find((r) => r.id === activeId) ?? null;
+  const activeAddress = activeResto
+    ? [activeResto.address, activeResto.city].filter(Boolean).join(' · ')
+    : '';
+  const activePremium =
+    activeResto?.subscription_tier === 'premium' &&
+    (!activeResto.subscription_expires_at || new Date(activeResto.subscription_expires_at) > new Date());
 
   // Toute navigation referme le tiroir mobile et remonte le contenu en haut
   // (le scroll vit dans <main>, plus dans window — Next ne le restaure pas).
@@ -137,19 +152,40 @@ export default function ProShell({
               type="button"
               onClick={() => setDrawerOpen(true)}
               aria-label="Ouvrir le menu"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border2)] text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)] lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border2)] text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)] lg:hidden"
             >
               <BurgerIcon className="h-4.5 w-4.5" />
             </button>
-            <Link href="/pro" className="flex items-center gap-2 text-[var(--text)] lg:hidden">
-              <AnimatedLogo size={24} />
-              <span className="hidden text-base font-extrabold tracking-tight sm:block">
-                DishRank <span className="text-[var(--primary)]">Pro</span>
-              </span>
-            </Link>
 
-            <div className="flex-1" />
+            {/* En-tête du resto actif — vit ICI (persistant sur toutes les pages)
+                plutôt que répété dans chaque layout de page. */}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-base font-extrabold tracking-tight sm:text-lg">
+                  {activeResto?.name ?? 'Mes établissements'}
+                </h1>
+                {activePremium ? (
+                  <span className="hidden shrink-0 rounded-full bg-[var(--primary-container)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary)] sm:inline-block">
+                    Premium
+                  </span>
+                ) : null}
+              </div>
+              {activeAddress ? (
+                <p className="truncate text-xs text-[var(--text2)]">{activeAddress}</p>
+              ) : null}
+            </div>
 
+            <SaveStatusSlot />
+            {activeId ? (
+              <a
+                href={`/menu/${activeId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden shrink-0 rounded-lg border border-[var(--border2)] px-3 py-1.5 text-xs font-semibold text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)] sm:inline-block"
+              >
+                Aperçu public ↗
+              </a>
+            ) : null}
             <ThemeToggle />
             <NotifBell restaurants={restaurants} pending={pending} activeId={activeId} />
             <RestoSwitcher
@@ -540,10 +576,10 @@ function RestoSwitcher({
         aria-expanded={open}
         className="flex items-center gap-2 rounded-full border border-[var(--border2)] py-1 pl-1 pr-2.5 transition-colors hover:border-[var(--primary)]"
       >
+        {/* Le NOM du resto actif vit dans le titre de la topbar → ici on garde un
+            switcher compact (vignette + chevron), sans dupliquer le nom. */}
         <Thumb resto={active} className="h-8 w-8 rounded-full" />
-        <span className="hidden max-w-[150px] truncate text-sm font-bold sm:block">
-          {active?.name ?? 'Mes établissements'}
-        </span>
+        <span className="sr-only">Changer d’établissement</span>
         <ChevronIcon className={`h-3.5 w-3.5 text-[var(--text3)] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 

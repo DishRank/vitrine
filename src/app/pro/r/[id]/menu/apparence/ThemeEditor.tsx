@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { uploadMenuImage } from '../imageUpload';
 import ColorField from './ColorField';
@@ -10,6 +10,9 @@ import {
   MENU_THEME_PRESETS,
   MENU_THEME_ORDER,
   PRESET_LABEL,
+  deriveMenuPalette,
+  nearestPreset,
+  contrastRatio,
   MENU_ACCENTS,
   MENU_FONTS,
   MENU_FONT_ORDER,
@@ -17,6 +20,28 @@ import {
   type MenuThemeConfig,
   type MenuThemePreset,
 } from '../themeConstants';
+
+/**
+ * Polices de l'aperçu — portées par CE composant, pas par un ancêtre.
+ * ThemeEditor est monté SOIT dans la page /menu/apparence, SOIT dans une MODALE
+ * (AppearanceButton → Modal → createPortal, donc déplacé sous <body>, hors de
+ * tout conteneur parent). Poser les variables sur un ancêtre ne les atteint donc
+ * pas dans le cas modale — et une `var(--font-*)` indéfinie rend la déclaration
+ * `font-family` ENTIÈREMENT invalide (CSS « invalid at computed-value time ») :
+ * la police est alors HÉRITÉE du body, d'où toutes les puces identiques.
+ * On charge donc les 6 familles ici et on définit les variables sur la racine.
+ */
+const PREVIEW_FONTS_HREF =
+  'https://fonts.googleapis.com/css2?family=Bitter:wght@300..800&family=Cormorant+Garamond:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300..700&family=Oswald:wght@300..600&family=Playfair+Display:wght@400..800&family=Poppins:wght@400;500;600;700&display=swap';
+
+const PREVIEW_FONT_VARS = {
+  '--font-fraunces': '"Fraunces"',
+  '--font-cormorant': '"Cormorant Garamond"',
+  '--font-bitter': '"Bitter"',
+  '--font-playfair': '"Playfair Display"',
+  '--font-oswald': '"Oswald"',
+  '--font-poppins': '"Poppins"',
+} as CSSProperties;
 
 export default function ThemeEditor({
   restaurantId,
@@ -35,7 +60,9 @@ export default function ThemeEditor({
   const set = <K extends keyof MenuThemeConfig>(k: K, v: MenuThemeConfig[K]) =>
     setTheme((t) => ({ ...t, [k]: v }));
 
-  const preset = MENU_THEME_PRESETS[theme.theme];
+  // Le fond LIBRE prime sur le preset : l'aperçu doit montrer la palette DÉRIVÉE,
+  // sinon il ment sur le rendu réel du menu public.
+  const preset = (theme.bg ? deriveMenuPalette(theme.bg) : null) ?? MENU_THEME_PRESETS[theme.theme];
   // Même stack que le menu live (MENU_FONTS) → l'aperçu montre la vraie police.
   // Les vars CSS des webfonts sont chargées par le conteneur de la page apparence.
   const fontFamily = MENU_FONTS[theme.font].stack;
@@ -76,6 +103,7 @@ export default function ThemeEditor({
   const reset = () => {
     setTheme((t) => ({
       theme: 'ivory',
+      bg: null, // sinon « Réinitialiser » laisserait le fond libre actif
       accent: '#AE8324',
       font: 'serif',
       photos: true,
@@ -97,7 +125,9 @@ export default function ThemeEditor({
   const disabled = !premium;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+    <div className="grid gap-6 lg:grid-cols-[1fr_320px]" style={PREVIEW_FONT_VARS}>
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link rel="stylesheet" href={PREVIEW_FONTS_HREF} />
       {/* Contrôles */}
       <div className="space-y-6">
         {!premium ? (
@@ -117,8 +147,10 @@ export default function ThemeEditor({
             {MENU_THEME_ORDER.map((p) => (
               <button
                 key={p}
-                onClick={() => set('theme', p)}
-                className={`rounded-xl border-2 p-2 text-left transition-colors ${theme.theme === p ? 'border-[var(--primary)]' : 'border-[var(--border2)]'}`}
+                // Choisir une ambiance ANNULE le fond libre — sinon le preset
+                // semblerait sans effet (le fond libre resterait prioritaire).
+                onClick={() => setTheme((t) => ({ ...t, theme: p, bg: null }))}
+                className={`rounded-xl border-2 p-2 text-left transition-colors ${theme.theme === p && !theme.bg ? 'border-[var(--primary)]' : 'border-[var(--border2)]'}`}
               >
                 <div className="h-10 rounded-lg" style={{ background: MENU_THEME_PRESETS[p].bg, border: `1px solid ${MENU_THEME_PRESETS[p].line}` }}>
                   <div className="m-1.5 h-2 w-8 rounded" style={{ background: MENU_THEME_PRESETS[p].text }} />
@@ -126,6 +158,31 @@ export default function ThemeEditor({
                 <span className="mt-1 block text-xs font-semibold">{PRESET_LABEL[p]}</span>
               </button>
             ))}
+          </div>
+
+          {/* Fond LIBRE — l'échappatoire quand aucune des 8 ambiances ne colle à
+              la marque du resto. Le reste de la palette (texte, séparateurs,
+              surfaces) est dérivé automatiquement et reste lisible par construction. */}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <ColorField
+              value={theme.bg ?? preset.bg}
+              onChange={(c) => setTheme((t) => ({ ...t, bg: c, theme: nearestPreset(c) }))}
+              presets={[]}
+              active={theme.bg != null}
+              label="Couleur de fond personnalisée"
+            />
+            <p className="min-w-0 flex-1 text-xs text-[var(--text3)]">
+              {theme.bg ? (
+                <>
+                  Fond personnalisé <span className="font-semibold text-[var(--text2)]">{theme.bg}</span> — texte et
+                  séparateurs adaptés automatiquement (contraste{' '}
+                  {contrastRatio(preset.text, preset.bg).toFixed(1)}:1). Choisissez une ambiance
+                  ci-dessus pour revenir.
+                </>
+              ) : (
+                <>Ou choisissez librement votre couleur de fond — le texte s&apos;adapte pour rester lisible.</>
+              )}
+            </p>
           </div>
         </section>
 
@@ -212,15 +269,16 @@ export default function ThemeEditor({
           {uploadError ? <p className="mt-2 text-sm font-medium text-red-500">{uploadError}</p> : null}
         </section>
 
-        <section className={disabled ? 'opacity-60 pointer-events-none' : ''}>
+        {/* Photos des plats — GRATUIT (mig. 122) : hors du bloc premium, tout le
+            monde décide d'afficher ou non les photos sur son menu. */}
+        <section>
           <h3 className="mb-2 text-sm font-extrabold">Photos des plats</h3>
           <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
             <input type="checkbox" checked={theme.photos} onChange={(e) => set('photos', e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
             Afficher les photos des plats sur le menu
           </label>
           <p className="mt-1 text-xs text-[var(--text3)]">
-            Les photos sont incluses gratuitement et affichées par défaut. Les masquer (choix de
-            présentation) fait partie de la personnalisation Premium.
+            Affichées par défaut. À vous de décider de les montrer ou non sur votre menu — c&apos;est gratuit.
           </p>
         </section>
 
