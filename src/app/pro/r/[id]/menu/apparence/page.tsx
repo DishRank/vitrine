@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireOwnedRestaurant, isPremium, requireUser } from '@/lib/pro/data';
+import { requireOwnedRestaurant, isPremium } from '@/lib/pro/data';
 import { normalizeMenuTheme } from '../themeConstants';
 import { MENU_FONT_VARS } from '../menuFonts';
 import ThemeEditor from './ThemeEditor';
@@ -10,9 +10,9 @@ export default async function AppearancePage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const resto = await requireOwnedRestaurant(id);
   const premium = isPremium(resto);
-  const { supabase } = await requireUser();
-  const { data } = await supabase.from('restaurants').select('menu_theme').eq('id', id).maybeSingle();
-  const theme = normalizeMenuTheme((data as { menu_theme?: unknown } | null)?.menu_theme);
+  // `requireOwnedRestaurant` ramène déjà menu_theme + logo_url (LISTING_COLS,
+  // et c'est un React.cache) → inutile de refaire une requête ici.
+  const theme = normalizeMenuTheme(resto.menu_theme);
 
   return (
     <div className={MENU_FONT_VARS}>
@@ -24,7 +24,7 @@ export default async function AppearancePage({ params }: { params: Promise<{ id:
         Personnalisez l&apos;ambiance de votre menu numérique. Le logo et les photos de plats sont
         inclus gratuitement ; l&apos;ambiance, la couleur et la police sont réservés au Premium.
       </p>
-      <ThemeEditor restaurantId={id} initial={theme} premium={premium} />
+      <ThemeEditor restaurantId={id} initial={theme} premium={premium} logoUrl={resto.logo_url} />
     </div>
   );
 }

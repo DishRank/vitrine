@@ -6,8 +6,12 @@ import { logProEvent } from '@/lib/pro/instrument';
 
 /**
  * Association avis ↔ plat du menu (mig 112/113). Trois gestes pour l'owner :
- *  1. LIER un avis orphelin à un plat existant (RPC link_review_to_menu_item —
- *     seul chemin d'écriture, la RLS UPDATE de reviews est author-only) ;
+ *  1. RATTACHER un avis orphelin à un plat existant (RPC link_review_to_menu_item
+ *     — seul chemin d'écriture, la RLS UPDATE de reviews est author-only). Le
+ *     geste inverse — DÉTACHER — n'existe pas (mig.130) : un avis rattaché
+ *     compte dans la note du plat, pouvoir l'en retirer serait un bouton
+ *     « effacer ce 1/5 de ma moyenne ». Une erreur d'association se corrige en
+ *     repointant l'avis sur le bon plat ;
  *  2. CRÉER le plat à partir du nom de l'avis (bootstrappe la carte + une section
  *     « À classer » si le resto n'a pas encore de menu) → le nom colle, la
  *     jointure par nom résout l'avis (et tous ceux du même nom) ;
@@ -30,6 +34,8 @@ const FAIL_OWNER: LinkActionState = { error: "Tu n'es pas le propriétaire de ce
 
 function mapLinkError(error: { message?: string } | null): string {
   const m = (error?.message ?? '').toUpperCase();
+  if (m.includes('UNLINK_FORBIDDEN'))
+    return 'Un avis ne peut pas être détaché d’un plat — rattachez-le au bon plat.';
   if (m.includes('REVIEW_NOT_ORPHAN')) return 'Cet avis correspond déjà à un plat de la carte.';
   if (m.includes('ITEM_NOT_FOUND')) return 'Plat introuvable dans ta carte.';
   if (m.includes('REVIEW_NOT_FOUND')) return 'Avis introuvable.';
@@ -47,15 +53,21 @@ function revalidateReviews(restaurantId: string) {
   revalidatePath(`/pro/r/${restaurantId}/avis`);
 }
 
-// ── 1. Lier / délier un avis à un plat (orphelins uniquement) ─────────────────
+// ── 1. Rattacher un avis à un plat (jamais l'en détacher) ─────────────────────
 export async function linkReviewAction(
   restaurantId: string,
   _prev: LinkActionState,
   formData: FormData
 ): Promise<LinkActionState> {
   const reviewId = String(formData.get('reviewId') ?? '');
-  const menuItemId = String(formData.get('menuItemId') ?? '') || null; // '' = délier
+  const menuItemId = String(formData.get('menuItemId') ?? '').trim();
   if (!reviewId) return { error: 'Avis introuvable.' };
+  // Détacher n'est pas un geste autorisé : un avis rattaché compte dans la note
+  // du plat, et pouvoir l'en retirer reviendrait à laisser un restaurateur
+  // effacer un mauvais avis de sa moyenne. Une association ERRONÉE se corrige
+  // en la repointant sur le bon plat. Le RPC refuse aussi le NULL (mig.130) —
+  // ceci n'est que le premier filtre.
+  if (!menuItemId) return { error: 'Choisissez le plat auquel rattacher cet avis.' };
 
   const ctx = await assertOwner(restaurantId);
   if (!ctx) return FAIL_OWNER;

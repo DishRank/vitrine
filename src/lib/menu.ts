@@ -470,16 +470,28 @@ export function detectPlatformFromUA(ua: string | null | undefined): StorePlatfo
 /** Thème effectif. Les PHOTOS de plats et le LOGO sont GRATUITS (photos : le
  *  toggle afficher/masquer est libre, mig. 122 ; logo : celui de la FICHE,
  *  affiché s'il existe et que l'owner l'a laissé activé via `show_logo`) ; le
- *  reste du thème (ambiance, accent, police) reste PREMIUM — défaut ivoire sinon. */
-export function resolveMenuTheme(raw: unknown, isPremium: boolean): ResolvedMenuTheme {
+ *  reste du thème (ambiance, accent, police) reste PREMIUM — défaut ivoire sinon.
+ *
+ *  `restaurantLogo` vient de la colonne `restaurants.logo_url` (mig.124) : le
+ *  logo est de l'IDENTITÉ, il n'est plus dans le jsonb. Le thème ne décide que
+ *  de l'AFFICHER ou non (`show_logo`). */
+export function resolveMenuTheme(
+  raw: unknown,
+  isPremium: boolean,
+  restaurantLogo?: string | null
+): ResolvedMenuTheme {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const photos = o.photos !== false;
   // `show_logo` (défaut true) = l'owner choisit d'afficher ou non SON logo (celui
-  // de la fiche) en tête du menu. Clé absente ⇒ true : rétrocompat, les thèmes
-  // déjà stockés avec un logo continuent de l'afficher.
+  // de la fiche) en tête du menu. Clé absente ⇒ true : rétrocompat, les restos
+  // qui ont déjà un logo continuent de l'afficher.
   const showLogo = o.show_logo !== false;
-  const logoUrl =
-    showLogo && typeof o.logo_url === 'string' && o.logo_url ? (o.logo_url as string) : null;
+  // Fallback `o.logo_url` : les lignes écrites AVANT la mig.124 par une version
+  // de l'app pas encore mise à jour peuvent n'avoir que la clé jsonb. La colonne
+  // gagne dès qu'elle est renseignée.
+  const stored =
+    restaurantLogo || (typeof o.logo_url === 'string' ? (o.logo_url as string) : '');
+  const logoUrl = showLogo && stored ? stored : null;
   if (!isPremium) {
     return {
       ...MENU_THEME_PRESETS.ivory,
@@ -546,6 +558,18 @@ export const MENU_UI: Record<
     noResults: string;
     formulas: string;
     avoidAllergens: string;
+    // Modale de filtres : titres, aides explicatives et libellé du bouton de
+    // validation (`{n}` = nombre de plats correspondants, remplacé côté client).
+    filtersTitle: string;
+    filtersSectionShow: string;
+    filtersSignatureHelp: string;
+    filtersDietHelp: string;
+    filtersAllergenHelp: string;
+    filtersAllergenWarning: string;
+    filtersReset: string;
+    filtersApplyNone: string;
+    filtersApplyOne: string;
+    filtersApplyMany: string;
     allergens: Record<string, string>;
     diets: Record<string, string>;
   }
@@ -573,6 +597,17 @@ export const MENU_UI: Record<
     noResults: 'Aucun plat ne correspond',
     formulas: 'Nos formules',
     avoidAllergens: 'Éviter un allergène',
+    filtersTitle: 'Filtres',
+    filtersSectionShow: 'Afficher',
+    filtersSignatureHelp: 'Les plats mis en avant par le restaurant.',
+    filtersDietHelp: 'Un seul choix à la fois.',
+    filtersAllergenHelp: 'Masque les plats contenant les allergènes sélectionnés.',
+    filtersAllergenWarning:
+      'Informations déclarées par le restaurant. En cas d’allergie sévère, prévenez le personnel.',
+    filtersReset: 'Tout effacer',
+    filtersApplyNone: 'Aucun plat',
+    filtersApplyOne: 'Voir 1 plat',
+    filtersApplyMany: 'Voir {n} plats',
     ratedBy: 'Noté par la communauté',
     likedTitle: 'Un plat vous a plu ?',
     rateInvite: 'Notez-le sur DishRank',
@@ -612,6 +647,17 @@ export const MENU_UI: Record<
     noResults: 'No matching dish',
     formulas: 'Set menus',
     avoidAllergens: 'Avoid an allergen',
+    filtersTitle: 'Filters',
+    filtersSectionShow: 'Show',
+    filtersSignatureHelp: 'Dishes the restaurant highlights.',
+    filtersDietHelp: 'One choice at a time.',
+    filtersAllergenHelp: 'Hides dishes containing the selected allergens.',
+    filtersAllergenWarning:
+      'Information declared by the restaurant. If you have a severe allergy, please tell the staff.',
+    filtersReset: 'Clear all',
+    filtersApplyNone: 'No dish',
+    filtersApplyOne: 'Show 1 dish',
+    filtersApplyMany: 'Show {n} dishes',
     ratedBy: 'Rated by the community',
     likedTitle: 'Enjoyed a dish?',
     rateInvite: 'Rate it on DishRank',
@@ -651,6 +697,17 @@ export const MENU_UI: Record<
     noResults: 'Ningún plato coincide',
     formulas: 'Menús',
     avoidAllergens: 'Evitar un alérgeno',
+    filtersTitle: 'Filtros',
+    filtersSectionShow: 'Mostrar',
+    filtersSignatureHelp: 'Los platos que destaca el restaurante.',
+    filtersDietHelp: 'Una sola opción a la vez.',
+    filtersAllergenHelp: 'Oculta los platos que contienen los alérgenos seleccionados.',
+    filtersAllergenWarning:
+      'Información declarada por el restaurante. En caso de alergia grave, avise al personal.',
+    filtersReset: 'Borrar todo',
+    filtersApplyNone: 'Ningún plato',
+    filtersApplyOne: 'Ver 1 plato',
+    filtersApplyMany: 'Ver {n} platos',
     ratedBy: 'Puntuado por la comunidad',
     likedTitle: '¿Te gustó un plato?',
     rateInvite: 'Puntúalo en DishRank',
@@ -690,6 +747,17 @@ export const MENU_UI: Record<
     noResults: 'Kein passendes Gericht',
     formulas: 'Menüs',
     avoidAllergens: 'Allergen meiden',
+    filtersTitle: 'Filter',
+    filtersSectionShow: 'Anzeigen',
+    filtersSignatureHelp: 'Vom Restaurant hervorgehobene Gerichte.',
+    filtersDietHelp: 'Nur eine Auswahl gleichzeitig.',
+    filtersAllergenHelp: 'Blendet Gerichte mit den gewählten Allergenen aus.',
+    filtersAllergenWarning:
+      'Angaben des Restaurants. Bei einer schweren Allergie informieren Sie bitte das Personal.',
+    filtersReset: 'Alles löschen',
+    filtersApplyNone: 'Kein Gericht',
+    filtersApplyOne: '1 Gericht anzeigen',
+    filtersApplyMany: '{n} Gerichte anzeigen',
     ratedBy: 'Von der Community bewertet',
     likedTitle: 'Ein Gericht genossen?',
     rateInvite: 'Bewerte es auf DishRank',
@@ -729,6 +797,17 @@ export const MENU_UI: Record<
     noResults: 'Nessun piatto corrisponde',
     formulas: 'Menù fissi',
     avoidAllergens: 'Evitare un allergene',
+    filtersTitle: 'Filtri',
+    filtersSectionShow: 'Mostra',
+    filtersSignatureHelp: 'I piatti messi in evidenza dal ristorante.',
+    filtersDietHelp: 'Una sola scelta alla volta.',
+    filtersAllergenHelp: 'Nasconde i piatti che contengono gli allergeni selezionati.',
+    filtersAllergenWarning:
+      'Informazioni dichiarate dal ristorante. In caso di allergia grave, avvisa il personale.',
+    filtersReset: 'Cancella tutto',
+    filtersApplyNone: 'Nessun piatto',
+    filtersApplyOne: 'Vedi 1 piatto',
+    filtersApplyMany: 'Vedi {n} piatti',
     ratedBy: 'Votato dalla comunità',
     likedTitle: 'Ti è piaciuto un piatto?',
     rateInvite: 'Votalo su DishRank',

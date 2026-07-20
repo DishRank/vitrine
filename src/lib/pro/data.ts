@@ -33,6 +33,9 @@ export interface OwnedRestaurant {
   thank_template: string | null;
   menu_theme: unknown;
   menu_languages: string[] | null;
+  /** Logo de l'établissement — colonne dédiée depuis la mig.124 (identité, pas
+   *  thème). L'affichage en tête du menu reste piloté par menu_theme.show_logo. */
+  logo_url: string | null;
   subscription_source: string | null;
   subscription_status: string | null;
   stripe_customer_id: string | null;
@@ -42,7 +45,7 @@ export interface OwnedRestaurant {
 const LISTING_COLS =
   'id, name, city, address, photo_url, place_type, owner_id, subscription_tier, subscription_expires_at, ' +
   'description, accepts_groups, group_offer, phone, website, menu_url, instagram, reservation_url, ' +
-  'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template, menu_theme, menu_languages, ' +
+  'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template, menu_theme, menu_languages, logo_url, ' +
   'subscription_source, subscription_status, stripe_customer_id, stripe_subscription_id';
 
 /** Identité minimale suffisante pour /pro (filtres owner_id + affichage). */
@@ -147,6 +150,44 @@ export async function getPendingReviewCounts(ids: string[]): Promise<Record<stri
     if (!replied.has(r.id)) counts[r.restaurant_id] = (counts[r.restaurant_id] ?? 0) + 1;
   }
   return counts;
+}
+
+/**
+ * Journal de notifications métier de l'owner (migration 130).
+ *
+ * À NE PAS confondre avec `getPendingReviewCounts` : celui-ci est une liste de
+ * travail (« combien d'avis restent à répondre ? »), recalculée à chaque rendu ;
+ * ci-dessous c'est un journal d'ÉVÉNEMENTS horodatés, avec un état lu/non-lu
+ * persistant, partagé avec la feuille de notifications de l'app mobile.
+ *
+ * La lecture passe par la session SSR de l'owner : la policy
+ * « Voir ses notifications » (`auth.uid() = user_id`) suffit, aucun service
+ * role n'est nécessaire — et n'en utilisez pas ici, ce serait un contournement
+ * de RLS sur une donnée strictement personnelle.
+ */
+export interface OwnerNotification {
+  id: string;
+  type: string;
+  restaurant_id: string;
+  review_id: string | null;
+  read: boolean;
+  created_at: string;
+  metadata: Record<string, unknown> | null;
+}
+
+export async function getOwnerNotifications(
+  ids: string[],
+  limit = 30
+): Promise<OwnerNotification[]> {
+  if (ids.length === 0) return [];
+  const { supabase } = await requireUser();
+  const { data } = await supabase
+    .from('notifications')
+    .select('id, type, restaurant_id, review_id, read, created_at, metadata')
+    .in('restaurant_id', ids)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return (data ?? []) as unknown as OwnerNotification[];
 }
 
 /**

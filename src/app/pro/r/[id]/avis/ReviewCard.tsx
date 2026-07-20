@@ -104,6 +104,9 @@ export default function ReviewCard({
     createDishFromReviewAction.bind(null, restaurantId),
     {}
   );
+  // Correction d'un rattachement existant (repli par défaut : le cas normal est
+  // que l'association soit bonne, on n'encombre pas la carte).
+  const [relinking, setRelinking] = useState(false);
 
   // Plats visibles groupés par catégorie (pour le <select> d'association).
   const menuGroups = useMemo(() => {
@@ -168,17 +171,44 @@ export default function ReviewCard({
 
       {/* Association au plat du menu (mig 112) — le nom du client reste intact. */}
       {review.assoc.state === 'linked' ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-[var(--surface-var)] px-3 py-2">
-          <span className="text-xs text-[var(--text2)]">
-            🔗 Rattaché à <b className="text-[var(--text)]">{review.assoc.linkedName}</b>
-          </span>
-          <form action={link}>
-            <input type="hidden" name="reviewId" value={review.id} />
-            <input type="hidden" name="menuItemId" value="" />
-            <button type="submit" className="text-xs font-semibold text-[var(--text3)] hover:text-red-500">
-              Dissocier
-            </button>
-          </form>
+        // Rattaché : on peut CORRIGER la cible, jamais détacher. Un avis
+        // rattaché compte dans la note du plat ; offrir « Dissocier » revenait à
+        // offrir « retirer ce mauvais avis de ma moyenne ». Le RPC refuse aussi
+        // le détachement côté base (mig.130) — ceci n'est que l'UI.
+        <div className="mt-3 rounded-xl bg-[var(--surface-var)] px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-[var(--text2)]">
+              🔗 Rattaché à <b className="text-[var(--text)]">{review.assoc.linkedName}</b>
+            </span>
+            {menuGroups.length > 0 && !relinking ? (
+              <button
+                type="button"
+                onClick={() => setRelinking(true)}
+                className="text-xs font-semibold text-[var(--text3)] hover:text-[var(--primary)]"
+              >
+                Changer de plat
+              </button>
+            ) : null}
+          </div>
+          {relinking ? (
+            <form action={link} className="mt-2 flex flex-wrap items-center gap-2">
+              <input type="hidden" name="reviewId" value={review.id} />
+              <DishSelect groups={menuGroups} />
+              <button
+                type="submit"
+                className="shrink-0 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
+              >
+                Rattacher
+              </button>
+              <button
+                type="button"
+                onClick={() => setRelinking(false)}
+                className="text-xs font-semibold text-[var(--text3)] hover:text-[var(--text2)]"
+              >
+                Annuler
+              </button>
+            </form>
+          ) : null}
           <FormError error={linkState.error} />
         </div>
       ) : review.assoc.state === 'orphan' ? (

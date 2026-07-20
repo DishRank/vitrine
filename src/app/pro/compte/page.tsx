@@ -46,7 +46,7 @@ export default async function AccountPage() {
       {/* Compte */}
       <section className={cardCls.replace('mt-4', 'mt-6')}>
         <h2 className={`${h2Cls} mb-1`}>Compte</h2>
-        <p className="text-sm text-[var(--text2)]">
+        <p className="text-sm break-words text-[var(--text2)]">
           Connecté en tant que <strong className="text-[var(--text)]">{user.email}</strong>.
         </p>
       </section>

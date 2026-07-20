@@ -60,11 +60,9 @@ export async function updateThemeAction(
   const ctx = await assertOwner(restaurantId);
   if (!ctx) return { error: "Tu n'es pas le propriétaire de cet établissement." };
 
+  // Depuis la mig.124 le thème ne transporte plus le logo (colonne dédiée) : il
+  // n'y a plus d'URL à valider ici, et le normalizer jette la clé si elle traîne.
   const t = normalizeMenuTheme(theme);
-  // Valider le logo (URL storage dans le dossier de l'owner) si présent.
-  const logo = validStorageUrl(t.logo_url, ctx.user.id);
-  if (!logo.ok) return { error: 'Logo invalide.' };
-  t.logo_url = logo.value;
 
   // Reset au thème par défaut = on écrit {} (libre, non premium). Sinon on écrit
   // la config ; le trigger 101 lève THEME_PREMIUM si le resto n'est pas premium.

@@ -19,16 +19,10 @@ export async function POST(req: Request) {
   if (!ctx) return NextResponse.json({ error: "Tu n'es pas le propriétaire de cet établissement." }, { status: 403 });
   const { supabase, user } = ctx;
 
+  // Pas de validation d'URL ici : depuis la mig.124 le thème ne transporte plus
+  // le logo (colonne `restaurants.logo_url`, écrite par setListingLogoAction qui
+  // fait la validation storage). Le normalizer jette toute clé `logo_url` reçue.
   const t = normalizeMenuTheme(body.theme);
-  // Valide le logo (URL storage dans le dossier de l'owner, .webp) si présent.
-  const logo = t.logo_url;
-  if (logo) {
-    const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const prefix = base ? `${base}/storage/v1/object/public/dish-photos/${user.id}/` : null;
-    if (!prefix || !logo.startsWith(prefix) || logo.length >= 500 || !/\.webp(\?|$)/.test(logo)) {
-      return NextResponse.json({ error: 'Logo invalide.' }, { status: 400 });
-    }
-  }
 
   // Reset au défaut = {} (libre, non premium) ; sinon le trigger 101 gate premium.
   const payload = isDefaultTheme(t) ? {} : t;

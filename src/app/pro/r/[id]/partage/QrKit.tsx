@@ -93,7 +93,11 @@ export default function QrKit({
             découvrent DishRank pour noter vos plats.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* `flex-wrap` indispensable : les 3 contrôles (case logo + 2 boutons)
+            font ~520 px côte à côte et débordaient sous 640 px. Le parent
+            enveloppe déjà, mais ça ne suffit pas — c'est CETTE rangée qui doit
+            casser. */}
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           {hasLogo ? (
             <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)]">
               <input

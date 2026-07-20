@@ -50,9 +50,12 @@ export interface MenuThemeConfig {
   accent: string;
   font: MenuThemeFont;
   photos: boolean;
-  /** LE logo unique du resto (celui de la fiche) — même champ des deux côtés. */
-  logo_url: string | null;
-  /** Afficher ce logo en tête du menu. Défaut true (clé absente ⇒ true). */
+  /**
+   * Afficher le logo du resto en tête du menu. Défaut true (clé absente ⇒ true).
+   * Le logo LUI-MÊME vit dans `restaurants.logo_url` depuis la mig.124 : c'est
+   * de l'identité (fiche, menu, QR), pas un réglage de thème. Ici on ne stocke
+   * que la décision d'affichage sur la carte.
+   */
   show_logo: boolean;
 }
 
@@ -89,7 +92,7 @@ export const MENU_ACCENTS: string[] = [
 ];
 
 export const DEFAULT_MENU_THEME: MenuThemeConfig = {
-  theme: 'ivory', bg: null, accent: '#AE8324', font: 'serif', photos: true, logo_url: null, show_logo: true,
+  theme: 'ivory', bg: null, accent: '#AE8324', font: 'serif', photos: true, show_logo: true,
 };
 
 // ── Maths couleur & dérivation de palette ────────────────────────────────────
@@ -265,9 +268,12 @@ export function normalizeMenuTheme(raw: unknown): MenuThemeConfig {
   const accent = typeof o.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.accent) ? (o.accent as string) : '#AE8324';
   const font: MenuThemeFont = typeof o.font === 'string' && o.font in MENU_FONTS ? (o.font as MenuThemeFont) : 'serif';
   const photos = o.photos !== false;
-  const logo_url = typeof o.logo_url === 'string' && o.logo_url ? (o.logo_url as string) : null;
   const show_logo = o.show_logo !== false; // clé absente ⇒ true (rétrocompat)
-  return { theme, bg, accent, font, photos, logo_url, show_logo };
+  // NB : `o.logo_url` (résidu d'avant la mig.124) est volontairement JETÉ ici —
+  // la colonne `restaurants.logo_url` est désormais la seule source de vérité,
+  // et ce normalizer strict est justement ce qui garantit qu'aucune clé morte ne
+  // se réinstalle dans le jsonb.
+  return { theme, bg, accent, font, photos, show_logo };
 }
 
 /** Le thème est-il « par défaut » (= vide côté serveur) ? Sert à autoriser le
@@ -278,6 +284,6 @@ export function isDefaultTheme(t: MenuThemeConfig): boolean {
   // le fond a disparu au rechargement (perte silencieuse).
   return (
     t.theme === 'ivory' && t.bg == null && t.accent === '#AE8324' && t.font === 'serif' &&
-    t.photos && !t.logo_url && t.show_logo
+    t.photos && t.show_logo
   );
 }

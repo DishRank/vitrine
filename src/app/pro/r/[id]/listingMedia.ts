@@ -2,7 +2,6 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { assertOwner } from '@/lib/pro/data';
-import { normalizeMenuTheme, isDefaultTheme } from './menu/themeConstants';
 
 /**
  * Écritures média de la FICHE établissement :
@@ -10,10 +9,10 @@ import { normalizeMenuTheme, isDefaultTheme } from './menu/themeConstants';
  *    par l'owner (bucket dish-photos, son dossier), soit une photo d'AVIS de ce
  *    resto (on la référence telle quelle — dans le dossier du client, donc on
  *    vérifie qu'elle correspond bien à un avis publié de l'établissement).
- *  - logo : c'est LE logo unique du resto, stocké dans `menu_theme.logo_url`
- *    (le même que celui du menu). GRATUIT depuis la mig.117 — le trigger ne gate
- *    plus que les customisations de thème AU-DELÀ du logo (ambiance/accent/police
- *    /photos). Le logo seul passe pour tous.
+ *  - logo (`restaurants.logo_url`, mig.124) : LE logo unique du resto. C'est de
+ *    l'IDENTITÉ (fiche, en-tête du menu public, centre du QR), pas un réglage de
+ *    thème — d'où sa propre colonne. GRATUIT. Le menu ne garde que le booléen
+ *    `menu_theme.show_logo` (« l'afficher en tête de la carte »).
  *
  * Miroir de l'app (OwnerManageSheet cover + MenuThemeSheet logo) : même bucket,
  * même convention .webp, le picker d'avis copie juste la review.photo_url.
@@ -79,9 +78,9 @@ export async function setListingCoverAction(
   return { ok: true };
 }
 
-/** Logo unique du resto (= `menu_theme.logo_url`, aussi affiché en tête du
- *  menu). Ajouter/changer/retirer = GRATUIT (mig.117). Le trigger reste le
- *  garde-fou serveur (THEME_PREMIUM) pour toute autre customisation de thème. */
+/** Logo unique du resto (colonne `restaurants.logo_url`, mig.124 — il fait
+ *  partie de l'IDENTITÉ, pas du thème du menu). Ajouter/changer/retirer =
+ *  GRATUIT. `null` = retirer. */
 export async function setListingLogoAction(
   restaurantId: string,
   logoUrl: string | null
@@ -93,31 +92,16 @@ export async function setListingLogoAction(
   const url = logoUrl?.trim() ?? '';
   if (url && !ownerStorageUrl(url, user.id)) return { error: 'Logo invalide.' };
 
-  // Lire le thème courant, y fusionner le logo, réécrire (le trigger 101 gate
-  // le premium ; retirer le logo d'un thème par ailleurs par défaut reste
-  // gratuit car on réécrit alors {}).
-  const { data: row } = await supabase
+  const { error, count } = await supabase
     .from('restaurants')
-    .select('menu_theme')
-    .eq('id', restaurantId)
-    .maybeSingle();
-  const theme = normalizeMenuTheme((row as { menu_theme?: unknown } | null)?.menu_theme);
-  theme.logo_url = url || null;
-  const payload = isDefaultTheme(theme) ? {} : theme;
-
-  const { error } = await supabase
-    .from('restaurants')
-    .update({ menu_theme: payload })
+    .update({ logo_url: url || null }, { count: 'exact' })
     .eq('id', restaurantId)
     .eq('owner_id', user.id);
-  if (error) {
-    if ((error.message ?? '').toUpperCase().includes('THEME_PREMIUM'))
-      return { error: 'Le logo fait partie de la personnalisation Premium.' };
-    return { error: 'Enregistrement impossible.' };
-  }
+  if (error || !count) return { error: 'Enregistrement impossible.' };
 
   revalidateListing(restaurantId);
   revalidatePath(`/pro/r/${restaurantId}/menu`);
   revalidatePath(`/pro/r/${restaurantId}/menu/apparence`);
+  revalidatePath(`/pro/r/${restaurantId}/partage`);
   return { ok: true };
 }

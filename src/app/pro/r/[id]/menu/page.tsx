@@ -26,6 +26,7 @@ export default async function MenuPage({
       menu={menu}
       premium={premium}
       initialTheme={initialTheme}
+      logoUrl={resto.logo_url}
       menuLanguages={resto.menu_languages ?? []}
       initialEditItemId={typeof edit === 'string' ? edit : undefined}
     />

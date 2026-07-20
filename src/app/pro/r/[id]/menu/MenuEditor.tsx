@@ -19,6 +19,7 @@ export default function MenuEditor({
   menu,
   premium,
   initialTheme,
+  logoUrl,
   menuLanguages,
   initialEditItemId,
 }: {
@@ -26,6 +27,9 @@ export default function MenuEditor({
   menu: EditorMenu | null;
   premium: boolean;
   initialTheme: MenuThemeConfig;
+  /** Logo de la fiche (`restaurants.logo_url`) — l'apparence ne fait que décider
+   *  de l'afficher ou non en tête du menu. */
+  logoUrl: string | null;
   menuLanguages: string[];
   /** Plat à éditer d'emblée (deep-link `?edit=<id>` — ex. « Créer ce plat » depuis un avis). */
   initialEditItemId?: string;
@@ -65,7 +69,10 @@ export default function MenuEditor({
             Vos modifications sont visibles immédiatement sur le menu public.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* Même piège que la rangée du kit QR : le parent enveloppe, mais c'est
+            cette rangée-ci qui doit casser. Sans `flex-wrap` les 3 libellés se
+            font écraser sur 2 lignes dès 375 px. */}
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <a
             href={`/menu/${restaurantId}`}
             target="_blank"
@@ -74,7 +81,7 @@ export default function MenuEditor({
           >
             Voir le menu public ↗
           </a>
-          <AppearanceButton restaurantId={restaurantId} initialTheme={initialTheme} premium={premium} />
+          <AppearanceButton restaurantId={restaurantId} initialTheme={initialTheme} premium={premium} logoUrl={logoUrl} />
           <a
             href={`/pro/r/${restaurantId}/partage`}
             className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)]"

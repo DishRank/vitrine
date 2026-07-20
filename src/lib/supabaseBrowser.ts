@@ -1,16 +1,25 @@
 'use client';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Client Supabase NAVIGATEUR (clé anon publique, protégée par RLS) — sert la
-// notation « sans compte » depuis le menu web : une session ANONYME Supabase
-// (auth.signInAnonymously) donne un vrai auth.uid(), donc les policies RLS,
-// les cooldowns (30 j/plat), le rate-limit (10 avis/24 h) et la contrainte
-// carte (trigger 092) s'appliquent tels quels. La session persiste dans le
-// localStorage du navigateur → le même client garde la même identité d'un
-// scan à l'autre (dédup naturelle par appareil, §5.4).
+// Client Supabase NAVIGATEUR (clé anon publique, protégée par RLS).
 //
-// Nécessite « Allow anonymous sign-ins » activé dans les réglages Auth du
-// projet Supabase. Sans les env NEXT_PUBLIC_*, retourne null (feature off).
+// Ne sert plus QU'À l'abonnement temps réel du menu (MenuLiveSync) : une
+// souscription en LECTURE, que le rôle anon peut ouvrir tel quel.
+//
+// ⚠️ IL NE SERT PLUS À LA NOTATION. Celle-ci passait par
+// `auth.signInAnonymously()` + INSERT direct dans PostgREST ; ce chemin a été
+// abandonné parce qu'il laissait le serveur aveugle — il ne voyait ni le
+// restaurant réellement scanné (donc n'importe quel plat inventé passait sur
+// n'importe quel établissement), ni l'IP (donc aucun plafond ne résistait à la
+// création illimitée d'identités anonymes). La notation invitée est désormais
+// écrite par la route serveur `/api/menu/rate`, avec une identité d'appareil en
+// cookie signé (cf. lib/guestIdentity.ts).
+//
+// Conséquence : « Allow anonymous sign-ins » N'A PAS à être activé sur le
+// projet Supabase. Ne pas le réactiver « pour dépanner » — cela rouvrirait la
+// surface décrite ci-dessus.
+//
+// Sans les env NEXT_PUBLIC_*, retourne null (temps réel désactivé).
 
 let _client: SupabaseClient | null = null;
 

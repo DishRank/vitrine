@@ -1,5 +1,4 @@
 import { requireOwnedRestaurant, requireUser } from '@/lib/pro/data';
-import { normalizeMenuTheme } from '../menu/themeConstants';
 import ListingForm from '../ListingForm';
 import ListingImages, { type ReviewPhoto } from '../ListingImages';
 
@@ -24,14 +23,12 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
     .limit(40);
   const reviewPhotos = (reviewPhotoRows ?? []) as ReviewPhoto[];
 
-  const logoUrl = normalizeMenuTheme(resto.menu_theme).logo_url;
-
   return (
     <div className="space-y-6">
       <ListingImages
         restaurantId={id}
         initialPhotoUrl={resto.photo_url}
-        initialLogoUrl={logoUrl}
+        initialLogoUrl={resto.logo_url}
         reviewPhotos={reviewPhotos}
       />
       <ListingForm

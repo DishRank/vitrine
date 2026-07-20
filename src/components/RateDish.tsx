@@ -1,15 +1,17 @@
 'use client';
 import { useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 // ─── « ☆ Noter » — notation rapide SANS COMPTE depuis le menu web ───────────
 //
 // Tap → feuille de notation in-page (pas de navigation, pas d'app requise) :
-// 5 étoiles + commentaire optionnel. La session est ANONYME (Supabase
-// signInAnonymously) → vrai auth.uid(), donc RLS + cooldown 30 j/plat +
-// rate-limit + contrainte carte (trigger 092) s'appliquent tels quels. La note
-// est écrite `source = 'in_venue_scan'` (§5.4) avec le NOM CANONIQUE (fr) du
-// plat — la clé des agrégats — même si le menu affiché est traduit.
+// 5 étoiles + commentaire optionnel. L'envoi passe par NOTRE route serveur
+// (/api/menu/rate) qui écrit en service_role : plus de session anonyme
+// Supabase dans le navigateur. C'est ce qui permet de vérifier que le plat noté
+// appartient bien au restaurant scanné, et de limiter par IP — deux choses
+// impossibles quand le client écrivait directement dans PostgREST.
+// La note est écrite `source = 'in_venue_scan'` (§5.4) avec le NOM CANONIQUE
+// (fr) du plat — la clé des agrégats — résolu côté serveur depuis `menuItemId`,
+// même si le menu affiché est traduit.
 // La note rapide alimente les 4 sous-notes avec la même valeur (le détail
 // goût/présentation/prix/quantité reste la richesse du parcours in-app).
 // Un lien « Ouvrir dans l'app » reste proposé pour l'expérience complète.
@@ -39,15 +41,16 @@ const BRAND_DARK = '#A29BFE';
 
 export default function RateDish({
   restaurantId,
-  dishName,
+  menuItemId,
   displayName,
   theme,
   labels,
   appHref,
 }: {
   restaurantId: string;
-  /** Nom CANONIQUE (fr) — clé des avis et du trigger carte. */
-  dishName: string;
+  /** Identifiant du plat. Le NOM canonique est résolu côté serveur à partir de
+   *  lui : le client n'envoie jamais de texte libre comme nom de plat. */
+  menuItemId: string;
   /** Nom affiché (éventuellement traduit). */
   displayName: string;
   theme: RateDishTheme;
@@ -88,40 +91,31 @@ export default function RateDish({
     setState('sending');
     setErrorMsg(null);
     try {
-      const sb = getSupabaseBrowser();
-      if (!sb) throw new Error('client_unavailable');
-      // Session anonyme au premier envoi — persistée dans le navigateur, donc
-      // le même appareil garde la même identité (dédup naturelle, §5.4).
-      let {
-        data: { session },
-      } = await sb.auth.getSession();
-      if (!session) {
-        const { data, error } = await sb.auth.signInAnonymously();
-        if (error || !data.session) throw error ?? new Error('anon_failed');
-        session = data.session;
-      }
-      const { error: insertError } = await sb.from('reviews').insert({
-        user_id: session.user.id,
-        restaurant_id: restaurantId,
-        dish_name: dishName,
-        rating_taste: stars,
-        rating_presentation: stars,
-        rating_value: stars,
-        rating_quantity: stars,
-        comment: comment.trim() || null,
-        source: 'in_venue_scan',
-      });
-      if (insertError) throw insertError;
-      setState('done');
-      // La note doit apparaître sur le menu (cache 5 min) — purge best-effort.
-      fetch('/api/revalidate-menu', {
+      // Un POST à NOTRE serveur, et rien d'autre. On n'envoie volontairement
+      // PAS le nom du plat : la route le relit en base depuis `menuItemId`, et
+      // c'est elle qui pose l'identité d'appareil (cookie httpOnly signé) puis
+      // purge le cache du menu. Le navigateur n'a plus aucune session Supabase.
+      const res = await fetch('/api/menu/rate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantId }),
-      }).catch(() => {});
-    } catch (e) {
-      const msg = String((e as { message?: string })?.message ?? '');
-      setErrorMsg(/déjà noté|cooldown/i.test(msg) ? labels.already : labels.error);
+        // Le cookie d'appareil doit voyager, sinon le cooldown ne tient pas.
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          restaurantId,
+          menuItemId,
+          stars,
+          comment: comment.trim() || undefined,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
+      if (!res.ok || !json.ok) {
+        setErrorMsg(json.reason === 'already' ? labels.already : labels.error);
+        setState('error');
+        return;
+      }
+      setState('done');
+    } catch {
+      setErrorMsg(labels.error);
       setState('error');
     }
   };

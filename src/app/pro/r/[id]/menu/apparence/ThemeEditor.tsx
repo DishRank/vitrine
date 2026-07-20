@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { uploadMenuImage } from '../imageUpload';
+import { setListingLogoAction } from '../../listingMedia';
 import ColorField from './ColorField';
 import { useAutoSave } from '@/app/pro/_components/useAutoSave';
 import { setSaveStatus } from '@/app/pro/_components/saveStatusStore';
@@ -47,12 +48,17 @@ export default function ThemeEditor({
   restaurantId,
   initial,
   premium,
+  logoUrl,
 }: {
   restaurantId: string;
   initial: MenuThemeConfig;
   premium: boolean;
+  /** Logo de l'établissement (`restaurants.logo_url`, mig.124). Il n'appartient
+   *  pas au thème : ici on ne pilote que `show_logo`. */
+  logoUrl: string | null;
 }) {
   const [theme, setTheme] = useState<MenuThemeConfig>(initial);
+  const [logo, setLogo] = useState(logoUrl);
   const [uploadError, setUploadError] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -98,28 +104,40 @@ export default function ThemeEditor({
   }, [status]);
   useEffect(() => () => setSaveStatus('idle'), []);
 
-  // Réinitialiser = l'APPARENCE seulement. Le logo appartient à la fiche : on le
-  // conserve (et on le ré-affiche), on ne le supprime pas d'ici.
+  // Réinitialiser = l'APPARENCE seulement. Le logo appartient à la fiche (autre
+  // colonne, autre écran) : il n'est pas touché ici, même pas indirectement.
   const reset = () => {
-    setTheme((t) => ({
+    setTheme({
       theme: 'ivory',
       bg: null, // sinon « Réinitialiser » laisserait le fond libre actif
       accent: '#AE8324',
       font: 'serif',
       photos: true,
-      logo_url: t.logo_url,
       show_logo: true,
-    }));
+    });
   };
 
+  // Raccourci de confort quand la fiche n'a pas encore de logo : on envoie
+  // l'image puis on écrit la COLONNE via l'action de la fiche (même validation
+  // storage, même source de vérité) — pas dans le thème.
   const onLogo = async (file: File) => {
     setUploading(true);
     setUploadError('');
     const r = await uploadMenuImage(file);
+    if (!r.ok || !r.url) {
+      setUploading(false);
+      setUploadError(r.error || "Échec de l'envoi du logo.");
+      return;
+    }
+    const saved = await setListingLogoAction(restaurantId, r.url);
     setUploading(false);
+    if (saved.error) {
+      setUploadError(saved.error);
+      return;
+    }
+    setLogo(r.url);
     // Ajouter un logo depuis l'apparence ⇒ on veut le voir : on l'active aussi.
-    if (r.ok && r.url) setTheme((t) => ({ ...t, logo_url: r.url as string, show_logo: true }));
-    else setUploadError(r.error || "Échec de l'envoi du logo.");
+    set('show_logo', true);
   };
 
   const disabled = !premium;
@@ -213,11 +231,11 @@ export default function ThemeEditor({
             s'il n'existe pas encore on peut l'ajouter (ça remplit la fiche aussi). */}
         <section>
           <h3 className="mb-2 text-sm font-extrabold">Logo</h3>
-          {theme.logo_url ? (
+          {logo ? (
             <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--border2)] p-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={theme.logo_url}
+                src={logo}
                 alt=""
                 className="h-12 w-12 shrink-0 rounded-lg bg-[var(--surface-var)] object-contain"
               />
@@ -297,9 +315,9 @@ export default function ThemeEditor({
       <div className="lg:sticky lg:top-4 self-start">
         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text3)]">Aperçu</p>
         <div className="rounded-2xl border border-[var(--border2)] p-4" style={{ background: preset.bg, fontFamily }}>
-          {theme.logo_url && theme.show_logo ? (
+          {logo && theme.show_logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={theme.logo_url} alt="" className="mx-auto mb-3 h-14 w-14 rounded-lg object-contain" />
+            <img src={logo} alt="" className="mx-auto mb-3 h-14 w-14 rounded-lg object-contain" />
           ) : null}
           <div className="mb-3 text-center">
             <div style={{ color: theme.accent, fontWeight: 800, letterSpacing: '0.05em', fontSize: 12, textTransform: 'uppercase' }}>Notre carte</div>

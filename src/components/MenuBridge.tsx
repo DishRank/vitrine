@@ -75,6 +75,8 @@ interface VenueInfo {
   subscription_expires_at: string | null;
   menu_theme: unknown;
   menu_languages: string[] | null;
+  /** Logo de l'établissement (colonne dédiée depuis la mig.124). */
+  logo_url: string | null;
   // Infos pratiques (affichées en tête du menu public).
   address: string | null;
   latitude: number | null;
@@ -105,7 +107,7 @@ async function fetchVenue(id: string): Promise<VenueInfo | null> {
     const { data } = await supabase
       .from('restaurants')
       .select(
-        'name, city, description, photo_url, subscription_tier, subscription_expires_at, menu_theme, menu_languages, address, latitude, longitude, google_rating, google_review_count, phone, website, reservation_url, cuisines, price_level'
+        'name, city, description, photo_url, subscription_tier, subscription_expires_at, menu_theme, menu_languages, logo_url, address, latitude, longitude, google_rating, google_review_count, phone, website, reservation_url, cuisines, price_level'
       )
       .eq('id', id)
       .maybeSingle();
@@ -449,7 +451,7 @@ function ItemRow({
         {rating ? <RatingMark rating={rating} word={ui.reviewsWord} theme={theme} /> : <span />}
         <RateDish
           restaurantId={restaurantId}
-          dishName={item.name}
+          menuItemId={item.id}
           displayName={name}
           theme={{
             accent: theme.accent,
@@ -797,7 +799,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
   // Thème d'apparence : appliqué UNIQUEMENT si le resto est premium (sinon
   // défaut ivoire) → dégradation propre à l'expiration, sans trigger DB.
   const isPremium = isRestaurantPremium(venue?.subscription_tier, venue?.subscription_expires_at);
-  const theme = resolveMenuTheme(venue?.menu_theme, isPremium);
+  const theme = resolveMenuTheme(venue?.menu_theme, isPremium, venue?.logo_url);
 
   // Langue PREMIUM (es/de/it) demandée par ?lang= sur un resto NON premium :
   // fr + en sont gratuits, les autres sont bloquées → on redirige vers l'anglais
@@ -838,15 +840,21 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
     background: primary ? theme.accent : theme.card,
     color: primary ? theme.accentOn : theme.sub,
   });
-  const hasVenueInfo = !!(
-    (venue.cuisines && venue.cuisines.length) ||
-    venue.price_level ||
-    venue.google_rating ||
-    mapsUrl ||
-    venue.phone ||
-    venue.website ||
-    venue.reservation_url
-  );
+  // Un QR de table est scanné SUR PLACE : itinéraire, téléphone, réservation,
+  // adresse, note Google et gamme de prix n'ont plus d'objet — le client est
+  // déjà assis. On ne garde que le site, seul lien encore utile à table.
+  // La fiche partagée (/restaurant → allowAppRedirect) garde tout : là, le
+  // lecteur n'y est pas encore et ces infos sont exactement ce qu'il cherche.
+  const atTable = !allowAppRedirect;
+  const showMeta =
+    !atTable &&
+    !!((venue.cuisines && venue.cuisines.length) || venue.price_level || venue.google_rating);
+  const showDirections = !atTable && !!mapsUrl;
+  const showCall = !atTable && !!venue.phone;
+  const showBook = !atTable && !!venue.reservation_url;
+  const showAddress = !atTable && !!venue.address;
+  const hasVenueInfo =
+    showMeta || showDirections || showCall || showBook || showAddress || !!venue.website;
   const infoL = INFO_LABELS[locale] ?? INFO_LABELS.fr;
 
   // Plateforme (SSR via User-Agent) : n'affiche que le bouton store pertinent.
@@ -916,6 +924,36 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
     <html lang={locale} className={MENU_FONT_VARS}>
       <head>
         <link rel="icon" type="image/webp" href="/img/icon.webp" />
+        {/* Une image dont l'URL est morte (objet absent du storage) ne doit pas
+            laisser un cadre vide ni afficher son texte alternatif à la place :
+            on masque celles marquées `data-hide-on-error`. En capture, car
+            l'événement `error` d'une <img> ne remonte pas. */}
+        {/* suppressHydrationWarning : le navigateur VIDE l'attribut `nonce` du
+            DOM après parsing (anti-exfiltration du nonce via sélecteurs CSS), donc
+            l'hydratation compare `nonce="…"` (rendu serveur) à `""` (DOM) et crie
+            au mismatch. Le script a déjà tourné avec le bon nonce — même parade
+            que les autres scripts noncés du site (pro/layout, join/[code], le
+            pont deep-link plus bas). */}
+        {/* ⚠️ Le script pose un ATTRIBUT, il ne touche PAS `style`. Écrire
+            `t.style.display='none'` (version précédente) mutait un attribut que
+            React contrôle : le navigateur re-sérialise alors tout le `style` en
+            longhand (`margin-top`, `border-top-left-radius`, `background-image:
+            initial`…), et l'hydratation comparait ça aux raccourcis rendus par
+            React → « tree hydrated but some attributes didn't match », sur
+            n'importe quelle image dont le chargement échoue avant l'hydratation.
+            Un attribut que React n'a jamais rendu, lui, n'est pas comparé — et
+            c'est la feuille de style ci-dessous qui masque. */}
+        <style
+          dangerouslySetInnerHTML={{ __html: 'img[data-broken]{display:none!important}' }}
+        />
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html:
+              "addEventListener('error',function(e){var t=e.target;if(t&&t.tagName==='IMG'&&t.hasAttribute('data-hide-on-error'))t.setAttribute('data-broken','')},true)",
+          }}
+        />
       </head>
       <body
         style={{
@@ -943,6 +981,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
               <img
                 src={cover}
                 alt={name || 'DishRank'}
+                data-hide-on-error=""
                 style={{
                   width: 'calc(100% + 40px)',
                   margin: '0 -20px',
@@ -958,7 +997,11 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={theme.logoUrl}
-                  alt={name || 'Logo'}
+                  // Décoratif : le nom est déjà porté par le <h1> juste dessous.
+                  // Un alt non vide se retrouvait affiché en toutes lettres dans
+                  // le cadre de 68px quand le logo ne chargeait pas.
+                  alt=""
+                  data-hide-on-error=""
                   style={{
                     width: 68,
                     height: 68,
@@ -985,20 +1028,37 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
               >
                 {name}
               </h1>
-              {city ? (
-                <p
-                  style={{
-                    color: theme.accent,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    letterSpacing: 2.2,
-                    textTransform: 'uppercase',
-                    margin: '9px 0 0',
-                  }}
-                >
-                  {city}
-                </p>
-              ) : null}
+              {/* Ville encadrée du fleuron (accent). L'ornement reste rendu même
+                  sans ville : c'est lui qui pose la respiration sous le nom. */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  margin: '9px 0 0',
+                  color: theme.accent,
+                }}
+              >
+                <span aria-hidden style={{ fontSize: 15, opacity: 0.6, lineHeight: 1 }}>
+                  ❦
+                </span>
+                {city ? (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      letterSpacing: 2.2,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {city}
+                  </span>
+                ) : null}
+                <span aria-hidden style={{ fontSize: 15, opacity: 0.6, lineHeight: 1 }}>
+                  ❦
+                </span>
+              </div>
               {description ? (
                 <p
                   style={{
@@ -1016,7 +1076,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
               {/* Infos pratiques : cuisine · prix · note Google + actions. */}
               {hasVenueInfo ? (
                 <div style={{ marginTop: 16 }}>
-                  {venue.cuisines?.length || venue.price_level || venue.google_rating ? (
+                  {showMeta ? (
                     <div
                       style={{
                         display: 'flex',
@@ -1054,12 +1114,12 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                       marginTop: 12,
                     }}
                   >
-                    {mapsUrl ? (
+                    {showDirections && mapsUrl ? (
                       <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={infoBtn(false)}>
                         📍 {infoL.directions}
                       </a>
                     ) : null}
-                    {venue.phone ? (
+                    {showCall ? (
                       <a href={`tel:${venue.phone}`} style={infoBtn(false)}>
                         📞 {infoL.call}
                       </a>
@@ -1069,13 +1129,13 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                         🌐 {infoL.website}
                       </a>
                     ) : null}
-                    {venue.reservation_url ? (
+                    {showBook && venue.reservation_url ? (
                       <a href={venue.reservation_url} target="_blank" rel="noopener noreferrer" style={infoBtn(true)}>
                         📅 {infoL.book}
                       </a>
                     ) : null}
                   </div>
-                  {venue.address ? (
+                  {showAddress ? (
                     <p style={{ fontSize: 12, color: theme.sub, margin: '10px 0 0', lineHeight: 1.5 }}>
                       {venue.address}
                     </p>
@@ -1083,12 +1143,6 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                 </div>
               ) : null}
 
-              {/* petit ornement (accent) — pas de bouton app en tête */}
-              <div
-                style={{ color: theme.accent, fontSize: 15, letterSpacing: 6, marginTop: 14, opacity: 0.6 }}
-              >
-                ❦
-              </div>
             </header>
 
             {/* Barre d'outils (recherche / filtres / langue) enrobant le menu :
@@ -1106,6 +1160,16 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                 signature: ui.filterSignature,
                 noResults: ui.noResults,
                 avoidAllergens: ui.avoidAllergens,
+                filtersTitle: ui.filtersTitle,
+                sectionShow: ui.filtersSectionShow,
+                signatureHelp: ui.filtersSignatureHelp,
+                dietHelp: ui.filtersDietHelp,
+                allergenHelp: ui.filtersAllergenHelp,
+                allergenWarning: ui.filtersAllergenWarning,
+                reset: ui.filtersReset,
+                applyNone: ui.filtersApplyNone,
+                applyOne: ui.filtersApplyOne,
+                applyMany: ui.filtersApplyMany,
               }}
               theme={{
                 bg: theme.bg,
@@ -1169,6 +1233,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
               <img
                 src={cover}
                 alt={name || 'DishRank'}
+                data-hide-on-error=""
                 style={{
                   width: '100%',
                   maxWidth: 320,

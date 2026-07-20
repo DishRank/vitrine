@@ -60,6 +60,10 @@ export async function upsertReplyAction(
 
   await logProEvent(supabase, 'pro_review_reply', restaurantId);
   revalidatePath(`/pro/r/${restaurantId}/avis`);
+  // La pastille « avis sans réponse » est calculée par le layout `/pro/r` :
+  // revalider le seul chemin de page la laissait figée après une réponse,
+  // elle ne se corrigeait qu'au rechargement complet.
+  revalidatePath('/pro', 'layout');
   return { ok: true };
 }
 
@@ -80,6 +84,8 @@ export async function deleteReplyAction(
   if (error) return { error: mapReplyError(error) };
 
   revalidatePath(`/pro/r/${restaurantId}/avis`);
+  // Supprimer une réponse remet l'avis dans les « à répondre » → même besoin.
+  revalidatePath('/pro', 'layout');
   return { ok: true };
 }
 

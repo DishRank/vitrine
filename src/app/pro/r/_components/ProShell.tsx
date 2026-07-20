@@ -11,6 +11,8 @@ import DigestToggle from '@/app/pro/compte/DigestToggle';
 import PasswordResetButton from '@/app/pro/compte/PasswordResetButton';
 import SaveStatusSlot from '@/app/pro/r/[id]/_components/SaveStatusSlot';
 import { signOutAction } from '@/app/pro/actions';
+import { markNotificationsReadAction } from './notifActions';
+import type { OwnerNotification } from '@/lib/pro/data';
 import AnimatedOutlet from './AnimatedOutlet';
 
 export interface ShellResto {
@@ -44,12 +46,16 @@ const accountLinkRow =
 export default function ProShell({
   restaurants,
   pending,
+  notifications,
   email,
   digestOptOut,
   children,
 }: {
   restaurants: ShellResto[];
+  /** Liste de travail : avis publiés sans réponse, par resto. */
   pending: Record<string, number>;
+  /** Journal d'événements (table `notifications`), partagé avec l'app mobile. */
+  notifications: OwnerNotification[];
   email?: string | null;
   digestOptOut: boolean;
   children: React.ReactNode;
@@ -102,6 +108,12 @@ export default function ProShell({
       activeId={activeId}
       pendingCount={pendingCount}
       email={email}
+      restaurants={restaurants}
+      suffix={suffix}
+      onClaim={() => {
+        setDrawerOpen(false);
+        setClaimOpen(true);
+      }}
       onAccount={() => {
         setDrawerOpen(false);
         setAccountOpen(true);
@@ -144,8 +156,9 @@ export default function ProShell({
         </div>
       ) : null}
 
-      {/* Colonne principale : topbar + contenu */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      {/* Colonne principale : topbar + contenu. `relative` sert d'ancrage à la
+          pastille d'auto-save, sortie du flux de la topbar (voir plus bas). */}
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="relative z-40 shrink-0 border-b border-[var(--border2)] bg-[var(--surface)]">
           <div className="flex h-16 items-center gap-2 px-4 sm:px-6 lg:px-8">
             <button
@@ -175,7 +188,6 @@ export default function ProShell({
               ) : null}
             </div>
 
-            <SaveStatusSlot />
             {activeId ? (
               <a
                 href={`/menu/${activeId}`}
@@ -186,16 +198,17 @@ export default function ProShell({
                 Aperçu public ↗
               </a>
             ) : null}
-            <ThemeToggle />
-            <NotifBell restaurants={restaurants} pending={pending} activeId={activeId} />
-            <RestoSwitcher
-              restaurants={restaurants}
-              activeId={activeId}
-              suffix={suffix}
-              onClaim={() => setClaimOpen(true)}
-            />
+            <NotifBell restaurants={restaurants} notifications={notifications} activeId={activeId} />
           </div>
         </header>
+
+        {/* Pastille d'auto-save : sortie du flux de la topbar (où elle mangeait
+            de la largeur et faisait sauter le titre à chaque changement d'état),
+            posée sous la barre côté droit. `pointer-events-none` pour qu'elle ne
+            capture jamais un clic destiné au contenu en dessous. */}
+        <div className="pointer-events-none absolute right-4 top-[4.5rem] z-30 sm:right-6 lg:right-8">
+          <SaveStatusSlot />
+        </div>
 
         <main ref={mainRef} className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
@@ -220,7 +233,9 @@ export default function ProShell({
         <div className="space-y-4">
           <section className={accountCard}>
             <h3 className="mb-1 text-sm font-extrabold">Compte</h3>
-            <p className="text-sm text-[var(--text2)]">
+            {/* `break-words` : une adresse est un token insécable, une adresse
+                pro longue déborderait de la modale (303 px de contenu à 375 px). */}
+            <p className="text-sm break-words text-[var(--text2)]">
               Connecté en tant que <strong className="text-[var(--text)]">{email ?? '—'}</strong>.
             </p>
           </section>
@@ -300,12 +315,18 @@ function SidebarContent({
   activeId,
   pendingCount,
   email,
+  restaurants,
+  suffix,
+  onClaim,
   onAccount,
 }: {
   pathname: string;
   activeId: string | null;
   pendingCount: number;
   email?: string | null;
+  restaurants: ShellResto[];
+  suffix: string;
+  onClaim: () => void;
   onAccount: () => void;
 }) {
   const base = activeId ? `/pro/r/${activeId}` : '/pro';
@@ -334,6 +355,21 @@ function SidebarContent({
           DishRank <span className="text-[var(--primary)]">Pro</span>
         </span>
       </Link>
+
+      {/* Sélecteur d'établissement — remonté de la topbar. La sidebar est assez
+          large pour afficher le NOM du resto actif, ce que la version compacte
+          de la barre (vignette + chevron) ne permettait pas. Placé HORS du
+          <nav> défilant : son menu déroulant y serait rogné par l'overflow. */}
+      {restaurants.length > 0 ? (
+        <div className="px-4 pb-2">
+          <RestoSwitcher
+            restaurants={restaurants}
+            activeId={activeId}
+            suffix={suffix}
+            onClaim={onClaim}
+          />
+        </div>
+      ) : null}
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         <p className="px-3 pb-2 pt-3 text-[11px] font-bold uppercase tracking-wider text-[var(--text3)]">Menu</p>
@@ -390,6 +426,10 @@ function SidebarContent({
           {(email ?? '?').charAt(0)}
         </span>
         <p className="min-w-0 flex-1 truncate text-xs font-semibold text-[var(--text2)]">{email ?? 'Mon compte'}</p>
+        {/* Bascule clair/sombre — descendue de la topbar : c'est un réglage, sa
+            place est avec l'identité et la déconnexion, pas dans la barre de
+            travail. */}
+        <ThemeToggle className="flex h-8 w-8 items-center justify-center rounded-lg text-base text-[var(--text2)] transition-colors hover:bg-[var(--surface-var)] hover:text-[var(--text)]" />
         <form action={signOutAction}>
           <button
             type="submit"
@@ -405,29 +445,117 @@ function SidebarContent({
   );
 }
 
+/** Libellé + icône par type de notification (migration 130). Un type inconnu
+ *  reste affiché avec un libellé générique plutôt que d'être masqué : mieux
+ *  vaut une ligne fade qu'un événement invisible. */
+function describeNotif(n: OwnerNotification): {
+  label: string;
+  icon: 'chat' | 'star' | 'warn' | 'shield' | 'qr' | 'trophy' | 'clock';
+} {
+  const meta = (n.metadata ?? {}) as Record<string, unknown>;
+  const dish = typeof meta.dish_name === 'string' ? meta.dish_name : null;
+  const rating = meta.rating != null ? String(meta.rating) : null;
+  switch (n.type) {
+    case 'owner_new_review':
+      return {
+        label: dish ? `${dish} noté ${rating ?? '?'}/5` : 'Nouvel avis sur votre carte',
+        icon: 'star',
+      };
+    case 'owner_low_rating':
+      return {
+        label: dish ? `${dish} : ${rating ?? '?'}/5 — à traiter` : 'Un avis attend votre réponse',
+        icon: 'warn',
+      };
+    case 'owner_claim_verified':
+      return { label: 'Établissement validé', icon: 'shield' };
+    case 'owner_claim_rejected':
+      return { label: 'Demande de revendication refusée', icon: 'shield' };
+    case 'owner_first_scan':
+      return { label: 'Premier scan de votre QR de table', icon: 'qr' };
+    case 'owner_milestone': {
+      const value = meta.value != null ? String(meta.value) : '';
+      return meta.kind === 'rating'
+        ? { label: `Moyenne au-dessus de ${value}/5`, icon: 'trophy' }
+        : { label: `${value} avis atteints`, icon: 'trophy' };
+    }
+    case 'owner_menu_unpublished':
+      return { label: 'Votre carte est encore en brouillon', icon: 'warn' };
+    case 'owner_dish_unavailable': {
+      const n = meta.count != null ? String(meta.count) : '1';
+      return { label: `${n} plat(s) épuisés depuis plus d'une semaine`, icon: 'warn' };
+    }
+    case 'owner_premium_expiring': {
+      const d = meta.bucket != null ? String(meta.bucket) : '30';
+      return { label: `Premium expire dans ~${d} jours`, icon: 'clock' };
+    }
+    case 'owner_weekly_recap': {
+      const rv = meta.reviews != null ? String(meta.reviews) : '0';
+      const sc = meta.scans != null ? String(meta.scans) : '0';
+      return { label: `Semaine : ${rv} avis, ${sc} scans`, icon: 'trophy' };
+    }
+    default:
+      return { label: 'Nouvelle notification', icon: 'chat' };
+  }
+}
+
+function timeAgo(iso: string): string {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "à l'instant";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const d = Math.floor(h / 24);
+  return d < 30 ? `il y a ${d} j` : `il y a ${Math.floor(d / 30)} mois`;
+}
+
 /**
- * Cloche de notifications — panneau listant, par établissement, les avis
- * publiés qui attendent une réponse (la tâche récurrente n°1 de l'owner).
- * Données déjà en mémoire (map chargée par le layout) → ouverture instantanée.
+ * Cloche de notifications — journal d'événements de la table `notifications`,
+ * le MÊME que celui de l'app mobile (migration 130). Le badge compte les
+ * non-lues ; l'ouverture du panneau les marque lues.
+ *
+ * À ne pas confondre avec la pastille « Avis » de la sidebar, qui reste une
+ * liste de travail (avis sans réponse). Un journal ne peut pas la remplacer :
+ * une notification lue ne dit pas si l'avis a été traité.
  */
 function NotifBell({
   restaurants,
-  pending,
+  notifications,
   activeId,
 }: {
   restaurants: ShellResto[];
-  pending: Record<string, number>;
+  notifications: OwnerNotification[];
   activeId: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [, startMarkRead] = useTransition();
 
-  const items = restaurants
-    .map((r) => ({ ...r, count: pending[r.id] ?? 0 }))
-    .filter((r) => r.count > 0)
-    // Resto actif d'abord, puis par volume décroissant.
-    .sort((a, b) => (a.id === activeId ? -1 : b.id === activeId ? 1 : b.count - a.count));
-  const total = items.reduce((s, r) => s + r.count, 0);
+  const nameById = new Map(restaurants.map((r) => [r.id, r.name ?? 'Sans nom']));
+  // Resto actif d'abord, puis antichronologique — un multi-sites veut d'abord
+  // ce qui concerne l'établissement qu'il est en train de gérer.
+  const items = [...notifications].sort((a, b) => {
+    if (a.restaurant_id !== b.restaurant_id) {
+      if (a.restaurant_id === activeId) return -1;
+      if (b.restaurant_id === activeId) return 1;
+    }
+    return b.created_at.localeCompare(a.created_at);
+  });
+  const unread = items.filter((n) => !n.read);
+  const total = unread.length;
+
+  // Marquer lu à l'OUVERTURE, pas au clic sur chaque ligne : le panneau est le
+  // moment où l'owner prend connaissance des événements.
+  useEffect(() => {
+    if (!open || unread.length === 0) return;
+    const ids = unread.map((n) => n.id);
+    startMarkRead(() => {
+      void markNotificationsReadAction(ids);
+    });
+    // `unread` est recalculé à chaque rendu : ne dépendre que de `open`, sinon
+    // la revalidation qui suit relancerait l'action en boucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -452,7 +580,7 @@ function NotifBell({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="true"
         aria-expanded={open}
-        aria-label={total > 0 ? `Notifications — ${total} avis à répondre` : 'Notifications'}
+        aria-label={total > 0 ? `Notifications — ${total} non lue${total > 1 ? 's' : ''}` : 'Notifications'}
         className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border2)] text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)]"
       >
         <BellIcon className="h-4.5 w-4.5" />
@@ -475,31 +603,61 @@ function NotifBell({
           </p>
           {items.length === 0 ? (
             <p className="px-2.5 pb-2 text-sm text-[var(--text2)]">
-              <span className="font-semibold text-[var(--accent-success)]">Tout est à jour ✓</span>
+              <span className="font-semibold text-[var(--accent-success)]">Rien de neuf ✓</span>
               <br />
-              Aucun avis n’attend de réponse.
+              Les nouveaux avis et les décisions sur votre établissement apparaîtront ici.
             </p>
           ) : (
             <div className="max-h-80 overflow-y-auto">
-              {items.map((r) => (
-                <Link
-                  key={r.id}
-                  href={`/pro/r/${r.id}/avis`}
-                  prefetch={true}
-                  onClick={() => setOpen(false)}
-                  className="flex items-start gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-[var(--surface-var)]"
-                >
-                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--primary-container)] text-[var(--primary)]">
-                    <ChatIcon className="h-4 w-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold">{r.name ?? 'Sans nom'}</span>
-                    <span className="text-xs text-[var(--text2)]">
-                      {r.count} avis {r.count > 1 ? 'attendent' : 'attend'} votre réponse
+              {items.map((n) => {
+                const { label, icon } = describeNotif(n);
+                // Un avis renvoie vers l'onglet Avis (là où on répond) ; un
+                // verdict de revendication vers la fiche.
+                const href =
+                  n.type === 'owner_claim_verified' || n.type === 'owner_claim_rejected'
+                    ? `/pro/r/${n.restaurant_id}/fiche`
+                    : n.type === 'owner_menu_unpublished' || n.type === 'owner_dish_unavailable'
+                      ? `/pro/r/${n.restaurant_id}/menu`
+                      : n.type === 'owner_premium_expiring'
+                        ? `/pro/r/${n.restaurant_id}`
+                        : n.type === 'owner_first_scan' ||
+                            n.type === 'owner_milestone' ||
+                            n.type === 'owner_weekly_recap'
+                          ? `/pro/r/${n.restaurant_id}/stats`
+                          : `/pro/r/${n.restaurant_id}/avis`;
+                return (
+                  <Link
+                    key={n.id}
+                    href={href}
+                    prefetch={true}
+                    onClick={() => setOpen(false)}
+                    className={`flex items-start gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-[var(--surface-var)] ${
+                      n.read ? '' : 'bg-[var(--primary-container)]/40'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                        icon === 'warn' || icon === 'clock'
+                          ? 'bg-red-500/15 text-red-500'
+                          : icon === 'trophy'
+                            ? 'bg-amber-500/15 text-amber-500'
+                            : 'bg-[var(--primary-container)] text-[var(--primary)]'
+                      }`}
+                    >
+                      <ChatIcon className="h-4 w-4" />
                     </span>
-                  </span>
-                </Link>
-              ))}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold">{label}</span>
+                      <span className="block truncate text-xs text-[var(--text2)]">
+                        {nameById.get(n.restaurant_id) ?? ''} · {timeAgo(n.created_at)}
+                      </span>
+                    </span>
+                    {!n.read ? (
+                      <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--primary)]" />
+                    ) : null}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
@@ -508,7 +666,7 @@ function NotifBell({
   );
 }
 
-/** Sélecteur d'établissement de la topbar (remplace le carrousel). */
+/** Sélecteur d'établissement, en tête de la sidebar / du tiroir mobile. */
 function RestoSwitcher({
   restaurants,
   activeId,
@@ -574,19 +732,28 @@ function RestoSwitcher({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-full border border-[var(--border2)] py-1 pl-1 pr-2.5 transition-colors hover:border-[var(--primary)]"
+        className="flex w-full items-center gap-2.5 rounded-xl border border-[var(--border2)] p-1.5 text-left transition-colors hover:border-[var(--primary)]"
       >
-        {/* Le NOM du resto actif vit dans le titre de la topbar → ici on garde un
-            switcher compact (vignette + chevron), sans dupliquer le nom. */}
-        <Thumb resto={active} className="h-8 w-8 rounded-full" />
-        <span className="sr-only">Changer d’établissement</span>
-        <ChevronIcon className={`h-3.5 w-3.5 text-[var(--text3)] transition-transform ${open ? 'rotate-180' : ''}`} />
+        <Thumb resto={active} className="h-8 w-8 rounded-lg" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold">
+            {active?.name ?? 'Mes établissements'}
+          </span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--text3)]">
+            Changer d’établissement
+          </span>
+        </span>
+        <ChevronIcon
+          className={`mr-1 h-3.5 w-3.5 shrink-0 text-[var(--text3)] transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {open ? (
         <div
           role="listbox"
-          className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-2 shadow-[0_12px_32px_var(--card-shadow)]"
+          // `inset-x-0` : le panneau épouse la largeur de la sidebar (w-60) ou du
+          // tiroir (w-72). Une largeur fixe w-72 débordait de la sidebar desktop.
+          className="absolute inset-x-0 top-full z-50 mt-2 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-2 shadow-[0_12px_32px_var(--card-shadow)]"
           style={{ animation: 'dropDownIn 0.15s ease-out both' }}
         >
           <div className="max-h-80 overflow-y-auto">

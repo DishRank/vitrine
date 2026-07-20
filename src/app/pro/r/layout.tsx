@@ -1,5 +1,6 @@
-import { requireUser, getPendingReviewCounts } from '@/lib/pro/data';
+import { requireUser, getPendingReviewCounts, getOwnerNotifications } from '@/lib/pro/data';
 import ProShell, { type ShellResto } from './_components/ProShell';
+import NotifLiveSync from './_components/NotifLiveSync';
 
 /**
  * Shell PERSISTANT du workspace restaurateur (segment /pro/r, au-dessus de
@@ -23,13 +24,28 @@ export default async function ProWorkspaceLayout({ children }: { children: React
   const restaurants = (data ?? []) as ShellResto[];
   const digestOptOut = !!(profileRes.data as { email_digest_opt_out?: boolean } | null)?.email_digest_opt_out;
 
-  // Avis publiés sans réponse, par resto — pastille « Avis » de la sidebar et
-  // point de notification de la topbar (le resto actif n'est connu que du
-  // client via l'URL, donc on charge la map complète).
-  const pending = await getPendingReviewCounts(restaurants.map((r) => r.id));
+  // Deux choses DISTINCTES, volontairement gardées séparées :
+  //  · `pending` = liste de travail (avis publiés sans réponse) → pastille
+  //    « Avis » de la sidebar. Répond à « me reste-t-il du travail ? ».
+  //  · `notifications` = journal d'événements horodaté, lu/non-lu, partagé
+  //    avec l'app mobile → cloche de la topbar. Répond à « que s'est-il
+  //    passé ? ». Un journal ne peut pas répondre à la première question
+  //    (une notif lue ne dit pas si l'avis a été traité), d'où les deux.
+  const ids = restaurants.map((r) => r.id);
+  const [pending, notifications] = await Promise.all([
+    getPendingReviewCounts(ids),
+    getOwnerNotifications(ids),
+  ]);
 
   return (
-    <ProShell restaurants={restaurants} pending={pending} email={user.email} digestOptOut={digestOptOut}>
+    <ProShell
+      restaurants={restaurants}
+      pending={pending}
+      notifications={notifications}
+      email={user.email}
+      digestOptOut={digestOptOut}
+    >
+      <NotifLiveSync userId={user.id} />
       {children}
     </ProShell>
   );

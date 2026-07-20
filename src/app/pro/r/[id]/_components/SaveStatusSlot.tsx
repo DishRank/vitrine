@@ -3,8 +3,9 @@
 import { useSaveStatus } from '../../../_components/saveStatusStore';
 
 /**
- * Affiche l'état d'auto-save dans l'en-tête du workspace (à côté de « Aperçu
- * public »). Rien quand idle → n'encombre pas les autres onglets.
+ * État d'auto-save du workspace. Rien quand idle → n'encombre pas les autres
+ * onglets. Rendu en flottant sous la topbar (cf. ProShell) : il lui faut donc
+ * un fond opaque, sinon le texte se superposerait au contenu qui défile.
  */
 export default function SaveStatusSlot() {
   const status = useSaveStatus();
@@ -20,8 +21,12 @@ export default function SaveStatusSlot() {
   if (!s) return null;
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
-      <span className={`inline-block h-2 w-2 rounded-full ${s.dot}`} />
+    <span
+      role="status"
+      aria-live="polite"
+      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border2)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold shadow-[0_4px_14px_var(--card-shadow)]"
+    >
+      <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${s.dot}`} />
       <span className={s.cls}>{s.text}</span>
     </span>
   );

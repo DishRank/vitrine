@@ -10,7 +10,12 @@ type Mode = 'light' | 'dark';
  * ('dr-pro-theme'). Le script d'init du layout applique la préférence AVANT le
  * paint (pas de flash) ; ce bouton ne fait que la lire et la changer.
  */
-export default function ThemeToggle() {
+/** Habillage par défaut (bouton bordé) ; surchargeable là où le bouton doit se
+ *  fondre dans son conteneur — par ex. le pied de la sidebar de l'espace pro. */
+const DEFAULT_CLASS =
+  'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border2)] text-base text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)]';
+
+export default function ThemeToggle({ className }: { className?: string }) {
   const [mode, setMode] = useState<Mode | null>(null);
 
   useEffect(() => {
@@ -39,7 +44,7 @@ export default function ThemeToggle() {
 
   // Avant hydratation on réserve la place (évite un saut de layout + le flash
   // d'une icône qui ne correspondrait pas au thème réellement appliqué).
-  if (mode === null) return <span className="h-9 w-9" aria-hidden />;
+  if (mode === null) return <span className={className ?? DEFAULT_CLASS} aria-hidden />;
 
   const next: Mode = mode === 'dark' ? 'light' : 'dark';
   return (
@@ -48,7 +53,7 @@ export default function ThemeToggle() {
       onClick={() => apply(next)}
       aria-label={`Passer en thème ${next === 'dark' ? 'sombre' : 'clair'}`}
       title={`Thème ${next === 'dark' ? 'sombre' : 'clair'}`}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border2)] text-base text-[var(--text2)] transition-colors hover:border-[var(--primary)] hover:text-[var(--text)]"
+      className={className ?? DEFAULT_CLASS}
     >
       {mode === 'dark' ? '☀️' : '🌙'}
     </button>

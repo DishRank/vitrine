@@ -1,5 +1,4 @@
 import { requireOwnedRestaurant, isPremium } from '@/lib/pro/data';
-import { normalizeMenuTheme } from '../menu/themeConstants';
 import { CopyButton } from './ShareControls';
 import QrKit from './QrKit';
 import { buildStyledQrSvg } from './qrSvg';
@@ -14,9 +13,9 @@ const QR_DARK = '#1A1832';
 
 /**
  * Préfixe Storage public autorisé pour le logo. GARDE ANTI-SSRF : `logo_url`
- * vient de `menu_theme` (jsonb), que l'owner peut écrire EN DIRECT via PostgREST
- * — la RLS l'y autorise et le trigger premium (101/117) ne valide que le tier,
- * jamais le format de l'URL. Sans ce contrôle, le serveur fetcherait une URL
+ * (colonne, mig.124) est écrivable EN DIRECT par l'owner via PostgREST — la RLS
+ * l'y autorise et aucun trigger ne valide le FORMAT de l'URL, seulement le tier
+ * pour le thème. Sans ce contrôle, le serveur fetcherait une URL
  * arbitraire (métadonnées cloud, service interne…) et en ré-inlinerait la
  * réponse en base64 dans la page → SSRF avec exfiltration. Même esprit que le
  * garde `isBlockedHost` de osm/photos. L'UI valide déjà à l'écriture
@@ -87,11 +86,12 @@ export default async function PartagePage({ params }: { params: Promise<{ id: st
   const menuLink = `${SITE}/menu/${id}`;
   const qrTarget = `${menuLink}?src=qr`;
 
-  // Logo dans le QR = perk Premium : on réutilise le logo d'Apparence
-  // (menu_theme.logo_url, gaté trigger 101). Gaté aussi au rendu (isPremium)
-  // pour rester cohérent si l'abonnement a expiré.
+  // Logo dans le QR = perk Premium : on réutilise le logo de la FICHE
+  // (`restaurants.logo_url`, mig.124). Le logo lui-même est gratuit à définir,
+  // c'est son insertion dans le QR qui est premium — gaté ici au rendu, donc
+  // cohérent si l'abonnement a expiré.
   const premium = isPremium(resto);
-  const logoUrl = premium ? normalizeMenuTheme(resto.menu_theme).logo_url : null;
+  const logoUrl = premium ? resto.logo_url : null;
   const logoDataUri = await fetchLogoDataUri(logoUrl);
 
   // QR nu niveau M (toggle off / pas de logo) ; QR niveau H (~30% de récupération,

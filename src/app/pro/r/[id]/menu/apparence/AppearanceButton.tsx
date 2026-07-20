@@ -15,10 +15,12 @@ export default function AppearanceButton({
   restaurantId,
   initialTheme,
   premium,
+  logoUrl,
 }: {
   restaurantId: string;
   initialTheme: MenuThemeConfig;
   premium: boolean;
+  logoUrl: string | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -37,7 +39,7 @@ export default function AppearanceButton({
         subtitle="Ambiance, couleur, police et logo. Les changements sont enregistrés automatiquement."
         maxWidth="max-w-4xl"
       >
-        <ThemeEditor restaurantId={restaurantId} initial={initialTheme} premium={premium} />
+        <ThemeEditor restaurantId={restaurantId} initial={initialTheme} premium={premium} logoUrl={logoUrl} />
       </Modal>
     </>
   );

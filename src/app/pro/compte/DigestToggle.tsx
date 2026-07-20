@@ -8,14 +8,21 @@ export default function DigestToggle({ initialOptOut }: { initialOptOut: boolean
   const [pending, start] = useTransition();
   const [err, setErr] = useState('');
 
-  const toggle = () =>
+  // Bascule OPTIMISTE : l'interrupteur suit le doigt tout de suite, et ne
+  // revient en arrière que si le serveur refuse. Attendre l'aller-retour avant
+  // de bouger donnait un bouton qui paraissait mort pendant ~300 ms.
+  const toggle = () => {
+    const next = !optOut;
+    setErr('');
+    setOptOut(next);
     start(async () => {
-      setErr('');
-      const next = !optOut;
       const r = await setDigestOptOutAction(next);
-      if (r.ok) setOptOut(next);
-      else setErr(r.error || 'Erreur.');
+      if (!r.ok) {
+        setOptOut(!next);
+        setErr(r.error || 'Erreur.');
+      }
     });
+  };
 
   return (
     <div>

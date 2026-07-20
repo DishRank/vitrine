@@ -91,10 +91,16 @@ function generateNonce(): string {
  * 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`.
  */
 // L'hôte Supabase autorisé en connect-src suit l'environnement (le client
-// navigateur — notation sans compte — parle au projet de NEXT_PUBLIC_*) ;
-// défaut = prod.
+// navigateur parle au projet de NEXT_PUBLIC_*) ; défaut = prod.
 const SUPABASE_CONNECT =
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yztbhdvrvgozhyaujtjz.supabase.co';
+
+// ⚠️ LE SCHÉMA FAIT PARTIE DU MATCH CSP : `https://x.supabase.co` n'autorise
+// PAS `wss://x.supabase.co`. Le temps réel du menu (MenuLiveSync → Realtime)
+// ouvre un WebSocket, donc l'origine doit être déclarée DEUX FOIS, une par
+// schéma. Sans ça le navigateur bloque la souscription et le menu ne se met
+// plus à jour en direct (« épuisé », prix) chez le client déjà à table.
+const SUPABASE_CONNECT_WS = SUPABASE_CONNECT.replace(/^https:/i, 'wss:');
 
 // En dev uniquement, tolère tous les projets Supabase : NEXT_PUBLIC_* est
 // inliné dans le proxy à sa compilation, donc un .env.local modifié pendant
@@ -102,7 +108,9 @@ const SUPABASE_CONNECT =
 // bundles clients recompilés parlent déjà au nouveau → connect-src bloque
 // tout jusqu'au restart. En prod l'hôte reste exact.
 const supabaseConnect = (isDev: boolean) =>
-  isDev ? `${SUPABASE_CONNECT} https://*.supabase.co` : SUPABASE_CONNECT;
+  isDev
+    ? `${SUPABASE_CONNECT} ${SUPABASE_CONNECT_WS} https://*.supabase.co wss://*.supabase.co`
+    : `${SUPABASE_CONNECT} ${SUPABASE_CONNECT_WS}`;
 
 function buildStaticCsp(isDev: boolean): string {
   return [
