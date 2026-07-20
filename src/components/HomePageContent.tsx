@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { getTranslations } from 'next-intl/server';
 import { fetchDishes, fetchCategories, fetchRecentReviews } from '@/lib/supabase';
 import { localizedCategory } from '@/lib/categoryLabels';
+import { jsonLdHtml } from '@/lib/jsonLd';
 import { citySlug, cityFromSlug, restaurantSlug } from '@/lib/slug';
 import { buildFilterPath, buildFilterUrl, buildBestCategoryFragment, buildTopDishesTitle } from '@/lib/seoMetadata';
 import Nav from './Nav';
@@ -353,32 +354,32 @@ export default async function HomePageContent({
         type="application/ld+json"
         nonce={nonce}
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(organizationJsonLd) }}
       />
       <script
         type="application/ld+json"
         nonce={nonce}
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(websiteJsonLd) }}
       />
       <script
         type="application/ld+json"
         nonce={nonce}
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(softwareAppJsonLd) }}
       />
       <script
         type="application/ld+json"
         nonce={nonce}
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(breadcrumbs) }}
       />
       {dishListJsonLd && (
         <script
           type="application/ld+json"
           nonce={nonce}
           suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(dishListJsonLd).replace(/</g, '\\u003c') }}
+          dangerouslySetInnerHTML={{ __html: jsonLdHtml(dishListJsonLd) }}
         />
       )}
       {localBusinessJsonLd && (
@@ -386,7 +387,7 @@ export default async function HomePageContent({
           type="application/ld+json"
           nonce={nonce}
           suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') }}
+          dangerouslySetInnerHTML={{ __html: jsonLdHtml(localBusinessJsonLd) }}
         />
       )}
       <Nav />

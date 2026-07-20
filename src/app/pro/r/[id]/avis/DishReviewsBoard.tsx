@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import TabPanel from "@/components/TabPanel";
 import ReviewCard, { type ProReview, type MenuItemRef } from "./ReviewCard";
 import OrphanWorklist, { type OrphanDish } from "./OrphanWorklist";
-import { getThumbnailUrl } from "../menu/thumb";
+import { getThumbnailUrl } from "@/lib/thumb";
 import Modal from "../../../_components/Modal";
 
 /** Un plat + ses avis (préparé côté serveur par la page). */

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { jsonLdHtml } from '@/lib/jsonLd';
 
 /**
  * FAQ accordéon — questions localisées via `useTranslations('faq')`.
@@ -30,7 +31,7 @@ export default function FAQ({ nonce }: { nonce?: string }) {
 
   return (
     <section id="faq" className="max-w-[800px] mx-auto px-4 sm:px-8 py-16 sm:py-20">
-      <script type="application/ld+json" nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml(faqJsonLd) }} />
       <h2
         className="font-black tracking-tight text-center mb-3"
         style={{ fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)' }}

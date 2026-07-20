@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
-import { getThumbnailUrl } from './menu/thumb';
+import { getThumbnailUrl } from '@/lib/thumb';
 import { setListingCoverAction, setListingLogoAction } from './listingMedia';
 import ImageCropper from './ImageCropper';
 import Modal from '../../_components/Modal';

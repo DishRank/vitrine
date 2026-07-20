@@ -2,6 +2,9 @@
  * Dérive l'URL du `_thumb` frère d'une image storage (créé à l'upload par
  * uploadMenuImage). Copie client-safe de getThumbnailUrl (lib/storage.ts app).
  * URL externe / sans extension → inchangée.
+ *
+ * Partagé /pro ET menu public (MenuBridge) depuis l'audit 2026-07-20 : les
+ * vignettes du menu servaient le fichier 1280 px en 72 px d'affichage.
  */
 const PUBLIC_OBJECT = '/storage/v1/object/public/';
 

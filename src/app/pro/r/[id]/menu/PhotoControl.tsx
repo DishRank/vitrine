@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 import { uploadMenuImage } from './imageUpload';
 import { setItemPhotoAction } from './mediaActions';
-import { getThumbnailUrl } from './thumb';
+import { getThumbnailUrl } from '@/lib/thumb';
 
 /** Ajout / changement / retrait de la photo d'un plat. Upload navigateur
  *  (full + _thumb) puis persistance de photo_url via Server Action. (L'option

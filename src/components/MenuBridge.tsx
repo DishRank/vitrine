@@ -28,6 +28,7 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import { headers } from 'next/headers';
+import { getThumbnailUrl } from '@/lib/thumb';
 import { notFound, redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -371,7 +372,12 @@ function ItemRow({
   const serviceNote =
     services.length === 1 ? (services[0] === 'lunch' ? ui.lunchOnly : ui.dinnerOnly) : null;
   const showPrice = item.kind === 'item' && item.variants.length === 0 && item.price != null;
-  const thumb = theme.photos && item.photo_url ? item.photo_url : null;
+  // La vignette fait 72 px : on sert le `_thumb` (320 px) et on garde le fichier
+  // pleine résolution pour la lightbox (`data-zoom`). Servir le full en 72 px
+  // coûtait plusieurs Mo sur un menu photographié, en concurrence directe avec
+  // le LCP au scan du QR (audit 2026-07-20).
+  const photoFull = theme.photos && item.photo_url ? item.photo_url : null;
+  const photoThumb = photoFull ? getThumbnailUrl(photoFull) : null;
   // Texte de recherche (langue courante) : nom + description + libellés
   // régimes/allergènes → alimente le filtre live de la barre d'outils.
   const searchText = [
@@ -571,13 +577,15 @@ function ItemRow({
         opacity: item.is_available ? 1 : 0.5,
       }}
     >
-      {thumb ? (
+      {photoFull ? (
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={thumb}
+            src={photoThumb!}
             alt={name}
-            data-zoom={thumb}
+            data-zoom={photoFull}
+            loading="lazy"
+            decoding="async"
             style={{
               width: 72,
               height: 72,
@@ -982,6 +990,10 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                 src={cover}
                 alt={name || 'DishRank'}
                 data-hide-on-error=""
+                // Cover = LCP du scan QR : pleine résolution assumée (elle
+                // occupe toute la largeur) et priorité haute pour qu'elle ne
+                // soit pas retardée par les vignettes.
+                fetchPriority="high"
                 style={{
                   width: 'calc(100% + 40px)',
                   margin: '0 -20px',
