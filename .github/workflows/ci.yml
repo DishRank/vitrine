@@ -74,13 +74,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --no-audit --no-fund
-      # Seuil `critical` et non `high`, volontairement : `nodemailer` traîne une
-      # faille high (SSRF / lecture de fichier via l'option `raw`) dont le seul
-      # correctif est un passage en 9.x, breaking. Elle n'est pas exploitable
-      # ici — l'option `raw` n'est jamais exposée à l'utilisateur — mais tant
-      # qu'elle n'est pas traitée, un seuil `high` ferait échouer chaque PR et
-      # le job finirait ignoré.
-      #
-      # À BASCULER sur `--audit-level=high` dès que nodemailer est migré.
-      - name: npm audit (critical)
-        run: npm audit --audit-level=critical
+      # Seuil `high` : le dépôt est à 0 vulnérabilité, la marche est donc
+      # tenable. En cas d'échec, se méfier du correctif proposé par npm — sur ce
+      # projet il suggérait `next@14.2.35`, soit une rétrogradation majeure
+      # depuis Next 16 qui aurait cassé l'App Router. Vérifier d'où vient
+      # réellement la faille (`npm audit --json`, champ `via`) avant d'agir.
+      - name: npm audit (high + critical)
+        run: npm audit --audit-level=high
