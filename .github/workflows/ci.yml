@@ -1,0 +1,85 @@
+name: CI
+
+# La vitrine est en production (dishrank.fr) : site public, menus QR scannés à
+# table, et l'espace restaurateur /pro avec ses données. Elle n'avait aucune
+# vérification automatique jusqu'ici — Vercel construisait à chaque push, ce qui
+# rattrape une erreur de compilation mais seulement APRÈS le merge, et ne dit
+# rien des vulnérabilités.
+#
+# Ces jobs tournent donc sur les PR, avant que Vercel ne déploie.
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Secrets requis (Settings → Secrets → Actions), alignés sur Vercel :
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY  (publics)
+#   SUPABASE_SERVICE_ROLE_KEY                                (serveur, sensible)
+# Sans eux le build échoue à l'initialisation du client Supabase.
+
+jobs:
+  build:
+    name: Typecheck & build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      # `next build` typecheck déjà (next.config.ts ne désactive ni
+      # `ignoreBuildErrors` ni `ignoreDuringBuilds` — vérifié), mais un tsc
+      # explicite échoue plus vite et sur TOUT le projet, y compris les fichiers
+      # qu'aucune page n'importe.
+      - name: Type check
+        run: npx tsc --noEmit
+
+      # PAS d'étape lint : `npm run lint` lance `next lint`, supprimé dans
+      # Next 16 (le projet est en 16.2). La commande échoue en interprétant
+      # « lint » comme un dossier, et ESLint n'est même pas installé ici — donc
+      # la vitrine ne lint plus rien depuis la migration. À rétablir en
+      # installant eslint + eslint-config-next et en remplaçant le script par
+      # `eslint .` ; prévoir une passe de correction, le code n'a jamais été
+      # linté sous cette config.
+
+      # Le build a besoin des variables publiques Supabase : sans elles, la
+      # génération statique des pages qui lisent la base échoue. Valeurs
+      # publiques (la RLS est la vraie barrière), stockées en secrets pour
+      # rester alignées sur Vercel.
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run build
+
+  audit:
+    name: Vulnérabilités
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # Seuil `critical` et non `high`, volontairement : `nodemailer` traîne une
+      # faille high (SSRF / lecture de fichier via l'option `raw`) dont le seul
+      # correctif est un passage en 9.x, breaking. Elle n'est pas exploitable
+      # ici — l'option `raw` n'est jamais exposée à l'utilisateur — mais tant
+      # qu'elle n'est pas traitée, un seuil `high` ferait échouer chaque PR et
+      # le job finirait ignoré.
+      #
+      # À BASCULER sur `--audit-level=high` dès que nodemailer est migré.
+      - name: npm audit (critical)
+        run: npm audit --audit-level=critical
