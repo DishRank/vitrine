@@ -16,7 +16,6 @@
 // circulaire) : les events GA techniques (consent update) sont gérés
 // directement par CookieConsent via `gtag('consent', 'update', ...)`.
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 type GtagFn = (...args: unknown[]) => void;
 
 const CONSENT_KEY = 'dishrank_cookie_consent';

@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   build:
-    name: Typecheck & build
+    name: Typecheck, lint & build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -43,13 +43,14 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      # PAS d'étape lint : `npm run lint` lance `next lint`, supprimé dans
-      # Next 16 (le projet est en 16.2). La commande échoue en interprétant
-      # « lint » comme un dossier, et ESLint n'est même pas installé ici — donc
-      # la vitrine ne lint plus rien depuis la migration. À rétablir en
-      # installant eslint + eslint-config-next et en remplaçant le script par
-      # `eslint .` ; prévoir une passe de correction, le code n'a jamais été
-      # linté sous cette config.
+      # Bloque sur les erreurs, laisse passer les avertissements : le lint vient
+      # d'être remis en service (il était mort depuis la migration Next 16) et
+      # le code traîne ~113 warnings de dette — surtout des <a> internes à
+      # convertir en <Link> et des règles du React Compiler. Les transformer en
+      # erreurs bloquerait chaque PR pour des motifs qui ne sont pas des bugs.
+      # Resserrer avec `--max-warnings` au fur et à mesure que la dette baisse.
+      - name: Lint
+        run: npm run lint
 
       # Le build a besoin des variables publiques Supabase : sans elles, la
       # génération statique des pages qui lisent la base échoue. Valeurs

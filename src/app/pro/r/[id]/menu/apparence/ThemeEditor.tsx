@@ -144,7 +144,6 @@ export default function ThemeEditor({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]" style={PREVIEW_FONT_VARS}>
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link rel="stylesheet" href={PREVIEW_FONTS_HREF} />
       {/* Contrôles */}
       <div className="space-y-6">

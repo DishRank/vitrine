@@ -517,7 +517,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
             )}{' '}
             DishRank classe chaque plat individuellement plutôt que le restaurant
             dans son ensemble : tu sais exactement quoi commander chez{' '}
-            {restaurant.name}, et tu peux comparer avec d'autres adresses
+            {restaurant.name}, et tu peux comparer avec d&apos;autres adresses
             similaires à {cityName}.
           </p>
         </section>

@@ -61,7 +61,6 @@ export default function QrKit({
       <p className={compact ? 'text-lg font-extrabold leading-tight tracking-tight' : 'text-2xl font-extrabold tracking-tight'}>{name}</p>
       <p className={compact ? 'mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#6C5CE7]' : 'mt-1 text-sm font-semibold uppercase tracking-widest text-[#6C5CE7]'}>Notre menu</p>
       <div className={`relative mx-auto ${compact ? 'mt-3 w-[150px]' : 'mt-5 w-56'}`}>
-        {/* eslint-disable-next-line react/no-danger */}
         <div dangerouslySetInnerHTML={{ __html: svg }} />
         {withLogo ? (
           <div
