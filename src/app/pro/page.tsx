@@ -5,6 +5,9 @@ import { getSupabaseServer } from '@/lib/pro/supabaseServer';
 import ProLandingHeader from './_components/ProLandingHeader';
 
 const SITE = 'https://dishrank.fr';
+// Image OG/Twitter partagée avec le site (identité DishRank, 1024×500) — évite
+// un aperçu social/IA sans visuel. Une image dédiée « Pro » pourra la remplacer.
+const OG_IMAGE = `${SITE}/img/play_store_feature_graphic.webp`;
 const TITLE = 'DishRank Pro — Gérez votre établissement';
 const DESCRIPTION =
   'Fiche, menu numérique avec QR de table et réponse aux avis clients, réunis dans un seul espace. Premium offert 1 an au lancement, sans carte bancaire.';
@@ -33,6 +36,14 @@ export const metadata: Metadata = {
     siteName: 'DishRank Pro',
     title: TITLE,
     description: DESCRIPTION,
+    locale: 'fr_FR',
+    images: [{ url: OG_IMAGE, width: 1024, height: 500 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [OG_IMAGE],
   },
 };
 
