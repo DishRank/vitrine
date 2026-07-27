@@ -112,7 +112,7 @@ export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
         <p className="mt-1 text-sm text-[var(--text2)]">
           {picked?.name} vous appartient désormais. Vous pouvez gérer sa fiche et ses avis.
         </p>
-        <button onClick={() => { onDone?.(); router.push(picked ? `/pro/r/${picked.id}` : '/pro'); }} className={`${btn} mt-5 w-full`}>
+        <button onClick={() => { onDone?.(); router.push(picked ? `/pro/r/${picked.id}` : '/pro/espace'); }} className={`${btn} mt-5 w-full`}>
           Gérer mon établissement
         </button>
       </div>
@@ -128,7 +128,7 @@ export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
           Nous vérifions votre demande pour {picked?.name}. Vous serez notifié par email dès qu&apos;elle
           est validée.
         </p>
-        <button onClick={() => { onDone?.(); router.push('/pro'); }} className={`${btn} mt-5 w-full`}>
+        <button onClick={() => { onDone?.(); router.push('/pro/espace'); }} className={`${btn} mt-5 w-full`}>
           Retour à mes établissements
         </button>
       </div>
@@ -152,7 +152,7 @@ export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
         <button onClick={() => { setError(''); setStep('intro'); }} className={`${btn} mt-5 w-full`}>
           Refaire une demande
         </button>
-        <button onClick={() => { onDone?.(); router.push('/pro'); }} className={`${linkBtn} mt-3 block w-full text-center`}>
+        <button onClick={() => { onDone?.(); router.push('/pro/espace'); }} className={`${linkBtn} mt-3 block w-full text-center`}>
           Retour à mes établissements
         </button>
       </div>

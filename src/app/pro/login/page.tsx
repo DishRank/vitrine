@@ -15,7 +15,7 @@ export default async function LoginPage({
   const next =
     sp.next && sp.next.startsWith('/') && !sp.next.startsWith('//') && !sp.next.includes('\\')
       ? sp.next
-      : '/pro';
+      : '/pro/espace';
 
   return (
     <AuthShell title="Connexion" subtitle="Accédez à votre espace restaurateur.">

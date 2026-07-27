@@ -329,7 +329,7 @@ function SidebarContent({
   onClaim: () => void;
   onAccount: () => void;
 }) {
-  const base = activeId ? `/pro/r/${activeId}` : '/pro';
+  const base = activeId ? `/pro/r/${activeId}` : '/pro/espace';
   const menu = [
     { href: base, label: 'Tableau de bord', icon: HomeIcon, exact: true },
     { href: `${base}/fiche`, label: 'Fiche', icon: StoreIcon },
@@ -349,7 +349,7 @@ function SidebarContent({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <Link href="/pro" className="flex items-center gap-2.5 px-5 pb-4 pt-5 text-[var(--text)]">
+      <Link href="/pro/espace" className="flex items-center gap-2.5 px-5 pb-4 pt-5 text-[var(--text)]">
         <AnimatedLogo size={28} />
         <span className="text-lg font-extrabold tracking-tight">
           DishRank <span className="text-[var(--primary)]">Pro</span>

@@ -7,7 +7,7 @@ import ThemeToggle from './ThemeToggle';
 export default function ProHeader({ email }: { email?: string | null }) {
   return (
     <header className="flex items-center justify-between gap-4 pb-5 border-b border-[var(--border2)]">
-      <Link href="/pro" className="flex items-center gap-2.5 text-[var(--text)]">
+      <Link href="/pro/espace" className="flex items-center gap-2.5 text-[var(--text)]">
         <AnimatedLogo size={28} />
         <span className="text-lg font-extrabold tracking-tight">
           DishRank <span className="text-[var(--primary)]">Pro</span>

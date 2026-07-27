@@ -5,8 +5,12 @@ import FlagPolyfill from '@/components/FlagPolyfill';
 import '../globals.css';
 
 // Applique la préférence de thème (localStorage) AVANT le paint → pas de flash.
-// Classe `.dark` / `.light` sur <html> ; sans préférence = thème système.
-const THEME_INIT = `try{var t=localStorage.getItem('dr-pro-theme');if(t==='dark')document.documentElement.classList.add('dark');else if(t==='light')document.documentElement.classList.add('light');}catch(e){}`;
+// Classe `.dark` / `.light` sur <html> ; SANS préférence = thème SYSTÈME (le
+// média-requête `prefers-color-scheme` de globals.css prend le relais).
+// On synchronise aussi `color-scheme` sur <html> pour que l'UA rende nativement
+// dans le bon schéma (fond du canvas, ascenseurs, champs) : sans préférence on
+// déclare `light dark` → l'UA suit l'OS ; avec préférence on la fige.
+const THEME_INIT = `try{var e=document.documentElement,t=localStorage.getItem('dr-pro-theme');if(t==='dark'){e.classList.add('dark');e.style.colorScheme='dark';}else if(t==='light'){e.classList.add('light');e.style.colorScheme='light';}else{e.style.colorScheme='light dark';}}catch(_){}`;
 
 /**
  * Layout racine de la zone /pro (espace restaurateur).
@@ -36,7 +40,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // La barre d'adresse garde la couleur de marque…
   themeColor: '#6C5CE7',
+  // …mais on déclare le support des deux schémas → l'UA suit l'OS dès le rendu
+  // serveur (avant le script d'init), et bascule le rendu natif en dark si l'OS
+  // est en dark. Le script d'init la fige ensuite si une préférence existe.
+  colorScheme: 'light dark',
 };
 
 export default async function ProLayout({ children }: { children: React.ReactNode }) {

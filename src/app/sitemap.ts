@@ -119,6 +119,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const urls: MetadataRoute.Sitemap = [
     // Homepage (priority 1)
     ...withAlternates('', { changeFrequency: 'daily', priority: 1 }),
+    // Landing restaurateur — seule page indexable de la zone /pro (le reste est
+    // noindex). Hors [locale] (FR only) → entrée simple, sans hreflang.
+    {
+      url: `${BASE}/pro`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
   ];
 
   // 1. Hierarchy parents (continental umbrellas + drinks) — broadest landing

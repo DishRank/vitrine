@@ -27,11 +27,11 @@ export async function GET(request: Request) {
   // Anti open-redirect : chemin relatif interne uniquement, backslash rejeté
   // (le parseur WHATWG normalise `\` en `/` → `/\evil.com` sortirait du
   // domaine — audit M1).
-  const rawNext = url.searchParams.get('next') ?? '/pro';
+  const rawNext = url.searchParams.get('next') ?? '/pro/espace';
   const next =
     rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.includes('\\')
       ? rawNext
-      : '/pro';
+      : '/pro/espace';
 
   const fail = (message: string) =>
     NextResponse.redirect(

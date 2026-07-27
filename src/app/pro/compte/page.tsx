@@ -37,7 +37,7 @@ export default async function AccountPage() {
       <ProHeader email={user.email} />
 
       <div className="mt-6">
-        <Link href="/pro" className="text-xs font-semibold text-[var(--text3)] hover:text-[var(--text2)]">
+        <Link href="/pro/espace" className="text-xs font-semibold text-[var(--text3)] hover:text-[var(--text2)]">
           ← Mes établissements
         </Link>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Mon compte</h1>
@@ -55,7 +55,7 @@ export default async function AccountPage() {
       <section className={cardCls}>
         <div className="mb-2 flex items-center justify-between gap-3">
           <h2 className={h2Cls}>Mes établissements</h2>
-          <Link href="/pro" className="text-xs font-semibold text-[var(--primary)] hover:underline">
+          <Link href="/pro/espace" className="text-xs font-semibold text-[var(--primary)] hover:underline">
             Tout gérer →
           </Link>
         </div>

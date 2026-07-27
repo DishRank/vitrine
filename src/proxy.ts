@@ -166,7 +166,11 @@ function buildCsp(
 // Session Supabase en cookies (@supabase/ssr) : le middleware la RAFRAÎCHIT à
 // chaque requête (sinon les Server Components lisent un token expiré) et garde
 // l'accès au edge. Pages auth publiques ; tout le reste exige une session.
-const PRO_PUBLIC_PATHS = new Set(['/pro/login', '/pro/signup', '/pro/reset', '/pro/callback']);
+// `/pro` = landing PUBLIQUE de présentation (indexable) ; login/signup/reset/
+// callback = pages auth publiques. Tout le reste (/pro/espace, /pro/r, /pro/claim,
+// /pro/compte…) exige une session. Match EXACT (`.has(pathname)`) : les
+// sous-chemins restent gardés (ex. /pro/reset/update).
+const PRO_PUBLIC_PATHS = new Set(['/pro', '/pro/login', '/pro/signup', '/pro/reset', '/pro/callback']);
 
 // CSP /pro : la base stricte + Turnstile (iframe + télémétrie) quand le
 // captcha est configuré (NEXT_PUBLIC_* inliné au build, comme SUPABASE_CONNECT).
@@ -228,8 +232,10 @@ async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
 
   const finalize = (r: NextResponse) => {
     r.headers.set('Content-Security-Policy', csp);
-    // Zone jamais indexée (D1) — le sitemap ne la liste pas non plus.
-    r.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    // La landing publique `/pro` est la SEULE page indexable de la zone
+    // (acquisition restaurateurs — au sitemap) ; tout le reste (dashboard,
+    // workspace, auth) reste hors index.
+    r.headers.set('X-Robots-Tag', pathname === '/pro' ? 'index, follow' : 'noindex, nofollow');
     return r;
   };
 
@@ -256,9 +262,10 @@ async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
     return redirectPreservingSession(loginUrl);
   }
 
-  // Déjà connecté sur login/signup → direction le dashboard.
+  // Déjà connecté sur login/signup → direction le dashboard (/pro/espace,
+  // PAS la landing publique /pro).
   if (authenticated && (pathname === '/pro/login' || pathname === '/pro/signup')) {
-    return redirectPreservingSession(new URL('/pro', req.url));
+    return redirectPreservingSession(new URL('/pro/espace', req.url));
   }
 
   return finalize(response);

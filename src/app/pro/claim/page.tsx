@@ -13,7 +13,7 @@ export default async function ClaimPage() {
       <ProHeader email={user.email} />
 
       <div className="mt-6">
-        <Link href="/pro" className="text-xs font-semibold text-[var(--text3)] hover:text-[var(--text2)]">
+        <Link href="/pro/espace" className="text-xs font-semibold text-[var(--text3)] hover:text-[var(--text2)]">
           ← Mes établissements
         </Link>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Revendiquer votre établissement</h1>

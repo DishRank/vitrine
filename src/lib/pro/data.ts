@@ -203,6 +203,6 @@ export const requireOwnedRestaurant = cache(async (id: string): Promise<OwnedRes
     .eq('id', id)
     .maybeSingle();
   const resto = data as unknown as OwnedRestaurant | null;
-  if (!resto || resto.owner_id !== user.id) redirect('/pro');
+  if (!resto || resto.owner_id !== user.id) redirect('/pro/espace');
   return resto;
 });

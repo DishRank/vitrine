@@ -59,7 +59,7 @@ async function emailLinkOrigin(): Promise<string> {
  * Rejette aussi les backslashes : le parseur WHATWG normalise `\` en `/`,
  * donc `/\evil.com` redirigerait hors-domaine (audit M1).
  */
-function safeNext(raw: FormDataEntryValue | null, fallback = '/pro'): string {
+function safeNext(raw: FormDataEntryValue | null, fallback = '/pro/espace'): string {
   const v = typeof raw === 'string' ? raw : '';
   return v.startsWith('/') && !v.startsWith('//') && !v.includes('\\') ? v : fallback;
 }
@@ -132,7 +132,7 @@ export async function signUpAction(
       // Sans nom fourni, le profil reste display_name NULL — l'app y verrait
       // un onboarding en cours, l'espace pro s'en accommode (compte unique D3).
       data: displayName ? { display_name: displayName } : undefined,
-      emailRedirectTo: `${origin}/pro/callback?next=${encodeURIComponent('/pro')}`,
+      emailRedirectTo: `${origin}/pro/callback?next=${encodeURIComponent('/pro/espace')}`,
       captchaToken: captchaToken(formData),
     },
   });
@@ -240,7 +240,7 @@ export async function updatePasswordAction(
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: mapAuthErrorFr(error) };
 
-  redirect('/pro?pwd=updated');
+  redirect('/pro/espace?pwd=updated');
 }
 
 // ─── Déconnexion ──────────────────────────────────────────────────────────────
