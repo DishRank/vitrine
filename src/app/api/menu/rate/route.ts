@@ -25,8 +25,10 @@ import {
  *  2. LE PLAT DOIT APPARTENIR AU RESTAURANT SCANNÉ. Vérifié ici ET re-vérifié
  *     par le trigger `check_guest_review` (mig.129) : la base garde le dernier
  *     mot, pour qu'un futur second appelant ne rouvre pas le trou.
- *  3. L'IP EST VISIBLE, donc limitable — un plafond par identité ne vaut rien
- *     quand l'identité est gratuite à renouveler.
+ *  3. L'ÉTRANGLEMENT PORTE SUR L'APPAREIL (cookie signé), pas sur l'IP : une
+ *     salle partage son wifi donc son IP, et plafonner l'IP capait la soirée
+ *     entière. L'IP ne reste qu'un backstop grossier ; la vraie borne anti-abus
+ *     vit en base (plafond par restaurant, mig.129 + cooldown 30 j/plat).
  *
  * L'identité d'appareil est un cookie httpOnly signé (cf. lib/guestIdentity) :
  * zéro ligne dans auth.users, zéro MAU facturé, et le cooldown 30 j/plat tient
@@ -45,28 +47,46 @@ function fail(kind: Fail, status: number) {
 }
 
 /**
- * Étranglement par IP, en mémoire du process. Volontairement modeste : sur
- * serverless chaque instance a sa propre fenêtre, donc ce n'est PAS la garantie
- * — la vraie borne est le plafond par restaurant, en base (mig.129). C'est un
- * amortisseur bon marché contre la rafale évidente, rien de plus, et c'est
- * écrit ici pour que personne ne le prenne pour une protection sérieuse.
+ * Étranglement à fenêtre glissante, en mémoire du process. Deux clés :
+ *
+ *  - guest_id (cookie signé) : la limite COURTOISE par appareil. Dans une salle,
+ *    tous les convives partagent le wifi donc l'IP — plafonner par IP capait la
+ *    soirée ENTIÈRE (le 13ᵉ vote/h de la salle prenait un 429 silencieux). Le
+ *    cookie est propre à chaque appareil : un plafond par cookie ne pénalise que
+ *    l'appareil qui s'emballe, jamais ses voisins.
+ *  - ip : un backstop GROSSIER, volontairement TRÈS haut. Une salle animée ne
+ *    l'atteint jamais ; il ne sert qu'à borner une inondation depuis une seule
+ *    source avant qu'elle ne touche la base.
+ *
+ * Aucun des deux n'est LA garantie : sur serverless chaque instance a sa propre
+ * fenêtre. La vraie borne anti-abus vit en base — plafond par restaurant
+ * (mig.129) + cooldown 30 j/plat par guest_id. Le cookie étant « gratuit à
+ * renouveler » (il suffit de ne pas le renvoyer), un plafond par cookie n'arrête
+ * pas un attaquant déterminé : il rend l'usage HONNÊTE propre, sans punir la
+ * salle. C'est écrit ici pour que personne ne le prenne pour plus que ça.
  */
+const WINDOW_MS = 60 * 60 * 1000;
+const guestHits = new Map<string, { n: number; reset: number }>();
 const ipHits = new Map<string, { n: number; reset: number }>();
-const IP_MAX = 12;
-const IP_WINDOW_MS = 60 * 60 * 1000;
+const GUEST_MAX = 12; // votes / heure / appareil
+const IP_MAX = 240; // backstop grossier / heure / IP (≈ salle très animée jamais atteinte)
 
-function ipThrottled(ip: string): boolean {
+function throttled(
+  map: Map<string, { n: number; reset: number }>,
+  key: string,
+  max: number
+): boolean {
   const now = Date.now();
-  const cur = ipHits.get(ip);
+  const cur = map.get(key);
   if (!cur || now > cur.reset) {
-    ipHits.set(ip, { n: 1, reset: now + IP_WINDOW_MS });
-    if (ipHits.size > 5000) {
-      for (const [k, v] of ipHits) if (now > v.reset) ipHits.delete(k);
+    map.set(key, { n: 1, reset: now + WINDOW_MS });
+    if (map.size > 5000) {
+      for (const [k, v] of map) if (now > v.reset) map.delete(k);
     }
     return false;
   }
   cur.n += 1;
-  return cur.n > IP_MAX;
+  return cur.n > max;
 }
 
 export async function POST(req: NextRequest) {
@@ -90,18 +110,30 @@ export async function POST(req: NextRequest) {
   if (!UUID_RE.test(restaurantId) || !UUID_RE.test(menuItemId)) return fail('error', 400);
   if (stars < 1 || stars > 5) return fail('error', 400);
 
-  const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.headers.get('x-real-ip') ||
-    'unknown';
-  if (ipThrottled(ip)) return fail('error', 429);
-
-  // Identité d'appareil : réutilisée si le cookie est valide, sinon émise.
+  // Identité d'appareil D'ABORD : le throttle porte dessus, pas sur l'IP.
+  // Réutilisée si le cookie est valide, sinon émise.
   const existing = readGuestId(req.cookies.get(GUEST_COOKIE)?.value);
   const issued = existing ? null : issueGuestId();
   const guestId = existing ?? issued?.id;
   // Pas de secret configuré ⇒ pas de notation invité (échec fermé, cf. lib).
   if (!guestId) return fail('error', 503);
+
+  // Plafond COURTOIS par APPAREIL (cookie), pas par IP : ne cape jamais la salle
+  // (wifi partagé = IP partagée), seulement l'appareil qui s'emballe. Un cookie
+  // fraîchement émis a n=1 → jamais throttlé au premier vote.
+  if (throttled(guestHits, guestId, GUEST_MAX)) {
+    return withCookie(fail('error', 429), issued?.cookie, req);
+  }
+
+  // Backstop grossier par IP (très haut) : anti-inondation depuis une source
+  // unique, jamais atteint par une salle légitime.
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown';
+  if (throttled(ipHits, ip, IP_MAX)) {
+    return withCookie(fail('error', 429), issued?.cookie, req);
+  }
 
   const supabase = createClient(url, key);
 
