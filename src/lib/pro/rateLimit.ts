@@ -72,3 +72,20 @@ export async function rateLimit(key: string, max: number, windowMs: number): Pro
   }
   return { ok: true, retryAfter: 0 };
 }
+
+/**
+ * Heartbeat : une écriture minimale pour garder la base Upstash ACTIVE. Le plan
+ * gratuit supprime une base sans aucune commande depuis ~14 jours. Or Redis
+ * n'est sollicité que par les formulaires auth pro (login/inscription/reset/
+ * lien magique/claim) : avant l'ouverture publique, la base ne reçoit rien et
+ * se fait supprimer. Le cron hebdo appelle ceci → une commande/semaine, bien en
+ * deçà de la fenêtre. Clé à TTL 30 j (auto-nettoyée si le cron s'arrête).
+ *
+ * Réutilise le MÊME transport REST + fail-open que rateLimit : renvoie false si
+ * Upstash n'est pas configuré ou injoignable, sans jamais throw (ne doit pas
+ * faire échouer le job cron qui l'héberge).
+ */
+export async function redisHeartbeat(): Promise<boolean> {
+  const res = await upstash([['SET', 'ops:heartbeat', String(Date.now()), 'EX', 2_592_000]]);
+  return res !== null;
+}

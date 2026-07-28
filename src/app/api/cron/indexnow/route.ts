@@ -22,6 +22,7 @@
 
 import { NextResponse } from 'next/server';
 import { submitToIndexNow } from '@/lib/indexnow';
+import { redisHeartbeat } from '@/lib/pro/rateLimit';
 
 const SITEMAP_URL = 'https://dishrank.fr/sitemap.xml';
 
@@ -61,6 +62,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
 
+  // Garde la base Upstash active (elle n'est sinon sollicitée que par les
+  // formulaires auth pro, absents avant l'ouverture publique → suppression pour
+  // inactivité). Non bloquant : n'affecte jamais le job IndexNow, et ne throw
+  // pas si Redis est down/non configuré. Cf. lib/pro/rateLimit.ts.
+  const heartbeat = await redisHeartbeat();
+  console.log(`[cron/indexnow] upstash heartbeat=${heartbeat}`);
+
   let urls: string[];
   try {
     urls = await fetchSitemapUrls();
@@ -89,6 +97,7 @@ export async function GET(request: Request) {
       status: result.status,
       submitted: result.submittedCount,
       skipped: result.skippedUrls.length,
+      heartbeat,
       ...(result.body ? { error: result.body.slice(0, 500) } : {}),
     });
   } catch (e) {
