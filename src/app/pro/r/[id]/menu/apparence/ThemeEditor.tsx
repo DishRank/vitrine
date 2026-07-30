@@ -44,11 +44,15 @@ const PREVIEW_FONT_VARS = {
   '--font-poppins': '"Poppins"',
 } as CSSProperties;
 
+/** Apparence enregistrée dans la bibliothèque (mig.159). */
+export type SavedTheme = { id: string; name: string; config: MenuThemeConfig; updated_at: string };
+
 export default function ThemeEditor({
   restaurantId,
   initial,
   premium,
   logoUrl,
+  initialLibrary,
 }: {
   restaurantId: string;
   initial: MenuThemeConfig;
@@ -56,12 +60,66 @@ export default function ThemeEditor({
   /** Logo de l'établissement (`restaurants.logo_url`, mig.124). Il n'appartient
    *  pas au thème : ici on ne pilote que `show_logo`. */
   logoUrl: string | null;
+  /** Bibliothèque chargée côté serveur (page.tsx / MenuEditor) — l'éditeur
+   *  s'ouvre déjà peuplé, sans aller-retour ni effet au montage. */
+  initialLibrary: SavedTheme[];
 }) {
   const [theme, setTheme] = useState<MenuThemeConfig>(initial);
   const [logo, setLogo] = useState(logoUrl);
   const [uploadError, setUploadError] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // ── Bibliothèque d'apparences (mig.159) ───────────────────────────────────
+  // Ranger un brouillon est ouvert à TOUS, gratuit compris : c'est ce qui évite
+  // de perdre son travail quand l'abonnement tombe. Seule l'ACTIVATION (l'auto-
+  // save sur restaurants.menu_theme, plus bas) reste gatée par le premium.
+  // Le quota affiché est indicatif : la limite qui fait foi est le trigger en
+  // base, dont on relaie le message tel quel.
+  const [library, setLibrary] = useState<SavedTheme[]>(initialLibrary);
+  const [libName, setLibName] = useState('');
+  const [libError, setLibError] = useState('');
+  const [libBusy, setLibBusy] = useState(false);
+  const libMax = premium ? 5 : 1;
+
+  const reloadLibrary = useCallback(async () => {
+    const res = await fetch(`/api/pro/theme/library?id=${encodeURIComponent(restaurantId)}`);
+    const json = (await res.json().catch(() => ({}))) as { themes?: SavedTheme[] };
+    setLibrary(json.themes ?? []);
+  }, [restaurantId]);
+
+  const saveCurrentToLibrary = async () => {
+    const name = libName.trim();
+    if (!name || libBusy) return;
+    setLibBusy(true);
+    setLibError('');
+    const res = await fetch('/api/pro/theme/library', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: restaurantId, name, config: theme }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (json.ok) {
+      setLibName('');
+      await reloadLibrary();
+    } else setLibError(json.error ?? "Échec de l'enregistrement.");
+    setLibBusy(false);
+  };
+
+  const removeSaved = async (themeId: string) => {
+    if (libBusy) return;
+    setLibBusy(true);
+    setLibError('');
+    const res = await fetch('/api/pro/theme/library', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: restaurantId, themeId }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (json.ok) await reloadLibrary();
+    else setLibError(json.error ?? 'Échec de la suppression.');
+    setLibBusy(false);
+  };
 
   const set = <K extends keyof MenuThemeConfig>(k: K, v: MenuThemeConfig[K]) =>
     setTheme((t) => ({ ...t, [k]: v }));
@@ -297,6 +355,65 @@ export default function ThemeEditor({
           <p className="mt-1 text-xs text-[var(--text3)]">
             Affichées par défaut. À vous de décider de les montrer ou non sur votre menu — c&apos;est gratuit.
           </p>
+        </section>
+
+        {/* ── Mes apparences (mig.159) ──────────────────────────────────
+            Volontairement HORS du bloc premium : ranger un brouillon est ouvert
+            à tous. C'est ce qui permet à un établissement qui sort du premium de
+            conserver son travail — seule l'ACTIVATION reste gatée. */}
+        <section className="pt-2">
+          <h3 className="text-sm font-bold text-[var(--text)]">Mes apparences</h3>
+          <p className="mt-1 text-xs text-[var(--text3)]">
+            {libMax === 1
+              ? 'Une apparence enregistrable sur la formule gratuite, cinq en Premium.'
+              : 'Jusqu’à cinq apparences enregistrées.'}{' '}
+            Elles sont conservées même si votre Premium prend fin.
+          </p>
+
+          {library.length === 0 ? (
+            <p className="mt-2 text-xs text-[var(--text3)]">Aucune apparence enregistrée.</p>
+          ) : (
+            <ul className="mt-2 space-y-1">
+              {library.map((item) => (
+                <li key={item.id} className="flex items-center gap-3 rounded-lg border border-[var(--border2)] px-3 py-2">
+                  <span
+                    aria-hidden
+                    className="h-6 w-6 shrink-0 rounded-md border-2"
+                    style={{ background: item.config.bg || MENU_THEME_PRESETS[item.config.theme].bg, borderColor: item.config.accent }}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm text-[var(--text)]">{item.name}</span>
+                  <button type="button" onClick={() => setTheme(item.config)} className="text-sm font-semibold text-[var(--text2)] hover:text-[var(--text)]">
+                    Charger
+                  </button>
+                  <button type="button" onClick={() => removeSaved(item.id)} aria-label={`Supprimer ${item.name}`} className="text-sm text-[var(--text3)] hover:text-red-500">
+                    Supprimer
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {library.length < libMax ? (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                value={libName}
+                onChange={(e) => setLibName(e.target.value)}
+                maxLength={60}
+                placeholder="Nom de l’apparence"
+                className="min-w-0 flex-1 rounded-lg border border-[var(--border2)] bg-transparent px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text3)]"
+              />
+              <button
+                type="button"
+                onClick={saveCurrentToLibrary}
+                disabled={!libName.trim() || libBusy}
+                className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] hover:text-[var(--text)] disabled:opacity-40"
+              >
+                Enregistrer cette apparence
+              </button>
+            </div>
+          ) : null}
+
+          {libError ? <p className="mt-2 text-xs font-medium text-red-500">{libError}</p> : null}
         </section>
 
         <div className="flex items-center gap-3 pt-2 text-sm">

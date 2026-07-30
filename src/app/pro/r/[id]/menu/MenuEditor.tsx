@@ -12,6 +12,7 @@ import { collectFormulaSources } from './menuSources';
 import MenuBoard from './MenuBoard';
 import LanguagePanel from './LanguagePanel';
 import AppearanceButton from './apparence/AppearanceButton';
+import type { SavedTheme } from './apparence/ThemeEditor';
 import { inputCls, labelCls, FormError } from '../../../_components/fields';
 
 export default function MenuEditor({
@@ -22,6 +23,7 @@ export default function MenuEditor({
   logoUrl,
   menuLanguages,
   initialEditItemId,
+  initialThemeLibrary,
 }: {
   restaurantId: string;
   menu: EditorMenu | null;
@@ -31,6 +33,8 @@ export default function MenuEditor({
    *  de l'afficher ou non en tête du menu. */
   logoUrl: string | null;
   menuLanguages: string[];
+  /** Apparences enregistrées (bibliothèque, mig.159), chargées côté serveur. */
+  initialThemeLibrary: SavedTheme[];
   /** Plat à éditer d'emblée (deep-link `?edit=<id>` — ex. « Créer ce plat » depuis un avis). */
   initialEditItemId?: string;
 }) {
@@ -81,7 +85,7 @@ export default function MenuEditor({
           >
             Voir le menu public ↗
           </a>
-          <AppearanceButton restaurantId={restaurantId} initialTheme={initialTheme} premium={premium} logoUrl={logoUrl} />
+          <AppearanceButton restaurantId={restaurantId} initialTheme={initialTheme} premium={premium} logoUrl={logoUrl} initialLibrary={initialThemeLibrary} />
           <a
             href={`/pro/r/${restaurantId}/partage`}
             className="rounded-lg border border-[var(--border2)] px-3 py-2 text-sm font-semibold text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)]"

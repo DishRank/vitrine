@@ -91,6 +91,20 @@ export async function assertOwner(restaurantId: string) {
   return (data as { owner_id: string | null } | null)?.owner_id === user.id ? { supabase, user } : null;
 }
 
+/** Apparences enregistrées d'un établissement (bibliothèque, mig.159). Chargée
+ *  côté serveur pour que l'éditeur s'ouvre déjà peuplé — même patron que
+ *  `initial` pour l'apparence active. La RLS borne déjà au propriétaire. */
+export async function getMenuThemeLibrary(restaurantId: string) {
+  const { supabase, user } = await getAuthContext();
+  if (!user) return [];
+  const { data } = await supabase
+    .from('restaurant_menu_themes')
+    .select('id, name, config, updated_at')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+  return (data ?? []) as { id: string; name: string; config: unknown; updated_at: string }[];
+}
+
 /** Premium actif ? (miroir de `has_active_premium` — expires NULL = à vie). */
 export function isPremium(r: Pick<OwnedRestaurant, 'subscription_tier' | 'subscription_expires_at'>): boolean {
   return (

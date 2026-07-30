@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { requireOwnedRestaurant, isPremium } from '@/lib/pro/data';
+import { requireOwnedRestaurant, isPremium, getMenuThemeLibrary } from '@/lib/pro/data';
 import { normalizeMenuTheme } from '../themeConstants';
 import { MENU_FONT_VARS } from '../menuFonts';
 import ThemeEditor from './ThemeEditor';
@@ -13,6 +13,9 @@ export default async function AppearancePage({ params }: { params: Promise<{ id:
   // `requireOwnedRestaurant` ramène déjà menu_theme + logo_url (LISTING_COLS,
   // et c'est un React.cache) → inutile de refaire une requête ici.
   const theme = normalizeMenuTheme(resto.menu_theme);
+  const library = (await getMenuThemeLibrary(id)).map((row) => ({
+    id: row.id, name: row.name, config: normalizeMenuTheme(row.config), updated_at: row.updated_at,
+  }));
 
   return (
     <div className={MENU_FONT_VARS}>
@@ -24,7 +27,7 @@ export default async function AppearancePage({ params }: { params: Promise<{ id:
         Personnalisez l&apos;ambiance de votre menu numérique. Le logo et les photos de plats sont
         inclus gratuitement ; l&apos;ambiance, la couleur et la police sont réservés au Premium.
       </p>
-      <ThemeEditor restaurantId={id} initial={theme} premium={premium} logoUrl={resto.logo_url} />
+      <ThemeEditor restaurantId={id} initial={theme} premium={premium} logoUrl={resto.logo_url} initialLibrary={library} />
     </div>
   );
 }

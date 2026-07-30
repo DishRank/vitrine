@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Modal from '@/app/pro/_components/Modal';
 import ThemeEditor from './ThemeEditor';
 import type { MenuThemeConfig } from '../themeConstants';
+import type { SavedTheme } from './ThemeEditor';
 
 /**
  * Ouvre l'éditeur d'apparence en modale (ouverture instantanée, aucune
@@ -16,11 +17,13 @@ export default function AppearanceButton({
   initialTheme,
   premium,
   logoUrl,
+  initialLibrary,
 }: {
   restaurantId: string;
   initialTheme: MenuThemeConfig;
   premium: boolean;
   logoUrl: string | null;
+  initialLibrary: SavedTheme[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -39,7 +42,7 @@ export default function AppearanceButton({
         subtitle="Ambiance, couleur, police et logo. Les changements sont enregistrés automatiquement."
         maxWidth="max-w-4xl"
       >
-        <ThemeEditor restaurantId={restaurantId} initial={initialTheme} premium={premium} logoUrl={logoUrl} />
+        <ThemeEditor restaurantId={restaurantId} initial={initialTheme} premium={premium} logoUrl={logoUrl} initialLibrary={initialLibrary} />
       </Modal>
     </>
   );

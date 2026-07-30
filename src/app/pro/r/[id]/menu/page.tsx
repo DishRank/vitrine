@@ -1,4 +1,4 @@
-import { requireOwnedRestaurant, isPremium } from '@/lib/pro/data';
+import { requireOwnedRestaurant, isPremium, getMenuThemeLibrary } from '@/lib/pro/data';
 import { getEditorMenus } from './menuData';
 import { normalizeMenuTheme } from './themeConstants';
 import MenuEditor from './MenuEditor';
@@ -19,6 +19,9 @@ export default async function MenuPage({
   const menus = await getEditorMenus(id);
   const menu = menus[0] ?? null;
   const initialTheme = normalizeMenuTheme(resto.menu_theme);
+  const initialThemeLibrary = (await getMenuThemeLibrary(id)).map((row) => ({
+    id: row.id, name: row.name, config: normalizeMenuTheme(row.config), updated_at: row.updated_at,
+  }));
 
   return (
     <MenuEditor
@@ -28,6 +31,7 @@ export default async function MenuPage({
       initialTheme={initialTheme}
       logoUrl={resto.logo_url}
       menuLanguages={resto.menu_languages ?? []}
+      initialThemeLibrary={initialThemeLibrary}
       initialEditItemId={typeof edit === 'string' ? edit : undefined}
     />
   );
