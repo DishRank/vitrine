@@ -171,6 +171,10 @@ export async function POST(req: NextRequest) {
     rating_presentation: stars,
     rating_value: stars,
     rating_quantity: stars,
+    // Note rapide assumée (mig.161) : la note du plat reste juste, mais cette
+    // ligne doit rester HORS de la ventilation par critere de la fiche plat —
+    // ses quatre valeurs sont identiques par construction.
+    rating_detailed: false,
     comment: comment || null,
     source: 'in_venue_scan',
   });
