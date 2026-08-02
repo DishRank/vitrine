@@ -42,7 +42,10 @@ function isRealPlaceId(id: unknown): id is string {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Âge à partir duquel on redemande la note à Google.
+ * Âge à partir duquel on redemande la note à Google. 25 jours ≈ 1,2
+ * rafraîchissement par fiche et par mois, soit environ 70 appels mensuels
+ * pour les 58 fiches notées — 7 % du plafond serveur de 950, et de quoi
+ * tenir jusqu'à ~790 fiches notées avant de le toucher.
  *
  * Doit rester STRICTEMENT sous les 28 jours de la purge
  * (`cleanup_old_data()`, migration 160), elle-même sous les 30 jours
@@ -55,7 +58,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * ne casse rien — au pire le client redemande une note que la route juge
  * encore fraîche, et la route répond depuis la base sans appeler Google.
  */
-const REFRESH_AFTER_MS = 21 * 24 * 60 * 60 * 1000;
+const REFRESH_AFTER_MS = 25 * 24 * 60 * 60 * 1000;
 
 /**
  * Mémoire vive, en amont du cache base. Elle absorbe les rafales : dix
