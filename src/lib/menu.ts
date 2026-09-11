@@ -97,6 +97,11 @@ export interface MenuTree {
   i18n: MenuI18n;
   display_order: number;
   version: number;
+  /** Qui a produit cette carte (mig. 189). 'scraped' = relevée sur le site du
+   *  restaurant, partielle, non fournie par lui — la page DOIT le dire.
+   *  `?? 'owner'` au map : les entrées de cache antérieures à ce champ n'en
+   *  ont pas, et une carte sans marque est une carte saisie. */
+  source: 'owner' | 'scraped';
   sections: MenuSection[];
 }
 
@@ -113,7 +118,7 @@ async function fetchMenuTreeRaw(restaurantId: string): Promise<MenuTree[]> {
   const { data, error } = await supabase
     .from('restaurant_menus')
     .select(
-      `id, slug, name, i18n, display_order, is_active, status, version,
+      `id, slug, name, i18n, display_order, is_active, status, source, version,
        menu_sections(id, parent_section_id, name, description, i18n, display_order, is_visible, created_at,
          menu_items(id, section_id, kind, name, description, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, variants, options, availability, formula_config, i18n, created_at))`
     )
@@ -159,6 +164,7 @@ async function fetchMenuTreeRaw(restaurantId: string): Promise<MenuTree[]> {
         i18n: m.i18n ?? {},
         display_order: m.display_order,
         version: m.version,
+        source: ((m as { source?: string }).source === 'scraped' ? 'scraped' : 'owner') as MenuTree['source'],
         sections: roots,
       };
     })
@@ -526,6 +532,10 @@ export const MENU_UI: Record<
   MenuLocale,
   {
     menuTitle: string;
+    /** Provenance d'une carte relevee et non fournie (mig. 186/189). */
+    sourceBanner: string;
+    sourceBannerHint: string;
+    rateSourceHint: string;
     from: string;
     soldOut: string;
     signature: string;
@@ -576,6 +586,9 @@ export const MENU_UI: Record<
 > = {
   fr: {
     menuTitle: 'Menu',
+    sourceBanner: 'Carte relevée sur le site du restaurant. Elle est partielle et n’a pas été fournie par l’établissement.',
+    sourceBannerHint: 'Elle peut être incomplète ou ne plus être à jour.',
+    rateSourceHint: 'Plat issu d’une carte relevée sur le site du restaurant.',
     from: 'dès',
     soldOut: 'Épuisé',
     signature: 'Choix du chef', rateAction: 'Noter', ratePublish: 'Publier', rateCommentPh: 'Un mot sur ce plat ? (optionnel)', rateThanks: 'Merci pour votre note !', rateAnonHint: 'Sans compte — votre note est anonyme.', rateAlready: 'Vous avez déjà noté ce plat ce mois-ci.', rateError: 'Impossible d’envoyer la note — réessayez.',
@@ -626,6 +639,9 @@ export const MENU_UI: Record<
   },
   en: {
     menuTitle: 'Menu',
+    sourceBanner: 'Menu collected from the restaurant’s website. It is partial and was not provided by the venue.',
+    sourceBannerHint: 'It may be incomplete or out of date.',
+    rateSourceHint: 'Dish taken from a menu collected from the restaurant’s website.',
     from: 'from',
     soldOut: 'Sold out',
     signature: "Chef's choice", rateAction: 'Rate', ratePublish: 'Publish', rateCommentPh: 'A word about this dish? (optional)', rateThanks: 'Thanks for rating!', rateAnonHint: 'No account needed — your rating is anonymous.', rateAlready: 'You already rated this dish this month.', rateError: 'Could not send your rating — try again.',
@@ -676,6 +692,9 @@ export const MENU_UI: Record<
   },
   es: {
     menuTitle: 'Carta',
+    sourceBanner: 'Carta recogida en la web del restaurante. Es parcial y no la ha facilitado el establecimiento.',
+    sourceBannerHint: 'Puede estar incompleta o desactualizada.',
+    rateSourceHint: 'Plato tomado de una carta recogida en la web del restaurante.',
     from: 'desde',
     soldOut: 'Agotado',
     signature: 'Elección del chef', rateAction: 'Valorar', ratePublish: 'Publicar', rateCommentPh: '¿Unas palabras sobre el plato? (opcional)', rateThanks: '¡Gracias por tu valoración!', rateAnonHint: 'Sin cuenta — tu valoración es anónima.', rateAlready: 'Ya valoraste este plato este mes.', rateError: 'No se pudo enviar la valoración — inténtalo de nuevo.',
@@ -726,6 +745,9 @@ export const MENU_UI: Record<
   },
   de: {
     menuTitle: 'Speisekarte',
+    sourceBanner: 'Karte von der Website des Restaurants übernommen. Sie ist unvollständig und stammt nicht vom Lokal selbst.',
+    sourceBannerHint: 'Sie kann unvollständig oder veraltet sein.',
+    rateSourceHint: 'Gericht aus einer von der Website übernommenen Karte.',
     from: 'ab',
     soldOut: 'Ausverkauft',
     signature: 'Empfehlung des Chefs', rateAction: 'Bewerten', ratePublish: 'Senden', rateCommentPh: 'Ein Wort zum Gericht? (optional)', rateThanks: 'Danke für deine Bewertung!', rateAnonHint: 'Ohne Konto — deine Bewertung ist anonym.', rateAlready: 'Du hast dieses Gericht diesen Monat schon bewertet.', rateError: 'Bewertung konnte nicht gesendet werden — bitte erneut versuchen.',
@@ -776,6 +798,9 @@ export const MENU_UI: Record<
   },
   it: {
     menuTitle: 'Menu',
+    sourceBanner: 'Menù raccolto dal sito del ristorante. È parziale e non è stato fornito dal locale.',
+    sourceBannerHint: 'Può essere incompleto o non aggiornato.',
+    rateSourceHint: 'Piatto tratto da un menù raccolto dal sito del ristorante.',
     from: 'da',
     soldOut: 'Esaurito',
     signature: 'Scelta dello chef', rateAction: 'Valuta', ratePublish: 'Pubblica', rateCommentPh: 'Due parole sul piatto? (facoltativo)', rateThanks: 'Grazie per la valutazione!', rateAnonHint: 'Senza account — la tua valutazione è anonima.', rateAlready: 'Hai già valutato questo piatto questo mese.', rateError: 'Invio non riuscito — riprova.',
