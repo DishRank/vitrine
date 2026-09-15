@@ -352,7 +352,7 @@ function ItemRow({
   rating,
   theme,
   restaurantId,
-  scrapedMenu,
+  menuSource,
 }: {
   item: MenuItem;
   locale: MenuLocale;
@@ -363,7 +363,7 @@ function ItemRow({
   /** Le plat vient d'une carte relevée sur le site du restaurant (mig. 189).
    *  On le redit dans la feuille de notation : on peut noter sans jamais avoir
    *  lu la bande en tête de carte, et c'est là qu'on s'engage. */
-  scrapedMenu?: boolean;
+  menuSource?: MenuTree['source'];
 }) {
   const ui = MENU_UI[locale];
   // « Noter ce plat » → deep-link app avec resto + plat pré-remplis. NOM
@@ -477,7 +477,10 @@ function ItemRow({
             publish: ui.ratePublish,
             commentPh: ui.rateCommentPh,
             thanks: ui.rateThanks,
-            anonHint: scrapedMenu ? `${ui.rateAnonHint} ${ui.rateSourceHint}` : ui.rateAnonHint,
+            anonHint:
+              menuSource === 'scraped' || menuSource === 'photo'
+                ? `${ui.rateAnonHint} ${menuSource === 'photo' ? ui.ratePhotoHint : ui.rateSourceHint}`
+                : ui.rateAnonHint,
             already: ui.rateAlready,
             error: ui.rateError,
             openApp: ui.openApp,
@@ -616,14 +619,14 @@ function SectionBlock({
   ratings,
   theme,
   restaurantId,
-  scrapedMenu,
+  menuSource,
   depth = 0,
 }: {
   section: MenuSection;
   locale: MenuLocale;
   itemById: Map<string, MenuItem>;
   restaurantId: string;
-  scrapedMenu?: boolean;
+  menuSource?: MenuTree['source'];
   ratings: Record<string, DishRating>;
   theme: ResolvedMenuTheme;
   depth?: number;
@@ -693,7 +696,7 @@ function SectionBlock({
             rating={ratings[ratingKey(item.name)] ?? null}
             theme={theme}
             restaurantId={restaurantId}
-            scrapedMenu={scrapedMenu}
+            menuSource={menuSource}
           />
         ))}
       </div>
@@ -706,7 +709,7 @@ function SectionBlock({
           ratings={ratings}
           theme={theme}
           restaurantId={restaurantId}
-          scrapedMenu={scrapedMenu}
+          menuSource={menuSource}
           depth={1}
         />
       ))}
@@ -724,7 +727,7 @@ function FormulasBlock({
   ratings,
   theme,
   restaurantId,
-  scrapedMenu,
+  menuSource,
 }: {
   formulas: MenuItem[];
   title: string;
@@ -733,7 +736,7 @@ function FormulasBlock({
   ratings: Record<string, DishRating>;
   theme: ResolvedMenuTheme;
   restaurantId: string;
-  scrapedMenu?: boolean;
+  menuSource?: MenuTree['source'];
 }) {
   if (formulas.length === 0) return null;
   return (
@@ -771,7 +774,7 @@ function FormulasBlock({
             rating={ratings[ratingKey(item.name)] ?? null}
             theme={theme}
             restaurantId={restaurantId}
-            scrapedMenu={scrapedMenu}
+            menuSource={menuSource}
           />
         ))}
       </div>
@@ -1216,7 +1219,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                       masque ces attributs, la bande ne doit pas en faire partie.
                       Couleurs prises au thème du restaurateur, dont la palette
                       garantit le contraste sur un fond libre. */}
-                  {menu.source === 'scraped' ? (
+                  {menu.source !== 'owner' ? (
                     <div
                       style={{
                         margin: '0 0 18px',
@@ -1227,10 +1230,22 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                       }}
                     >
                       <div style={{ fontSize: 12.5, lineHeight: 1.45, color: theme.text }}>
-                        {ui.sourceBanner}
+                        {menu.source === 'photo'
+                          ? menu.captured_at
+                            ? ui.sourceBannerPhoto.replace(
+                                '{{date}}',
+                                new Date(menu.captured_at).toLocaleDateString(locale, {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                  timeZone: 'Europe/Paris',
+                                })
+                              )
+                            : ui.sourceBannerPhotoNoDate
+                          : ui.sourceBanner}
                       </div>
                       <div style={{ fontSize: 11.5, lineHeight: 1.45, color: theme.sub }}>
-                        {ui.sourceBannerHint}
+                        {menu.source === 'photo' ? ui.sourceBannerPhotoHint : ui.sourceBannerHint}
                       </div>
                     </div>
                   ) : null}
@@ -1242,7 +1257,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                     ratings={ratings}
                     theme={theme}
                     restaurantId={id}
-                    scrapedMenu={menu.source === 'scraped'}
+                    menuSource={menu.source}
                   />
                   {menu.sections.map((section) => (
                     <SectionBlock
@@ -1253,7 +1268,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                       ratings={ratings}
                       theme={theme}
                       restaurantId={id}
-                      scrapedMenu={menu.source === 'scraped'}
+                      menuSource={menu.source}
                     />
                   ))}
                 </div>

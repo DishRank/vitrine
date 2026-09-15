@@ -101,7 +101,9 @@ export interface MenuTree {
    *  restaurant, partielle, non fournie par lui — la page DOIT le dire.
    *  `?? 'owner'` au map : les entrées de cache antérieures à ce champ n'en
    *  ont pas, et une carte sans marque est une carte saisie. */
-  source: 'owner' | 'scraped';
+  source: 'owner' | 'scraped' | 'photo';
+  /** Carte 'photo' (mig. 191) : date de la photo validée, affichée dans la bande. */
+  captured_at: string | null;
   sections: MenuSection[];
 }
 
@@ -118,7 +120,7 @@ async function fetchMenuTreeRaw(restaurantId: string): Promise<MenuTree[]> {
   const { data, error } = await supabase
     .from('restaurant_menus')
     .select(
-      `id, slug, name, i18n, display_order, is_active, status, source, version,
+      `id, slug, name, i18n, display_order, is_active, status, source, captured_at, version,
        menu_sections(id, parent_section_id, name, description, i18n, display_order, is_visible, created_at,
          menu_items(id, section_id, kind, name, description, price, currency, photo_url, display_order, is_visible, is_available, is_signature, allergens, diet_tags, variants, options, availability, formula_config, i18n, created_at))`
     )
@@ -164,7 +166,10 @@ async function fetchMenuTreeRaw(restaurantId: string): Promise<MenuTree[]> {
         i18n: m.i18n ?? {},
         display_order: m.display_order,
         version: m.version,
-        source: ((m as { source?: string }).source === 'scraped' ? 'scraped' : 'owner') as MenuTree['source'],
+        source: (['scraped', 'photo'].includes((m as { source?: string }).source ?? '')
+          ? (m as { source?: string }).source
+          : 'owner') as MenuTree['source'],
+        captured_at: (m as { captured_at?: string | null }).captured_at ?? null,
         sections: roots,
       };
     })
@@ -536,6 +541,11 @@ export const MENU_UI: Record<
     sourceBanner: string;
     sourceBannerHint: string;
     rateSourceHint: string;
+    /** Carte photographiée par un membre (mig. 191) — {{date}} remplacé au rendu. */
+    sourceBannerPhoto: string;
+    sourceBannerPhotoNoDate: string;
+    sourceBannerPhotoHint: string;
+    ratePhotoHint: string;
     from: string;
     soldOut: string;
     signature: string;
@@ -589,6 +599,10 @@ export const MENU_UI: Record<
     sourceBanner: 'Carte relevée sur le site du restaurant. Elle est partielle et n’a pas été fournie par l’établissement.',
     sourceBannerHint: 'Elle peut être incomplète ou ne plus être à jour.',
     rateSourceHint: 'Plat issu d’une carte relevée sur le site du restaurant.',
+    sourceBannerPhoto: 'Carte photographiée au restaurant par un membre DishRank le {{date}}. Elle n’a pas été fournie par l’établissement.',
+    sourceBannerPhotoNoDate: 'Carte photographiée au restaurant par un membre DishRank. Elle n’a pas été fournie par l’établissement.',
+    sourceBannerPhotoHint: 'Relue par notre équipe, elle peut être incomplète ou ne plus être à jour.',
+    ratePhotoHint: 'Plat issu d’une carte photographiée par un membre.',
     from: 'dès',
     soldOut: 'Épuisé',
     signature: 'Choix du chef', rateAction: 'Noter', ratePublish: 'Publier', rateCommentPh: 'Un mot sur ce plat ? (optionnel)', rateThanks: 'Merci pour votre note !', rateAnonHint: 'Sans compte — votre note est anonyme.', rateAlready: 'Vous avez déjà noté ce plat ce mois-ci.', rateError: 'Impossible d’envoyer la note — réessayez.',
@@ -642,6 +656,10 @@ export const MENU_UI: Record<
     sourceBanner: 'Menu collected from the restaurant’s website. It is partial and was not provided by the venue.',
     sourceBannerHint: 'It may be incomplete or out of date.',
     rateSourceHint: 'Dish taken from a menu collected from the restaurant’s website.',
+    sourceBannerPhoto: 'Menu photographed at the restaurant by a DishRank member on {{date}}. It was not provided by the venue.',
+    sourceBannerPhotoNoDate: 'Menu photographed at the restaurant by a DishRank member. It was not provided by the venue.',
+    sourceBannerPhotoHint: 'Checked by our team, it may still be incomplete or out of date.',
+    ratePhotoHint: 'Dish taken from a menu photographed by a member.',
     from: 'from',
     soldOut: 'Sold out',
     signature: "Chef's choice", rateAction: 'Rate', ratePublish: 'Publish', rateCommentPh: 'A word about this dish? (optional)', rateThanks: 'Thanks for rating!', rateAnonHint: 'No account needed — your rating is anonymous.', rateAlready: 'You already rated this dish this month.', rateError: 'Could not send your rating — try again.',
@@ -695,6 +713,10 @@ export const MENU_UI: Record<
     sourceBanner: 'Carta recogida en la web del restaurante. Es parcial y no la ha facilitado el establecimiento.',
     sourceBannerHint: 'Puede estar incompleta o desactualizada.',
     rateSourceHint: 'Plato tomado de una carta recogida en la web del restaurante.',
+    sourceBannerPhoto: 'Carta fotografiada en el restaurante por un miembro de DishRank el {{date}}. No la ha facilitado el establecimiento.',
+    sourceBannerPhotoNoDate: 'Carta fotografiada en el restaurante por un miembro de DishRank. No la ha facilitado el establecimiento.',
+    sourceBannerPhotoHint: 'Revisada por nuestro equipo, puede estar incompleta o desactualizada.',
+    ratePhotoHint: 'Plato tomado de una carta fotografiada por un miembro.',
     from: 'desde',
     soldOut: 'Agotado',
     signature: 'Elección del chef', rateAction: 'Valorar', ratePublish: 'Publicar', rateCommentPh: '¿Unas palabras sobre el plato? (opcional)', rateThanks: '¡Gracias por tu valoración!', rateAnonHint: 'Sin cuenta — tu valoración es anónima.', rateAlready: 'Ya valoraste este plato este mes.', rateError: 'No se pudo enviar la valoración — inténtalo de nuevo.',
@@ -748,6 +770,10 @@ export const MENU_UI: Record<
     sourceBanner: 'Karte von der Website des Restaurants übernommen. Sie ist unvollständig und stammt nicht vom Lokal selbst.',
     sourceBannerHint: 'Sie kann unvollständig oder veraltet sein.',
     rateSourceHint: 'Gericht aus einer von der Website übernommenen Karte.',
+    sourceBannerPhoto: 'Karte am {{date}} von einem DishRank-Mitglied im Restaurant fotografiert. Sie stammt nicht vom Lokal selbst.',
+    sourceBannerPhotoNoDate: 'Karte von einem DishRank-Mitglied im Restaurant fotografiert. Sie stammt nicht vom Lokal selbst.',
+    sourceBannerPhotoHint: 'Von unserem Team geprüft, kann sie dennoch unvollständig oder veraltet sein.',
+    ratePhotoHint: 'Gericht aus einer von einem Mitglied fotografierten Karte.',
     from: 'ab',
     soldOut: 'Ausverkauft',
     signature: 'Empfehlung des Chefs', rateAction: 'Bewerten', ratePublish: 'Senden', rateCommentPh: 'Ein Wort zum Gericht? (optional)', rateThanks: 'Danke für deine Bewertung!', rateAnonHint: 'Ohne Konto — deine Bewertung ist anonym.', rateAlready: 'Du hast dieses Gericht diesen Monat schon bewertet.', rateError: 'Bewertung konnte nicht gesendet werden — bitte erneut versuchen.',
@@ -801,6 +827,10 @@ export const MENU_UI: Record<
     sourceBanner: 'Menù raccolto dal sito del ristorante. È parziale e non è stato fornito dal locale.',
     sourceBannerHint: 'Può essere incompleto o non aggiornato.',
     rateSourceHint: 'Piatto tratto da un menù raccolto dal sito del ristorante.',
+    sourceBannerPhoto: 'Menù fotografato al ristorante da un membro DishRank il {{date}}. Non è stato fornito dal locale.',
+    sourceBannerPhotoNoDate: 'Menù fotografato al ristorante da un membro DishRank. Non è stato fornito dal locale.',
+    sourceBannerPhotoHint: 'Verificato dal nostro team, può comunque essere incompleto o non aggiornato.',
+    ratePhotoHint: 'Piatto tratto da un menù fotografato da un membro.',
     from: 'da',
     soldOut: 'Esaurito',
     signature: 'Scelta dello chef', rateAction: 'Valuta', ratePublish: 'Pubblica', rateCommentPh: 'Due parole sul piatto? (facoltativo)', rateThanks: 'Grazie per la valutazione!', rateAnonHint: 'Senza account — la tua valutazione è anonima.', rateAlready: 'Hai già valutato questo piatto questo mese.', rateError: 'Invio non riuscito — riprova.',
