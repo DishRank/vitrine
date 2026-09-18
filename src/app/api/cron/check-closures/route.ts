@@ -151,8 +151,12 @@ async function resolveSiret(resto: Resto): Promise<Verdict | null> {
         (got.length >= 4 && wanted.includes(got));
       if (!nameOk) continue;
 
-      const lat = e.latitude != null ? parseFloat(e.latitude) : null;
-      const lng = e.longitude != null ? parseFloat(e.longitude) : null;
+      // « [NON-DIFFUSIBLE] » : parseFloat → NaN, et NaN > 200 est faux — la distance
+      // passait alors TOUJOURS. Une coordonnée illisible compte comme absente.
+      const latN = e.latitude != null ? parseFloat(e.latitude) : NaN;
+      const lngN = e.longitude != null ? parseFloat(e.longitude) : NaN;
+      const lat = Number.isFinite(latN) ? latN : null;
+      const lng = Number.isFinite(lngN) ? lngN : null;
       if (resto.latitude != null && resto.longitude != null && lat != null && lng != null) {
         if (distM(resto.latitude, resto.longitude, lat, lng) > SAME_PLACE_M) continue;
       } else if (got !== wanted) {
@@ -171,6 +175,33 @@ async function resolveSiret(resto: Resto): Promise<Verdict | null> {
     matches.find((m) => m.etat === 'A') ??
     matches.sort((a, b) => String(b.fermeture ?? '').localeCompare(String(a.fermeture ?? '')))[0]
   );
+}
+
+/**
+ * Un restaurant ACTIF au registre à moins de 30 m : le local tourne, peut-être sous une
+ * autre société ou une autre enseigne (repreneur, gérance). On ne ferme pas alors : la
+ * passe à blanc du 18/09 déclarait fermés des lieux dont le site affichait la carte
+ * de la semaine.
+ */
+async function activeNearby(resto: Resto): Promise<boolean> {
+  if (resto.latitude == null || resto.longitude == null) return false;
+  const url = `${SIRENE.replace('/search', '/near_point')}?${new URLSearchParams({
+    lat: String(resto.latitude),
+    long: String(resto.longitude),
+    radius: '0.03',
+    activite_principale: FOOD_NAF,
+    per_page: '10',
+  })}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return true; // dans le doute, on ne ferme pas
+    const data = (await res.json()) as { results?: Entreprise[] };
+    return (data.results ?? []).some((c) =>
+      (c.matching_etablissements ?? []).some((e) => e.etat_administratif === 'A')
+    );
+  } catch {
+    return true;
+  }
 }
 
 async function checkSiret(siret: string): Promise<Verdict | null> {
@@ -199,9 +230,8 @@ async function handle(request: Request) {
   const dry = url.searchParams.get('dry') === '1';
   const limit = Math.min(500, Math.max(1, Number(url.searchParams.get('limit')) || DEFAULT_LIMIT));
 
-  // On ne contrôle que les fiches réellement exposées — celles qui portent au
-  // moins un avis. Interroger le registre pour 4 500 lignes importées d'OSM
-  // que personne n'a jamais ouvertes serait du gaspillage.
+  // On ne contrôle que les fiches réellement exposées — avec au moins un avis ou
+  // une carte publiée (mig. 193), hors fermetures décidées à la main.
   const { data: rows, error } = await supabase.rpc('get_restaurants_to_check_closure', {
     p_recheck_days: RECHECK_DAYS,
     p_limit: limit,
@@ -241,6 +271,11 @@ async function handle(request: Request) {
         info = found;
         if (!dry) await supabase.from('restaurants').update({ siret: found.siret }).eq('id', r.id);
       }
+    }
+
+    if (info?.etat === 'F' && (await activeNearby(r))) {
+      journal.push(`a_verifier:${r.name}`);
+      info = null;
     }
 
     if (!info) {
