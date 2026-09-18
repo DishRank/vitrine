@@ -75,6 +75,7 @@ interface Etab {
   nom_commercial?: string | null;
   latitude?: string | null;
   longitude?: string | null;
+  libelle_commune?: string | null;
 }
 interface Entreprise {
   nom_complet?: string;
@@ -159,8 +160,9 @@ async function resolveSiret(resto: Resto): Promise<Verdict | null> {
       const lng = Number.isFinite(lngN) ? lngN : null;
       if (resto.latitude != null && resto.longitude != null && lat != null && lng != null) {
         if (distM(resto.latitude, resto.longitude, lat, lng) > SAME_PLACE_M) continue;
-      } else if (got !== wanted) {
-        // Sans coordonnées des deux côtés, on exige l'égalité stricte.
+      } else if (got !== wanted || norm(e.libelle_commune) !== norm(resto.city)) {
+        // Sans coordonnées, même nom ET même commune : une chaîne porte le même nom
+        // partout (« Léon de Bruxelles » à Lyon rapproché de Meyzieu, fermé, 18/09).
         continue;
       }
       matches.push({
