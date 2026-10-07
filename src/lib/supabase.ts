@@ -549,19 +549,11 @@ export function fetchRestaurantsWithMenu(minItems = 10): Promise<RestaurantSitem
 export function fetchRestaurantsWithDishes(): Promise<RestaurantSitemapRow[]> {
   return cached('restaurants:with-dishes', THIRTY_MIN, async () => {
     const supabase = getSupabase();
-    const [reviewsRes, restosRes] = await Promise.all([
-      supabase
-        .from('reviews')
-        .select('restaurant_id, dish_name')
-        .not('pending_moderation', 'is', true),
-      supabase
-        .from('restaurants')
-        .select('id, name, city')
-        .not('city', 'is', null)
-        .not('name', 'is', null),
-    ]);
+    const reviewsRes = await supabase
+      .from('reviews')
+      .select('restaurant_id, dish_name')
+      .not('pending_moderation', 'is', true);
     if (reviewsRes.error) throw reviewsRes.error;
-    if (restosRes.error) throw restosRes.error;
 
     // Compter les plats DISTINCTS par resto (un plat = même nom normalisé)
     const dishesByResto = new Map<string, Set<string>>();
@@ -576,20 +568,28 @@ export function fetchRestaurantsWithDishes(): Promise<RestaurantSitemapRow[]> {
       dishesByResto.set(rv.restaurant_id, set);
     }
 
+    // On charge les restaurants PAR ID depuis les avis, et non la table entière :
+    // PostgREST plafonne une réponse à 1 000 lignes et la table en compte plus de
+    // 7 000, donc l'ancien parcours perdait en silence les restos notés situés
+    // au-delà — invisibles dans le sitemap sans la moindre erreur.
+    const ids = [...dishesByResto.keys()];
+    if (ids.length === 0) return [];
     const result: RestaurantSitemapRow[] = [];
-    for (const r of (restosRes.data || []) as Array<{
-      id: string;
-      name: string;
-      city: string;
-    }>) {
-      const dishes = dishesByResto.get(r.id);
-      if (!dishes || dishes.size === 0) continue;
-      result.push({
-        id: r.id,
-        name: r.name,
-        city: r.city,
-        dish_count: dishes.size,
-      });
+    const LOT = 150;
+    for (let i = 0; i < ids.length; i += LOT) {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('id, name, city')
+        .in('id', ids.slice(i, i + LOT))
+        .is('closed_at', null)
+        .not('city', 'is', null)
+        .not('name', 'is', null);
+      if (error) throw error;
+      for (const r of (data || []) as Array<{ id: string; name: string; city: string }>) {
+        const dishes = dishesByResto.get(r.id);
+        if (!dishes || dishes.size === 0) continue;
+        result.push({ id: r.id, name: r.name, city: r.city, dish_count: dishes.size });
+      }
     }
     return result;
   });
