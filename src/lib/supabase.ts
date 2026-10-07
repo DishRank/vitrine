@@ -382,15 +382,42 @@ export function fetchRestaurantBySlug(
 ): Promise<RestaurantRow | null> {
   const cacheKey = `restaurant:${cityName.toLowerCase()}:${restoSlug}`;
   return cached(cacheKey, FIVE_MIN, async () => {
+    const supabase = getSupabase();
+
+    // Le slug n'existe pas en base : il se recalcule depuis le nom, donc on balaie la
+    // ville. PostgREST plafonne une réponse à 1 000 lignes — et Lyon en compte 4 219 :
+    // sans pagination, tout restaurant au-delà du millième était « introuvable », soit
+    // un 404 sur la majorité des fiches. On pagine sur deux colonnes (léger), puis on
+    // charge la ligne complète par id.
+    let id: string | null = null;
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('id, name')
+        .ilike('city', cityName)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const page = (data || []) as { id: string; name: string }[];
+      const hit = page.find((r) => restaurantSlug(r.name) === restoSlug);
+      if (hit) {
+        id = hit.id;
+        break;
+      }
+      if (page.length < PAGE) break;
+    }
+    if (!id) return null;
+
     // Colonnes confirmées sur `restaurants` (+ cuisines/phone/opening_intervals
     // pour enrichir le JSON-LD Restaurant — servesCuisine/telephone/horaires).
-    // L'adresse + lat/lng viennent de la RPC `get_feed_dishes` (dishes[0]).
-    const { data, error } = await getSupabase()
+    const { data: row, error: rowErr } = await supabase
       .from('restaurants')
       .select('id, name, city, address, latitude, longitude, cuisines, phone, opening_intervals')
-      .ilike('city', cityName);
-    if (error) throw error;
-    for (const r of (data || []) as {
+      .eq('id', id)
+      .maybeSingle();
+    if (rowErr) throw rowErr;
+    if (!row) return null;
+    const r = row as {
       id: string;
       name: string;
       city: string;
@@ -400,22 +427,18 @@ export function fetchRestaurantBySlug(
       cuisines: string[] | null;
       phone: string | null;
       opening_intervals: { d: number; s: number; e: number }[] | null;
-    }[]) {
-      if (restaurantSlug(r.name) === restoSlug) {
-        return {
-          id: r.id,
-          name: r.name,
-          city: r.city,
-          address: r.address ?? null,
-          lat: r.latitude ?? null,
-          lng: r.longitude ?? null,
-          cuisines: r.cuisines ?? null,
-          phone: r.phone ?? null,
-          opening_intervals: r.opening_intervals ?? null,
-        };
-      }
-    }
-    return null;
+    };
+    return {
+      id: r.id,
+      name: r.name,
+      city: r.city,
+      address: r.address ?? null,
+      lat: r.latitude ?? null,
+      lng: r.longitude ?? null,
+      cuisines: r.cuisines ?? null,
+      phone: r.phone ?? null,
+      opening_intervals: r.opening_intervals ?? null,
+    };
   });
 }
 
