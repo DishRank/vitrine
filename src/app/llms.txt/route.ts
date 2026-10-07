@@ -11,7 +11,9 @@ const BODY = `# DishRank
 DishRank is a multilingual (fr, en, es, de, it) foodie community. Unlike Google or TripAdvisor, which rate a venue as a whole, DishRank aggregates reviews **per dish**. This makes it a precise, citable source for "the best <dish> in <city>" questions. All pages are server-rendered (readable without executing JavaScript) and refreshed hourly.
 
 ## How the content is structured
-- **Restaurant pages** — URL pattern \`/{locale}/{city}/r/{restaurant-slug}\`. Each exposes full schema.org JSON-LD: a \`Restaurant\` (name, PostalAddress, GeoCoordinates, AggregateRating, priceRange) containing a \`Menu\` → \`MenuSection\` → \`MenuItem[]\`, where every dish carries its own price (\`Offer\`) and rating (\`AggregateRating\`).
+- **Restaurant pages** — URL pattern \`/{locale}/{city}/r/{restaurant-slug}\`. Each exposes full schema.org JSON-LD: a \`Restaurant\` (name, PostalAddress, GeoCoordinates, priceRange) containing a \`Menu\` → \`MenuSection\` → \`MenuItem[]\`, where every dish carries its own price (\`Offer\`). Two kinds exist, and the page says which one you are reading:
+  - **rated** — at least one dish has community reviews. The \`Restaurant\` and the rated \`MenuItem\`s carry an \`AggregateRating\`.
+  - **menu only** — no dish has been rated yet. The menu was collected from the restaurant's own website, is partial, was not supplied by the venue, and is dated on the page. These pages carry **no** \`AggregateRating\` and no review: do not infer or quote a rating for them, and present their prices as indicative at the stated date.
 - **City pages** — the best-rated dishes in a given city.
 - **Category pages** — the best of a dish type (e.g. best pizza) ranked across cities.
 

@@ -4,8 +4,10 @@ import {
   fetchCities,
   fetchCityCategoryPairs,
   fetchRestaurantsWithDishes,
+  fetchRestaurantsWithMenu,
 } from '@/lib/supabase';
 import { citySlug, restaurantSlug } from '@/lib/slug';
+import { MIN_PLATS_CARTE, estVilleCarte } from '@/lib/menuOnly';
 
 // Force dynamic rendering (rebuilt on each request — cheap because data is cached)
 export const dynamic = 'force-dynamic';
@@ -71,16 +73,31 @@ const TOP_CITY_NAMES = [
 ];
 const PRIORITY_CITIES = new Set(['Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux']);
 
+/**
+ * Langues listées pour les fiches « carte relevée ». Elles existent dans les 5 langues
+ * (et le hreflang les déclare), mais 818 fiches × 5 = 4 090 URLs de pages sans avis : on
+ * ne liste que fr + en, là où la demande existe. Les autres se découvrent par hreflang.
+ */
+const LOCALES_CARTE = ['fr', 'en'];
+
 function pathFor(locale: string, path: string) {
   const prefix = locale === 'fr' ? '' : `/${locale}`;
   return `${BASE}${prefix}${path}`;
 }
 
+/**
+ * Une entrée par langue, chacune déclarant les 5 alternates hreflang.
+ *
+ * `emises` restreint les URLs *listées* (budget d'exploration) sans toucher aux
+ * alternates : celles-ci doivent rester le jeu complet, identique aux balises HTML de la
+ * page, sinon Google voit deux jeux hreflang contradictoires et les ignore.
+ */
 function withAlternates(
   path: string,
-  extra: Omit<MetadataRoute.Sitemap[number], 'url' | 'alternates'>
+  extra: Omit<MetadataRoute.Sitemap[number], 'url' | 'alternates'>,
+  emises: string[] = LOCALES
 ): MetadataRoute.Sitemap {
-  return LOCALES.map((locale) => ({
+  return emises.map((locale) => ({
     url: pathFor(locale, path),
     lastModified: new Date(),
     alternates: {
@@ -96,17 +113,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let dbCityNames = new Set<string>();
   let dbCityCategoryPairs: { city: string; category_slug: string; dish_count: number }[] = [];
   let dbRestaurants: Awaited<ReturnType<typeof fetchRestaurantsWithDishes>> = [];
+  let dbRestaurantsCarte: Awaited<ReturnType<typeof fetchRestaurantsWithMenu>> = [];
   try {
-    const [categories, cities, pairs, restos] = await Promise.all([
+    const [categories, cities, pairs, restos, restosCarte] = await Promise.all([
       fetchCategories(),
       fetchCities(),
       fetchCityCategoryPairs(),
       fetchRestaurantsWithDishes(),
+      fetchRestaurantsWithMenu(MIN_PLATS_CARTE),
     ]);
     dbCategorySlugs = new Set(categories.map((c) => c.slug));
     dbCityNames = new Set(cities);
     dbCityCategoryPairs = pairs;
     dbRestaurants = restos;
+    dbRestaurantsCarte = restosCarte;
   } catch (e) {
     console.error('sitemap: failed to fetch data', e);
   }
@@ -247,6 +267,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         })
       );
     }
+  }
+
+  // 4bis. Fiches « carte relevée » (19/09) : restaurants SANS avis dont la carte a été
+  // relevée sur leur propre site. Elles valent d'être indexées (plats, prix, balisage
+  // MenuItem), mais elles n'ont aucune note : priorité basse, et même périmètre que la
+  // route (`lib/menuOnly` : Lyon d'abord, MIN_PLATS_CARTE plats minimum) — un sitemap
+  // qui annoncerait une page que la route refuse de rendre fabriquerait des 404.
+  const dejaListe = new Set<string>();
+  for (const [cSlug, cityMap] of restaurantPathByCity) {
+    for (const { slug } of cityMap.values()) dejaListe.add(`${cSlug}/${slug}`);
+  }
+  for (const r of dbRestaurantsCarte) {
+    if (!estVilleCarte(r.city)) continue;
+    const cSlug = citySlug(r.city);
+    const rSlug = restaurantSlug(r.name);
+    if (!cSlug || !rSlug || dejaListe.has(`${cSlug}/${rSlug}`)) continue;
+    dejaListe.add(`${cSlug}/${rSlug}`);
+    urls.push(
+      ...withAlternates(
+        `/${cSlug}/r/${rSlug}`,
+        { changeFrequency: 'monthly', priority: 0.3 },
+        LOCALES_CARTE
+      )
+    );
   }
 
   return urls;

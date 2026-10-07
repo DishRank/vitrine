@@ -31,10 +31,14 @@ export function citySlug(name: string): string {
  */
 export function cityFromSlug(slug: string, knownCities: string[]): string | null {
   const normalized = slug.toLowerCase();
-  for (const city of knownCities) {
-    if (citySlug(city) === normalized) return city;
-  }
-  return null;
+  const matches = knownCities.filter((city) => citySlug(city) === normalized);
+  if (matches.length === 0) return null;
+  // `restaurants.city` n'est pas normalisé en base : à côté de « Lyon » (4 219 lignes en
+  // prod) traînent « LYON » (18) et « lyon » (1), venus des imports. Un seul slug les
+  // désigne tous, donc on choisit la graphie à AFFICHER — la casse mixte — sinon le titre
+  // et le fil d'Ariane de la page sortent en « lyon » ou « LYON » selon l'ordre de la
+  // liste. Le nom reste tel qu'il est en base : les lectures filtrent en `ilike`.
+  return matches.find((c) => c !== c.toUpperCase() && c !== c.toLowerCase()) ?? matches[0];
 }
 
 /**

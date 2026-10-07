@@ -387,13 +387,16 @@ export function fetchRestaurantBySlug(
     // L'adresse + lat/lng viennent de la RPC `get_feed_dishes` (dishes[0]).
     const { data, error } = await getSupabase()
       .from('restaurants')
-      .select('id, name, city, cuisines, phone, opening_intervals')
+      .select('id, name, city, address, latitude, longitude, cuisines, phone, opening_intervals')
       .ilike('city', cityName);
     if (error) throw error;
     for (const r of (data || []) as {
       id: string;
       name: string;
       city: string;
+      address: string | null;
+      latitude: number | null;
+      longitude: number | null;
       cuisines: string[] | null;
       phone: string | null;
       opening_intervals: { d: number; s: number; e: number }[] | null;
@@ -403,9 +406,9 @@ export function fetchRestaurantBySlug(
           id: r.id,
           name: r.name,
           city: r.city,
-          address: null,
-          lat: null,
-          lng: null,
+          address: r.address ?? null,
+          lat: r.latitude ?? null,
+          lng: r.longitude ?? null,
           cuisines: r.cuisines ?? null,
           phone: r.phone ?? null,
           opening_intervals: r.opening_intervals ?? null,
@@ -456,6 +459,70 @@ export interface RestaurantSitemapRow {
  * Utilisé par le sitemap pour générer les URLs `/[city]/r/[slug]` —
  * seuls les restos avec contenu sont indexés (évite les soft-404).
  */
+/**
+ * Restaurants dont la CARTE est publiée (relevée sur leur site ou photographiée), avec
+ * le nombre de plats visibles. Sert au sitemap : ces fiches n'ont pas d'avis, donc
+ * `fetchRestaurantsWithDishes` les ignore, et elles restaient invisibles (19/09).
+ */
+export function fetchRestaurantsWithMenu(minItems = 10): Promise<RestaurantSitemapRow[]> {
+  return cached(`restaurants:with-menu:${minItems}`, THIRTY_MIN, async () => {
+    const supabase = getSupabase();
+
+    // PostgREST plafonne une réponse à 1 000 lignes : sans pagination explicite, on
+    // perdrait silencieusement les menus au-delà (1 390 en prod) — et un sitemap amputé
+    // ne fait pas d'erreur, il oublie juste des pages.
+    const countByResto = new Map<string, number>();
+    const PAGE = 500;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('restaurant_menus')
+        .select('restaurant_id, menu_sections(is_visible, menu_items(is_visible, kind))')
+        .eq('is_active', true)
+        .eq('status', 'published')
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const page = (data || []) as Array<{
+        restaurant_id: string;
+        menu_sections: Array<{ is_visible: boolean; menu_items: Array<{ is_visible: boolean; kind: string }> }>;
+      }>;
+      for (const m of page) {
+        let n = 0;
+        for (const s of m.menu_sections || []) {
+          if (!s.is_visible) continue;
+          n += (s.menu_items || []).filter((i) => i.is_visible && i.kind === 'item').length;
+        }
+        countByResto.set(m.restaurant_id, (countByResto.get(m.restaurant_id) || 0) + n);
+      }
+      if (page.length < PAGE) break;
+    }
+
+    const ids = [...countByResto.entries()].filter(([, n]) => n >= minItems).map(([id]) => id);
+    if (ids.length === 0) return [];
+
+    // `.in('id', ids)` part dans l'URL : avec 800 UUID elle dépasse la taille admise et
+    // PostgREST répond « Bad Request ». On interroge par paquets.
+    const rows: Array<{ id: string; name: string; city: string }> = [];
+    const LOT = 150;
+    for (let i = 0; i < ids.length; i += LOT) {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('id, name, city')
+        .in('id', ids.slice(i, i + LOT))
+        .is('closed_at', null)
+        .not('city', 'is', null)
+        .not('name', 'is', null);
+      if (error) throw error;
+      rows.push(...((data || []) as Array<{ id: string; name: string; city: string }>));
+    }
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      city: r.city,
+      dish_count: countByResto.get(r.id) || 0,
+    }));
+  });
+}
+
 export function fetchRestaurantsWithDishes(): Promise<RestaurantSitemapRow[]> {
   return cached('restaurants:with-dishes', THIRTY_MIN, async () => {
     const supabase = getSupabase();

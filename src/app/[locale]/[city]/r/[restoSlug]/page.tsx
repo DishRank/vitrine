@@ -1,5 +1,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { fetchMenuTree } from '@/lib/menu';
+import { MIN_PLATS_CARTE, compterPlats, estVilleCarte } from '@/lib/menuOnly';
+import MenuOnlyPage from './MenuOnlyPage';
 import { headers } from 'next/headers';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import dynamic from 'next/dynamic';
@@ -164,8 +167,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     it: `Scopri tutti i piatti di ${restaurant.name} a ${cityName} valutati dalla community DishRank. Foto, prezzi, recensioni verificate — sai esattamente cosa ordinare.`,
   };
 
-  const title = titleByLocale[locale] || titleByLocale.fr;
-  const description = descByLocale[locale] || descByLocale.fr;
+  // Fiche « carte relevée » (aucun plat noté) : le titre ci-dessus promettrait des notes
+  // qui n'existent pas. On annonce ce que la page contient vraiment — la carte et ses
+  // prix — sinon le visiteur arrive déçu et Google voit un titre démenti par la page.
+  let title = titleByLocale[locale] || titleByLocale.fr;
+  let description = descByLocale[locale] || descByLocale.fr;
+  const aDesPlatsNotes = (await fetchDishesForRestaurant(restaurant.id).catch(() => [])).length > 0;
+  if (!aDesPlatsNotes) {
+    const nbPlats = compterPlats(await fetchMenuTree(restaurant.id).catch(() => []));
+    if (!estVilleCarte(cityName) || nbPlats < MIN_PLATS_CARTE) {
+      return { robots: { index: false, follow: false } };
+    }
+    const carteTitre: Record<string, string> = {
+      fr: `Carte et prix de ${restaurant.name} à ${cityName} | DishRank`,
+      en: `${restaurant.name} in ${cityName} — menu and prices | DishRank`,
+      es: `Carta y precios de ${restaurant.name} en ${cityName} | DishRank`,
+      de: `Speisekarte und Preise von ${restaurant.name} in ${cityName} | DishRank`,
+      it: `Menù e prezzi di ${restaurant.name} a ${cityName} | DishRank`,
+    };
+    const carteDesc: Record<string, string> = {
+      fr: `${nbPlats} plats et leurs prix, relevés sur le site de ${restaurant.name} à ${cityName}. Carte partielle, aucun plat encore noté — notez le vôtre depuis l'application DishRank.`,
+      en: `${nbPlats} dishes and their prices, collected from ${restaurant.name}'s own website in ${cityName}. Partial menu, no dish rated yet — rate yours from the DishRank app.`,
+      es: `${nbPlats} platos y sus precios, recogidos en el sitio de ${restaurant.name} en ${cityName}. Carta parcial, ningún plato valorado todavía.`,
+      de: `${nbPlats} Gerichte und Preise, erfasst auf der Website von ${restaurant.name} in ${cityName}. Teilweise Speisekarte, noch kein Gericht bewertet.`,
+      it: `${nbPlats} piatti e i loro prezzi, raccolti sul sito di ${restaurant.name} a ${cityName}. Menù parziale, nessun piatto ancora valutato.`,
+    };
+    title = carteTitre[locale] || carteTitre.fr;
+    description = carteDesc[locale] || carteDesc.fr;
+  }
   const canonical = buildRestaurantUrl(locale, cityName, restoSlug);
 
   const HREFLANG: Record<string, string> = {
@@ -222,10 +251,33 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
 
   const dishes = await fetchDishesForRestaurant(restaurant.id).catch(() => []);
 
-  // Si 0 plat moderé → on ne render PAS la page indexable (équivalent 404 SEO).
-  // Empêche les soft-404 sur des restos qui existent en DB mais n'ont aucune
-  // review modérée affichable.
-  if (dishes.length === 0) notFound();
+  // Aucun plat noté : la fiche vaut quand même d'exister SI sa carte est publiée
+  // (relevée sur le site du restaurant, mig. 186-191). Elle affiche alors la carte
+  // et ses prix, sans la moindre note — c'est la page « carte relevée » (19/09).
+  // Périmètre du pilote et seuil de plats : `lib/menuOnly` (partagé avec le sitemap).
+  if (dishes.length === 0) {
+    if (!estVilleCarte(cityName)) notFound();
+    const menus = await fetchMenuTree(restaurant.id).catch(() => []);
+    if (compterPlats(menus) < MIN_PLATS_CARTE) notFound();
+    return (
+      <MenuOnlyPage
+        locale={locale}
+        cityName={cityName}
+        restaurant={{
+          id: restaurant.id,
+          name: restaurant.name,
+          address: restaurant.address,
+          phone: restaurant.phone,
+          latitude: restaurant.lat,
+          longitude: restaurant.lng,
+          cuisines: restaurant.cuisines?.map(prettyCuisine) ?? null,
+        }}
+        menus={menus}
+        allCities={allCities}
+        searchPage={sp.page || ''}
+      />
+    );
+  }
 
   // Avis récents avec commentaire (tous plats confondus) → Review[] du JSON-LD.
   const reviews = await fetchReviewsForRestaurant(restaurant.id).catch(() => []);
