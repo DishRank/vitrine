@@ -66,7 +66,11 @@ export default function HeroTickets({ dishes }: { dishes: DishRow[] }) {
                 src={d.cover_photo_url}
                 alt={`${d.dish_name} chez ${d.restaurant_name}`}
                 fill
-                sizes="(max-width: 640px) 58vw, 320px"
+                // Photo paysage recadrée dans un cadre portrait 4:5 : il faut
+                // ~1,7× la largeur du cadre pour couvrir sa hauteur sans
+                // agrandir l'image (sinon flou). Cadre ≈ 58vw mobile, ≤ 330px.
+                sizes="(max-width: 640px) 100vw, 560px"
+                quality={85}
                 priority={i === 0}
                 className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               />

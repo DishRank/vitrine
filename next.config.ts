@@ -36,6 +36,9 @@ const nextConfig: NextConfig = {
 
   images: {
     formats: ['image/avif', 'image/webp'],
+    // 85 réservé aux photos de plats mises en avant (tickets du héros, top 10) :
+    // à 75, le grain des photos de téléphone se voit une fois recadrées.
+    qualities: [75, 85],
     minimumCacheTTL: 31536000,
     remotePatterns: [
       {

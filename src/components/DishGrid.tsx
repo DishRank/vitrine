@@ -90,13 +90,16 @@ export default function DishGrid({
               onClick={() => window.dispatchEvent(new CustomEvent('open-dish', { detail: d }))}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('open-dish', { detail: d })); } }}
             >
-              <div className="relative aspect-[4/5] overflow-hidden rounded-[18px] bg-[var(--surface-var)]">
+              <div className="relative aspect-square overflow-hidden rounded-[18px] bg-[var(--surface-var)]">
                 <Image
                   src={d.cover_photo_url}
                   alt={`${d.dish_name} chez ${d.restaurant_name}${d.restaurant_city ? ` à ${d.restaurant_city}` : ''}`}
                   fill
                   className="object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                  // Cadre carré, photos paysage (~4:3) : ~1,35× la largeur du
+                  // cadre pour couvrir sa hauteur sans agrandir l'image.
+                  sizes="(max-width: 640px) 60vw, (max-width: 1024px) 42vw, (max-width: 1280px) 30vw, 300px"
+                  quality={85}
                   priority={i === 0}
                   loading={i < 4 ? 'eager' : 'lazy'}
                   fetchPriority={i === 0 ? 'high' : undefined}
