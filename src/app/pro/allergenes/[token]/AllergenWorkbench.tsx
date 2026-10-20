@@ -21,6 +21,8 @@ interface DishState {
   saved: AllergenKey[] | null;
   /** Ligne relevée qui n'est pas un plat : hors tableau. */
   excluded: boolean;
+  /** Écartée d'office (titre, phrase du site…), pas par le restaurateur. */
+  auto?: boolean;
   saving: boolean;
   error?: string;
 }
@@ -43,6 +45,9 @@ function initialState(item: InviteItem): DishState {
   // Carte déjà renseignée par l'établissement → on part de ses allergènes ;
   // sinon des suggestions.
   const base = item.published.length ? item.published : item.suggested.map((s) => s.allergen);
+  // Titre de rubrique ou phrase du site relevés comme des plats : écartés d'office,
+  // rétablissables en un clic.
+  if (item.suspect) return { selected: sortKeys(base), saved: null, excluded: true, auto: true, saving: false };
   return { selected: sortKeys(base), saved: null, excluded: false, saving: false };
 }
 
@@ -84,6 +89,7 @@ export default function AllergenWorkbench({ token, payload }: { token: string; p
 
   const verifiedCount = items.filter((it) => dishes[it.id]?.saved).length;
   const excludedCount = items.filter((it) => dishes[it.id]?.excluded).length;
+  const autoCount = items.filter((it) => dishes[it.id]?.excluded && dishes[it.id]?.auto).length;
   const dishCount = items.length - excludedCount;
   const todoCount = dishCount - verifiedCount;
 
@@ -128,7 +134,7 @@ export default function AllergenWorkbench({ token, payload }: { token: string; p
     const sel = dishes[id].selected;
     patch(id, { saving: true, error: undefined });
     const res = await saveDishAllergens(token, id, sel, false, excluded);
-    if (res.ok) patch(id, { saving: false, saved: null, excluded });
+    if (res.ok) patch(id, { saving: false, saved: null, excluded, auto: false });
     else patch(id, { saving: false, error: res.error });
   };
 
@@ -247,6 +253,17 @@ export default function AllergenWorkbench({ token, payload }: { token: string; p
               ))}
             </div>
 
+            {autoCount > 0 && filter !== 'all' ? (
+              <p className="text-sm text-[var(--text2)]">
+                {autoCount === 1
+                  ? 'Une ligne relevée sur votre site ne ressemble pas à un plat : nous l’avons écartée.'
+                  : `${autoCount} lignes relevées sur votre site ne ressemblent pas à des plats : nous les avons écartées.`}{' '}
+                <button type="button" onClick={() => setFilter('all')} className="font-semibold text-[var(--primary)] hover:underline">
+                  Les voir
+                </button>
+              </p>
+            ) : null}
+
             {groups.length === 0 ? (
               <p className="py-6 text-center text-sm text-[var(--text2)]">
                 {filter === 'todo' ? 'Tous les plats sont vérifiés. Il ne reste qu’à imprimer.' : 'Aucun plat vérifié pour l’instant.'}
@@ -264,7 +281,14 @@ export default function AllergenWorkbench({ token, payload }: { token: string; p
                   if (st.excluded) {
                     return (
                       <article key={it.id} className={`${card} flex items-center justify-between gap-3 opacity-60`}>
-                        <span className="min-w-0 truncate text-sm text-[var(--text2)] line-through">{it.name}</span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm text-[var(--text2)] line-through">{it.name}</span>
+                          {st.auto ? (
+                            <span className="block text-xs text-[var(--text3)]">
+                              Écarté d’office : ressemble à un titre ou à une phrase de votre site.
+                            </span>
+                          ) : null}
+                        </span>
                         <button
                           type="button"
                           onClick={() => setExcluded(it.id, false)}

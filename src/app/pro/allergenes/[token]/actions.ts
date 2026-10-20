@@ -2,6 +2,8 @@
 
 import { headers } from 'next/headers';
 import { revalidateTag } from 'next/cache';
+import { after } from 'next/server';
+import { flushInviteAlerts } from '@/lib/pro/inviteAlerts';
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
 import { rateLimit } from '@/lib/pro/rateLimit';
 import { INVITE_TOKEN_RE, UUID_RE, isAllergenKey, type AllergenKey } from '@/lib/pro/invite';
@@ -70,7 +72,8 @@ export async function trackInviteEvent(token: string, event: 'open' | 'print' | 
   if (!['open', 'print', 'claim_click'].includes(event)) return;
   if (await limited('event', 60, 60_000)) return;
   const supabase = await getSupabaseServer();
-  await supabase.rpc('invite_event', { p_token: token, p_event: event });
+  const { error } = await supabase.rpc('invite_event', { p_token: token, p_event: event });
+  if (!error) after(flushInviteAlerts);
 }
 
 /**
@@ -99,6 +102,7 @@ export async function saveDishAllergens(
     p_excluded: !!excluded,
   });
   if (error) return { ok: false, error: mapError(error.message) };
+  after(flushInviteAlerts);
   return { ok: true, confirmedCount: Number(data ?? 0) };
 }
 
@@ -111,6 +115,7 @@ export async function publishAllergens(token: string): Promise<InviteActionResul
   if (error) return { ok: false, error: mapError(error.message) };
   const rid = await restaurantIdOf(token);
   if (rid) revalidateTag(`menu:${rid}`, 'max');
+  after(flushInviteAlerts);
   return { ok: true, count: Number(data ?? 0) };
 }
 
@@ -121,6 +126,7 @@ export async function stopContact(token: string): Promise<InviteActionResult> {
   const supabase = await getSupabaseServer();
   const { error } = await supabase.rpc('invite_contact_opt_out', { p_token: token });
   if (error) return { ok: false, error: mapError(error.message) };
+  after(flushInviteAlerts);
   return { ok: true };
 }
 
@@ -133,5 +139,6 @@ export async function removeMenu(token: string): Promise<InviteActionResult> {
   const { error } = await supabase.rpc('invite_remove_menu', { p_token: token });
   if (error) return { ok: false, error: mapError(error.message) };
   if (rid) revalidateTag(`menu:${rid}`, 'max');
+  after(flushInviteAlerts);
   return { ok: true };
 }

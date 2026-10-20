@@ -3,6 +3,8 @@
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
 import { rateLimit } from '@/lib/pro/rateLimit';
 import { logProEvent } from '@/lib/pro/instrument';
+import { after } from 'next/server';
+import { flushInviteAlerts } from '@/lib/pro/inviteAlerts';
 
 /**
  * Claim web (lot 2). Portage du flux de ClaimRestaurantSheet :
@@ -96,6 +98,8 @@ export async function verifyClaimCodeAction(restaurantId: string, code: string):
   if (res.verified) {
     const supabase = await getSupabaseServer();
     await logProEvent(supabase, 'pro_claim_completed', restaurantId);
+    // Fiche revendiquée d'un restaurant invité : alerte immédiate (mig. 199).
+    after(flushInviteAlerts);
   }
   return res;
 }

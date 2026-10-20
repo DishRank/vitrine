@@ -79,6 +79,8 @@ export interface InviteItem {
   /** Allergènes déjà publiés sur la carte (vide pour une carte relevée). */
   published: AllergenKey[];
   suggested: InviteSuggestion[];
+  /** Ligne sans prix qui ressemble à un titre ou à une phrase du site (mig. 199) : écartée d'office. */
+  suspect?: boolean;
   draft: InviteDraft | null;
 }
 
