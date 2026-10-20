@@ -53,10 +53,17 @@ const featColor = (c: string) => ({ ['--feat-color']: c } as React.CSSProperties
 // parité menu + photos + réponse aux avis ; le premium = analytics/thème/etc.).
 const BENEFITS = [
   {
-    emoji: '📱',
+    emoji: '🥜',
     color: 'var(--primary)',
+    title: 'Allergènes par plat',
+    body: 'Indiquez les 14 allergènes de chaque plat : vos clients filtrent « sans gluten », « sans lait »… directement sur votre carte.',
+    tag: 'Gratuit',
+  },
+  {
+    emoji: '📱',
+    color: '#E0A617',
     title: 'Menu numérique & QR de table',
-    body: 'Un QR sur chaque table ouvre votre carte, toujours à jour. Gratuit, photos incluses.',
+    body: 'Un QR sur chaque table ouvre votre carte, toujours à jour. Un plat épuisé se masque en un tap. Photos incluses.',
     tag: 'Gratuit',
   },
   {
@@ -67,17 +74,10 @@ const BENEFITS = [
     tag: 'Gratuit',
   },
   {
-    emoji: '🍽️',
+    emoji: '🔄',
     color: '#ff7a3d',
-    title: 'Menu vivant',
-    body: 'Marquez un plat « épuisé » en un tap : vos clients le voient en temps réel, à table.',
-    tag: 'Gratuit',
-  },
-  {
-    emoji: '📊',
-    color: '#E8846A',
-    title: 'Statistiques & personnalisation',
-    body: 'Suivez vues et avis, personnalisez le thème de votre carte, épinglez vos plats signature.',
+    title: 'Allergènes à jour',
+    body: 'Quand votre carte change, nous la relevons et vous validez : allergènes et carte QR suivent, traduits en 5 langues.',
     tag: 'Premium',
   },
 ];
@@ -100,14 +100,12 @@ const STEPS = [
   },
 ];
 
-// Détail Premium — mêmes intitulés que l'écran d'abonnement de l'app
-// (AbonnementPanel), volontairement SANS le prix (choix « offre de lancement »).
+// Détail Premium — mêmes intitulés que l'écran d'abonnement (AbonnementPanel).
 const PREMIUM_FEATURES = [
-  'Traduction automatique du menu (5 langues)',
-  'Thème du menu : ambiance, couleur, police',
+  'Allergènes à jour : quand votre carte change, nous la relevons, vous validez',
+  'Carte et allergènes traduits automatiquement (5 langues)',
   'Statistiques & alertes de la fiche',
-  'Réponse épinglée + 5 plats signature',
-  'Logo au centre du QR de table',
+  'Thème du menu, réponse épinglée, 5 plats signature, logo au centre du QR',
 ];
 
 export default async function ProLandingPage() {
@@ -195,7 +193,7 @@ export default async function ProLandingPage() {
             Tout ce qu’il faut pour rayonner
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-[15px] text-[var(--text2)]">
-            L’essentiel est gratuit. Le Premium ajoute la visibilité et la personnalisation.
+            L’essentiel est gratuit. Le Premium garde vos allergènes à jour et traduit votre carte.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -256,11 +254,8 @@ export default async function ProLandingPage() {
           <div className="surface-card overflow-hidden p-8 sm:p-12">
             <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2">
               <div>
-                <span className="inline-block rounded-full bg-[var(--primary-container)] px-3 py-1 text-xs font-extrabold text-[var(--primary)]">
-                  Gratuit pour l’essentiel
-                </span>
                 <h2
-                  className="mt-4 font-extrabold tracking-tight"
+                  className="font-extrabold tracking-tight"
                   style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)' }}
                 >
                   L’essentiel reste gratuit
@@ -279,16 +274,19 @@ export default async function ProLandingPage() {
                 </Link>
               </div>
 
-              <ul className="space-y-2.5">
-                {PREMIUM_FEATURES.map((f) => (
+              <div>
+                <p className="mb-3 font-bold text-[var(--text)]">Avec le Premium, 19,99 €/mois</p>
+                <ul className="space-y-2.5">
+                  {PREMIUM_FEATURES.map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-[15px] text-[var(--text)]">
                     <span className="mt-0.5 font-extrabold text-[var(--primary)]" aria-hidden>
                       ✓
                     </span>
                     <span>{f}</span>
                   </li>
-                ))}
-              </ul>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </section>
