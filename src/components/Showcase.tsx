@@ -7,14 +7,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 // a un thème clair actif (système ou classe `.light`/.dark sur <html>), on
 // bascule sur la variante light.
 const IMAGES: { dark: string; light: string }[] = [
-  { dark: '/img/01_feed.webp',        light: '/img/01_feed_light.webp' },
-  { dark: '/img/02_dish_detail.webp', light: '/img/02_dish_detail_light.webp' },
-  { dark: '/img/03_categories.webp',  light: '/img/03_categories_light.webp' },
-  { dark: '/img/04_add_review.webp',  light: '/img/04_add_review_light.webp' },
-  { dark: '/img/05_settings.webp',    light: '/img/05_settings_light.webp' },
-  { dark: '/img/06_map.webp',         light: '/img/06_map_light.webp' },
-  { dark: '/img/07_restaurant.webp',  light: '/img/07_restaurant_light.webp' },
-  { dark: '/img/08_profile.webp',     light: '/img/08_profile_light.webp' },
+  { dark: '/img/01_feed-v2.webp',        light: '/img/01_feed_light-v2.webp' },
+  { dark: '/img/02_dish_detail-v2.webp', light: '/img/02_dish_detail_light-v2.webp' },
+  { dark: '/img/03_categories-v2.webp',  light: '/img/03_categories_light-v2.webp' },
+  { dark: '/img/04_add_review-v2.webp',  light: '/img/04_add_review_light-v2.webp' },
+  { dark: '/img/05_settings-v2.webp',    light: '/img/05_settings_light-v2.webp' },
+  { dark: '/img/06_map-v2.webp',         light: '/img/06_map_light-v2.webp' },
+  { dark: '/img/07_restaurant-v2.webp',  light: '/img/07_restaurant_light-v2.webp' },
+  { dark: '/img/08_profile-v2.webp',     light: '/img/08_profile_light-v2.webp' },
 ];
 
 export default function Showcase() {

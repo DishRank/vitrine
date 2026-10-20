@@ -13,25 +13,25 @@
   "categories": ["food", "lifestyle", "social"],
   "icons": [
     {
-      "src": "/img/icon-192.webp",
+      "src": "/img/icon-192-v2.webp",
       "sizes": "192x192",
       "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/img/icon-512.webp",
+      "src": "/img/icon-512-v2.webp",
       "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/img/icon-192.webp",
+      "src": "/img/icon-192-v2.webp",
       "sizes": "192x192",
       "type": "image/webp",
       "purpose": "maskable"
     },
     {
-      "src": "/img/icon-512.webp",
+      "src": "/img/icon-512-v2.webp",
       "sizes": "512x512",
       "type": "image/webp",
       "purpose": "maskable"
@@ -39,21 +39,21 @@
   ],
   "screenshots": [
     {
-      "src": "/img/01_feed.webp",
+      "src": "/img/01_feed-v2.webp",
       "sizes": "1080x1920",
       "type": "image/webp",
       "form_factor": "narrow",
       "label": "Feed — Découvre les meilleurs plats près de toi"
     },
     {
-      "src": "/img/02_dish_detail.webp",
+      "src": "/img/02_dish_detail-v2.webp",
       "sizes": "1080x1920",
       "type": "image/webp",
       "form_factor": "narrow",
       "label": "Détail d'un plat — Notes, prix et avis"
     },
     {
-      "src": "/img/06_map.webp",
+      "src": "/img/06_map-v2.webp",
       "sizes": "1080x1920",
       "type": "image/webp",
       "form_factor": "narrow",

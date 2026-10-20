@@ -170,7 +170,7 @@ function Card({ children }: { children: React.ReactNode }) {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/img/icon.webp" alt="DishRank" width={56} height={56}
+        src="/img/icon-v2.webp" alt="DishRank" width={56} height={56}
         style={{ borderRadius: 16, marginBottom: 24, boxShadow: `0 8px 20px -6px ${C.primary}` }}
       />
       {children}

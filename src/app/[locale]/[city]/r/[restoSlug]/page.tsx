@@ -210,14 +210,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: canonical,
       siteName: 'DishRank',
-      images: [{ url: `${SITE}/img/play_store_feature_graphic.webp`, width: 1024, height: 500 }],
+      images: [{ url: `${SITE}/img/play_store_feature_graphic-v2.webp`, width: 1024, height: 500 }],
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [`${SITE}/img/play_store_feature_graphic.webp`],
+      images: [`${SITE}/img/play_store_feature_graphic-v2.webp`],
     },
     alternates: {
       canonical,
@@ -314,7 +314,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
     name: 'DishRank',
     alternateName: ['Dish Rank', 'Dish-Rank', 'dishrank'],
     url: SITE,
-    logo: `${SITE}/img/icon.webp`,
+    logo: `${SITE}/img/icon-v2.webp`,
     sameAs: [
       'https://www.instagram.com/dishrank.app',
       'https://apps.apple.com/fr/app/dishrank/id6761752556',
@@ -365,7 +365,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
     '@id': `${canonical}#restaurant`,
     name: restaurant.name,
     url: canonical,
-    image: dishes[0]?.cover_photo_url || `${SITE}/img/play_store_feature_graphic.webp`,
+    image: dishes[0]?.cover_photo_url || `${SITE}/img/play_store_feature_graphic-v2.webp`,
     address: {
       '@type': 'PostalAddress',
       streetAddress: restaurantAddress || undefined,

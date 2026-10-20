@@ -121,7 +121,7 @@ export default async function HomePageContent({
     name: 'DishRank',
     alternateName: ['Dish Rank', 'Dish-Rank', 'dishrank'],
     url: 'https://dishrank.fr',
-    logo: 'https://dishrank.fr/img/icon.webp',
+    logo: 'https://dishrank.fr/img/icon-v2.webp',
     sameAs: [
       'https://www.instagram.com/dishrank.app',
       'https://apps.apple.com/fr/app/dishrank/id6761752556',
@@ -316,7 +316,7 @@ export default async function HomePageContent({
           '@id': `${buildFilterUrl(locale, city, category)}#place`,
           name,
           url: buildFilterUrl(locale, city, category),
-          image: 'https://dishrank.fr/img/play_store_feature_graphic.webp',
+          image: 'https://dishrank.fr/img/play_store_feature_graphic-v2.webp',
           address: {
             '@type': 'PostalAddress',
             addressLocality: cityLabel,

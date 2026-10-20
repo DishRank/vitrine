@@ -2,21 +2,21 @@
 // long-handle fork). Mirrors dishrank/scripts/gen-app-logos.mjs. Run from the
 // vitrine root: `node scripts/gen-logos.mjs`
 //
-//   public/img/icon.webp                  512²  brand mark #6C5CE7, transparent (light favicon + JSON-LD logo)
-//   public/img/icon-192.webp              192²  brand mark #6C5CE7, transparent (manifest)
-//   public/img/icon-512.webp              512²  brand mark #6C5CE7, transparent (manifest)
+//   public/img/icon.webp                  512²  brand mark #C2452D, transparent (light favicon + JSON-LD logo)
+//   public/img/icon-192.webp              192²  brand mark #C2452D, transparent (manifest)
+//   public/img/icon-512.webp              512²  brand mark #C2452D, transparent (manifest)
 //   public/img/logo-light.webp            512²  white mark, transparent         (favicon dark scheme)
 //   public/img/logo-white.png            2048²  white mark, transparent         (brand kit / external)
-//   public/img/apple-touch-icon.png       180²  brand mark #6C5CE7, transparent
+//   public/img/apple-touch-icon.png       180²  brand mark #C2452D, transparent
 //   public/apple-touch-icon.png           180²  idem (racine, requêtée par iOS)
 //   public/apple-touch-icon-precomposed.png     idem
-//   public/favicon.png                    180²  brand mark #6C5CE7, transparent
+//   public/favicon.png                    180²  brand mark #C2452D, transparent
 //   public/favicon.ico                    180²  webp renommé .ico (les navigateurs sniffent le contenu)
 import sharp from 'sharp';
 import fs from 'node:fs';
 
 const LOGO_SVG = 'D:/dev/dishrank/communication/contenu/logo.svg';
-const BRAND = '#6C5CE7';
+const BRAND = '#C2452D'; // paprika (palette « cuisine », oct. 2026)
 const WHITE = '#FFFFFF';
 
 const svg = fs.readFileSync(LOGO_SVG, 'utf8');
@@ -63,6 +63,15 @@ await onTransparent(180, BRAND, 168, 'public/favicon.png', 'png');
 fs.copyFileSync('public/img/apple-touch-icon.png', 'public/apple-touch-icon.png');
 fs.copyFileSync('public/img/apple-touch-icon.png', 'public/apple-touch-icon-precomposed.png');
 console.log('✓ apple-touch-icon copié à la racine (+ variante precomposed)');
+
+// /img est servi en cache immutable d'un an (next.config.ts) : les pages
+// pointent vers les copies suffixées. Si le logo change encore, passer à -v3
+// ici ET dans les références (git grep -- '-v2.').
+for (const f of ['icon.webp', 'icon-192.webp', 'icon-512.webp', 'apple-touch-icon.png']) {
+  const dot = f.lastIndexOf('.');
+  fs.copyFileSync(`public/img/${f}`, `public/img/${f.slice(0, dot)}-v2${f.slice(dot)}`);
+}
+console.log('✓ copies -v2 (cache-busting) écrites');
 
 // favicon.ico — comme avant : un webp renommé .ico (contenu sniffé par les
 // navigateurs modernes, servi par next depuis public/).

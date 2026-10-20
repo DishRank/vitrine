@@ -29,7 +29,7 @@ const HREFLANG_BY_LOCALE: Record<string, string> = {
 };
 
 const SITE = 'https://dishrank.fr';
-const OG_IMAGE = `${SITE}/img/play_store_feature_graphic.webp`;
+const OG_IMAGE = `${SITE}/img/play_store_feature_graphic-v2.webp`;
 
 /**
  * Build the URL path for a given filter combo (without locale prefix).

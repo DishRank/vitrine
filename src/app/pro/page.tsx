@@ -7,7 +7,7 @@ import ProLandingHeader from './_components/ProLandingHeader';
 const SITE = 'https://dishrank.fr';
 // Image OG/Twitter partagée avec le site (identité DishRank, 1024×500) — évite
 // un aperçu social/IA sans visuel. Une image dédiée « Pro » pourra la remplacer.
-const OG_IMAGE = `${SITE}/img/play_store_feature_graphic.webp`;
+const OG_IMAGE = `${SITE}/img/play_store_feature_graphic-v2.webp`;
 const TITLE = 'DishRank Pro — Gérez votre établissement';
 const DESCRIPTION =
   'Fiche, menu numérique avec QR de table, allergènes par plat et réponse aux avis clients, réunis dans un seul espace. Gratuit, sans carte bancaire.';

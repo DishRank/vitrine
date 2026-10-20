@@ -153,7 +153,7 @@ export async function buildMenuMetadata(id: string): Promise<Metadata> {
       title,
       description,
       images: [
-        { url: venue?.photo_url || 'https://dishrank.fr/img/play_store_feature_graphic.webp' },
+        { url: venue?.photo_url || 'https://dishrank.fr/img/play_store_feature_graphic-v2.webp' },
       ],
     },
   };
@@ -946,7 +946,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
   return (
     <html lang={locale} className={MENU_FONT_VARS}>
       <head>
-        <link rel="icon" type="image/webp" href="/img/icon.webp" />
+        <link rel="icon" type="image/webp" href="/img/icon-v2.webp" />
         {/* Une image dont l'URL est morte (objet absent du storage) ne doit pas
             laisser un cadre vide ni afficher son texte alternatif à la place :
             on masque celles marquées `data-hide-on-error`. En capture, car
@@ -1312,7 +1312,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
               />
             ) : (
               <Image
-                src="/img/icon.webp"
+                src="/img/icon-v2.webp"
                 alt="DishRank"
                 width={64}
                 height={64}

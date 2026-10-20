@@ -85,9 +85,9 @@ export default async function LocaleLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="DishRank" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="icon" type="image/webp" href="/img/icon.webp" media="(prefers-color-scheme: light)" />
+        <link rel="icon" type="image/webp" href="/img/icon-v2.webp" media="(prefers-color-scheme: light)" />
         <link rel="icon" type="image/webp" href="/img/logo-light.webp" media="(prefers-color-scheme: dark)" />
-        <link rel="apple-touch-icon" href="/img/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/img/apple-touch-icon-v2.png" />
         {/* Performance hints — preconnect to font CDN + dns-prefetch to Supabase
             so images and HTTP requests start earlier on first paint. */}
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

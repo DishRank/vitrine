@@ -61,7 +61,10 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: securityHeaders,
       },
-      // Cache static assets aggressively
+      // Cache static assets aggressively. Cache d'un an + immutable : le
+      // navigateur ne revalide jamais. Toute image de /img modifiée doit donc
+      // changer de nom (suffixe -v2, -v3…), sinon les visiteurs déjà venus
+      // gardent l'ancienne version pendant un an.
       {
         source: '/img/:path*',
         headers: [

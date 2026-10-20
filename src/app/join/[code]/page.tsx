@@ -76,7 +76,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title,
       description,
-      images: [{ url: 'https://dishrank.fr/img/play_store_feature_graphic.webp' }],
+      images: [{ url: 'https://dishrank.fr/img/play_store_feature_graphic-v2.webp' }],
     },
   };
 }
@@ -98,7 +98,7 @@ export default async function JoinPage({ params }: PageProps) {
   return (
     <html lang="fr">
       <head>
-        <link rel="icon" type="image/webp" href="/img/icon.webp" />
+        <link rel="icon" type="image/webp" href="/img/icon-v2.webp" />
       </head>
       <body
         style={{
@@ -116,7 +116,7 @@ export default async function JoinPage({ params }: PageProps) {
       >
         <div style={{ maxWidth: 420, width: '100%' }}>
           <Image
-            src="/img/icon.webp"
+            src="/img/icon-v2.webp"
             alt="DishRank"
             width={64}
             height={64}
