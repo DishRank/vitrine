@@ -91,6 +91,8 @@ export default function AllergenWorkbench({ token, payload }: { token: string; p
   const excludedCount = items.filter((it) => dishes[it.id]?.excluded).length;
   const autoCount = items.filter((it) => dishes[it.id]?.excluded && dishes[it.id]?.auto).length;
   const dishCount = items.length - excludedCount;
+  // Lignes relevées qui sont vraiment des plats (hors titres et phrases du site).
+  const realCount = items.filter((it) => !it.suspect).length;
   const todoCount = dishCount - verifiedCount;
 
   const visible = items.filter((it) => {
@@ -199,7 +201,7 @@ export default function AllergenWorkbench({ token, payload }: { token: string; p
             <h2 className="text-base font-extrabold">Comment ça marche</h2>
             <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-[var(--text2)]">
               <li>
-                Nous avons repris les <strong>{items.length} plats</strong> de la carte publiée sur votre site
+                Nous avons repris les <strong>{realCount} plats</strong> de la carte publiée sur votre site
                 {capturedOn ? <> (relevée le {capturedOn})</> : null}, et pré-coché les allergènes que leur nom laisse deviner.
               </li>
               <li>
