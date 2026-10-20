@@ -110,7 +110,7 @@ export default async function CockpitInsights({
           {kpis.map((k, i) => {
             const inner = (
               <div
-                className={`h-full rounded-2xl border p-4 shadow-[0_2px_10px_var(--card-shadow)] transition-colors ${
+                className={`h-full rounded-2xl border p-4 transition-colors ${
                   k.accent
                     ? 'border-[var(--primary)] bg-[var(--primary-container)]'
                     : 'border-[var(--border2)] bg-[var(--surface)]'

@@ -40,7 +40,9 @@ html {
   --border: rgba(0,0,0,0.06);
   --border2: #EAE2D7;
   --loader-color: #C2452D;
-  --card-shadow: rgba(194,69,45,0.1);
+  /* Ombre NEUTRE, réservée à ce qui flotte (menus, modales, bannière cookies).
+     Les cartes posées sur le fond n'ont pas d'ombre : bordure seulement. */
+  --card-shadow: rgba(40,28,20,0.12);
   /* Store buttons (App Store / Google Play) — dark gray instead of pure
      black in light mode so the contrast n'est pas trop agressif. Reste
      vraiment "dark button" mais pas un bloc noir massif sur fond clair. */
@@ -61,10 +63,7 @@ html {
   --border: rgba(255,255,255,0.08);
   --border2: #3D322C;
   --loader-color: #FFF;
-  /* Shadow teintée violet (au lieu d'un noir générique) — conforme à la
-     règle skill "Tint shadows to match the background hue". Garde de la
-     présence sur fond sombre tout en restant cohérent avec la palette. */
-  --card-shadow: rgba(194,69,45,0.22);
+  --card-shadow: rgba(0,0,0,0.5);
   /* Off-black tinté plutôt que pur #000 — convention Apple/Google
      conservée mais sans le contraste agressif d'un noir pur. */
   --store-btn-bg: #0a0a0a;
@@ -84,7 +83,7 @@ html {
     --border: rgba(255,255,255,0.08);
     --border2: #3D322C;
     --loader-color: #FFF;
-    --card-shadow: rgba(194,69,45,0.22);
+    --card-shadow: rgba(0,0,0,0.5);
     --store-btn-bg: #0a0a0a;
     --store-btn-bg-hover: #1f1f1f;
     --store-btn-border: #2d2d2d;
@@ -274,31 +273,16 @@ label:has(> input[type='radio']:not(:disabled)) {
   50% { opacity: 0.5; transform: translateY(-8px); }
 }
 
-/* ────── v3 redesign animations ────────────────────────────────────────
-   Used by: FoodCloud (float-slow), SocialProof (mq-scroll), Hero (pulse-dot). */
-
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
+/* ────── Animations ────────────────────────────────────────────────────
+   Used by: SocialProof (mq-scroll). Oct. 2026 : plus de flottement, de
+   pulsation ni de reflets décoratifs — le mouvement est réservé aux
+   réponses à une action. */
 
 @keyframes mq-scroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
 
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
-}
-
-@keyframes shimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
-}
-
-.float-slow { animation: float-slow 5s ease-in-out infinite; }
-.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
 .mq-track {
   animation: mq-scroll 60s linear infinite;
   width: max-content;
@@ -317,64 +301,13 @@ label:has(> input[type='radio']:not(:disabled)) {
   padding-block: 18px;
 }
 
-/* Hero gradient title — saturation alignée avec Hero.tsx (cf. comment
-   `emGradient` côté React). Triplet 70/60/51% au lieu du 100/76/51 d'origine
-   pour atténuer le pattern "AI purple". */
-.hero-gradient-text {
-  background: linear-gradient(120deg, #E8A08C 0%, #B5402A 50%, #9E3420 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
-}
+/* Accent de titre — aplat paprika. Plus de texte en dégradé (oct. 2026). */
+.accent-text { color: var(--primary); }
 
-/* ────── Search "Chercher" button — shine sweep + hover lift ──────
-   • Periodic diagonal highlight that sweeps across the button every 4.5s.
-   • On hover: subtle scale-up + arrow icon translates right.
-   • Uses ::after pseudo so the underlying button keeps its solid bg. */
-@keyframes search-shine {
-  0% { transform: translateX(-110%) skewX(-18deg); }
-  60% { transform: translateX(220%) skewX(-18deg); }
-  100% { transform: translateX(220%) skewX(-18deg); }
-}
-
-.search-btn-shine {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  box-shadow: 0 4px 14px -4px rgba(194, 69, 45, 0.5);
-}
-.search-btn-shine::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  width: 60%;
-  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
-  pointer-events: none;
-  z-index: 1;
-  animation: search-shine 4.5s ease-in-out infinite;
-  animation-delay: 0.6s;
-  transform: translateX(-110%) skewX(-18deg);
-}
-.search-btn-shine:hover {
-  transform: scale(1.04);
-  box-shadow: 0 8px 22px -4px rgba(194, 69, 45, 0.65);
-}
-.search-btn-shine:active {
-  transform: scale(0.97);
-}
-.search-btn-shine .search-arrow {
-  transition: transform 0.2s ease;
-}
-.search-btn-shine:hover .search-arrow {
-  transform: translateX(3px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .search-btn-shine::after { animation: none; opacity: 0; }
-}
+/* Bouton « Chercher » — aplat, seule la flèche répond au survol. */
+.search-btn { cursor: pointer; transition: background-color 0.15s ease; }
+.search-btn .search-arrow { transition: transform 0.2s ease; }
+.search-btn:hover .search-arrow { transform: translateX(3px); }
 
 /* Store buttons (App Store / Google Play) — un seul style centralisé pour
    les 4 emplacements (Nav desktop, Nav drawer, Footer, CtaBanner). On
@@ -383,23 +316,10 @@ label:has(> input[type='radio']:not(:disabled)) {
 .store-btn {
   background-color: var(--store-btn-bg);
   border-color: var(--store-btn-border);
-  transition:
-    background-color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-  will-change: transform;
+  transition: background-color 0.2s ease;
 }
 .store-btn:hover {
   background-color: var(--store-btn-bg-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.35);
-}
-.store-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.3);
-}
-@media (hover: none) {
-  .store-btn:hover { transform: none; box-shadow: none; }
 }
 
 /* Event chips ("En direct" marquee) — hover scale + tint violette.
@@ -414,18 +334,12 @@ label:has(> input[type='radio']:not(:disabled)) {
   cursor: pointer;
   position: relative;
   transition:
-    transform 0.22s ease-out,
-    border-color 0.22s ease-out,
-    background-color 0.22s ease-out,
-    box-shadow 0.22s ease-out;
-  will-change: transform;
+    border-color 0.2s ease-out,
+    background-color 0.2s ease-out;
 }
 .event-chip:hover {
-  transform: scale(1.06);
   border-color: var(--primary);
-  background-color: color-mix(in srgb, var(--primary) 10%, var(--surface));
-  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--primary) 60%, transparent);
-  z-index: 2;
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--surface));
 }
 
 /* WhySection v3 — responsive internal-only borders.
@@ -434,29 +348,8 @@ label:has(> input[type='radio']:not(:disabled)) {
    without inline style overrides per cell.
    Border color uses var(--border2) so it adapts to light/dark theme. */
 
-/* Hover spotlight — radial gradient violet qui apparaît à l'entrée du
-   curseur sur la cell. Donne un focal point visuel sans dépendre de JS
-   (le vrai "follow cursor" exigerait un client component). Le ::after
-   est en pointer-events:none donc n'interfère pas avec les interactions
-   éventuelles (liens, boutons) à l'intérieur. */
+
 .why-cell { position: relative; }
-.why-cell::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 50% 32%,
-    color-mix(in srgb, var(--primary) 10%, transparent) 0%,
-    transparent 60%
-  );
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  pointer-events: none;
-}
-.why-cell:hover::after { opacity: 1; }
-@media (hover: none) {
-  .why-cell::after { display: none; }
-}
 
 /* Mobile (< 640px) — single column : horizontal separators only */
 @media (max-width: 639.98px) {
@@ -509,176 +402,12 @@ label:has(> input[type='radio']:not(:disabled)) {
   transform: translateY(0);
 }
 
-/* ────── Wow-effect animations (scroll-reveal, mesh blob, shimmer) ─────
-   Animations utilisées par :
-     • Reveal stagger (.reveal / .reveal-stagger) — IntersectionObserver
-       côté JS pose la classe `.in` quand la section entre dans le viewport,
-       et chaque enfant `[data-reveal-child]` est délayé par `--ri`.
-     • Mesh blob (.mesh-blob) — fond Hero qui dérive lentement.
-     • Shimmer (.shimmer) — sweep diagonal périodique sur un élément (ribbon
-       "Top" de WhySection, badges…). */
-
-/* Reveal — état au repos : caché en bas + scale léger.
-   Quand `.in` est posé par l'observer, transition vers l'état final. */
-.reveal {
-  opacity: 0;
-  transform: translateY(28px) scale(0.985);
-  transition:
-    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform, opacity;
-}
-.reveal.in {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-/* Reveal stagger — enfants directs marqués `data-reveal-child` reçoivent
-   un delay basé sur leur index (posé en CSS var `--ri` par le composant).
-   On utilise une CSS var fallback à 0 pour rester gracieux si non posé. */
-.reveal-stagger > [data-reveal-child] {
-  opacity: 0;
-  transform: translateY(24px);
-  transition:
-    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ri, 0) * 70ms),
-    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ri, 0) * 70ms);
-  will-change: transform, opacity;
-}
-.reveal-stagger.in > [data-reveal-child] {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Mesh blob — gradient radial qui dérive lentement (drift). Variation
-   discrète : translation circulaire + scale très léger. 18s loop. */
-@keyframes mesh-drift {
-  0%, 100% { transform: translate(-50%, 0) scale(1); }
-  25%      { transform: translate(-45%, -3%) scale(1.04); }
-  50%      { transform: translate(-50%, -1%) scale(1.07); }
-  75%      { transform: translate(-55%, -2%) scale(1.03); }
-}
-.mesh-blob {
-  animation: mesh-drift 18s ease-in-out infinite;
-  will-change: transform;
-}
-
-/* Mesh blob secondaire — phase inversée pour casser la symétrie. */
-@keyframes mesh-drift-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(4%, 2%) scale(1.05); }
-  66%      { transform: translate(-3%, -2%) scale(0.96); }
-}
-.mesh-blob-2 {
-  animation: mesh-drift-2 22s ease-in-out infinite;
-  will-change: transform;
-}
-
-/* Shimmer — sweep diagonal sur un élément `relative` + `overflow:hidden`.
-   On l'applique via ::after pour ne pas perturber le contenu. */
-@keyframes shimmer-sweep {
-  0%   { transform: translateX(-130%) skewX(-18deg); opacity: 0; }
-  35%  { opacity: 1; }
-  70%  { transform: translateX(230%) skewX(-18deg); opacity: 0; }
-  100% { transform: translateX(230%) skewX(-18deg); opacity: 0; }
-}
-.shimmer {
-  position: relative;
-  overflow: hidden;
-}
-.shimmer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  width: 55%;
-  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
-  pointer-events: none;
-  animation: shimmer-sweep 3.4s ease-in-out infinite;
-  animation-delay: 1.2s;
-  transform: translateX(-130%) skewX(-18deg);
-}
-
-/* Glow pulse — halo lent autour d'un élément (utilisé pour la beta pill,
-   ou tout badge "live"). Très léger pour ne pas distraire. */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 30%, transparent); }
-  50%      { box-shadow: 0 0 0 8px color-mix(in srgb, currentColor 0%, transparent); }
-}
-.glow-pulse {
-  animation: glow-pulse 2.4s ease-in-out infinite;
-}
-
-/* `.dish-card-shine` — overlay radial qui suit le curseur sur les cards
-   DishGrid. Les CSS vars `--mx` / `--my` sont posées en JS via onMouseMove
-   sur le parent (pourcentages X/Y dans la card). Désactivé sur touch. */
-.dish-card-shine {
-  background: radial-gradient(
-    200px circle at var(--mx, 50%) var(--my, 50%),
-    color-mix(in srgb, var(--primary) 24%, transparent),
-    transparent 60%
-  );
-  mix-blend-mode: overlay;
-}
-.dark .dish-card-shine { mix-blend-mode: screen; }
-@media (hover: none) { .dish-card-shine { display: none; } }
-
-/* `.magnetic` — élément dont la transform est mise à jour en JS via
-   pointermove (voir useMagnetic dans DownloadButtons). Pas de transition
-   CSS ici : pendant le follow, on veut un track instantané (sinon lag
-   perceptible). Le repli (pointerleave → 0,0) est géré côté JS via une
-   transition temporaire posée juste pour cette frame. */
-.magnetic {
-  will-change: transform;
-}
-
-/* Card tilt — la carte parent reçoit `--mx`/`--my` (0..1) du curseur via JS,
-   un enfant `.card-tilt-inner` les consomme pour appliquer une rotation 3D.
-   Léger : ±6° max. Le shine est un overlay radial qui suit le curseur. */
-.card-tilt {
-  perspective: 800px;
-  transform-style: preserve-3d;
-}
-.card-tilt-inner {
-  transform:
-    rotateY(calc((var(--mx, 0.5) - 0.5) * 10deg))
-    rotateX(calc((0.5 - var(--my, 0.5)) * 8deg));
-  transition: transform 0.18s ease-out;
-  transform-style: preserve-3d;
-}
-.card-tilt:not(:hover) .card-tilt-inner {
-  transform: rotateY(0) rotateX(0);
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.card-tilt-shine {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  background: radial-gradient(
-    220px circle at calc(var(--mx, 0.5) * 100%) calc(var(--my, 0.5) * 100%),
-    rgba(255, 255, 255, 0.22),
-    transparent 50%
-  );
-  mix-blend-mode: overlay;
-  border-radius: inherit;
-}
-.card-tilt:hover .card-tilt-shine {
-  opacity: 1;
-}
-@media (hover: none) {
-  .card-tilt-inner { transform: none !important; }
-  .card-tilt-shine { display: none; }
-}
-
-/* Animations reduced-motion : neutralise les drifts décoratifs. */
-@media (prefers-reduced-motion: reduce) {
-  .mesh-blob, .mesh-blob-2, .shimmer::after, .glow-pulse { animation: none !important; }
-  .reveal, .reveal-stagger > [data-reveal-child] {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-  }
-}
+/* ────── Effets décoratifs retirés (oct. 2026) ────────────────────────
+   Plus d'apparition au scroll, de halos qui dérivent, de reflets, de halo
+   pulsé, de spot qui suit la souris, de boutons « aimantés » ni de cartes
+   inclinées en 3D : ces effets faisaient « site généré ». `.reveal` reste
+   défini (posé par <Reveal />) mais n'anime plus rien. */
+.reveal, .reveal-stagger > [data-reveal-child] { opacity: 1; transform: none; }
 
 /* ────── Shared design-system helpers ─────────────────────────────────
    Common micro-interaction patterns extracted as utility classes so the
@@ -713,64 +442,19 @@ label:has(> input[type='radio']:not(:disabled)) {
   .footer-link::after { transition: none; }
 }
 
-/* `.lift` — standard hover treatment for clickable cards/links :
-   subtle Y translate + tinted card shadow, 200ms. Use on <article>,
-   <a>, <button> that are visually "card-shaped". */
+/* `.lift` — survol des cartes cliquables : la bordure prend la couleur
+   d'accent. Pas de soulèvement ni d'ombre (oct. 2026). */
 .lift {
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-  will-change: transform;
+  transition: border-color 0.2s ease;
 }
 .lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px -10px var(--card-shadow);
-}
-@media (hover: none) {
-  .lift:hover { transform: none; box-shadow: none; }
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border2));
 }
 
-/* `.cta-shadow` — glow + lift for primary CTA pills (download buttons,
-   "Chercher", "Télécharger l'app"). Distinct from `.lift` because the
-   shadow is tinted violet (brand presence) rather than neutral. */
-.cta-shadow {
-  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--primary) 55%, transparent);
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    background-color 0.18s ease;
-}
-.cta-shadow:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--primary) 70%, transparent);
-}
-.cta-shadow:active {
-  transform: translateY(0);
-  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--primary) 45%, transparent);
-}
-@media (hover: none) {
-  .cta-shadow:hover { transform: none; }
-}
-
-/* `.feature-card` — utilisé par <SocialFeatures />. Hover qui consomme une
-   CSS variable `--feat-color` posée par le React parent → chaque card a sa
-   propre signature couleur (violet/orange/vert) tout en partageant la même
-   classe. Évite l'usage de handlers JS dans un Server Component. */
-.feature-card {
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-  will-change: transform;
-}
-.feature-card:hover {
-  transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--feat-color, var(--primary)) 40%, transparent);
-  box-shadow: 0 18px 36px -18px color-mix(in srgb, var(--feat-color, var(--primary)) 60%, transparent);
-}
-@media (hover: none) {
-  .feature-card:hover { transform: none; box-shadow: none; border-color: var(--border2); }
+/* `.cta-btn` — bouton d'action principal : aplat, le survol fonce le fond
+   (classe hover:bg-… posée par le composant). Ni halo ni soulèvement. */
+.cta-btn {
+  transition: background-color 0.18s ease;
 }
 
 /* `.surface-card` — base card visual : surface bg + subtle border + radius.
@@ -788,11 +472,6 @@ label:has(> input[type='radio']:not(:disabled)) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
-  }
-  /* Coupe les translateY de hover pour les users qui préfèrent reduced
-     motion — le shadow change toujours pour garder le signal d'hover. */
-  .lift:hover, .cta-shadow:hover, .store-btn:hover {
-    transform: none !important;
   }
   /* Exception : le marquee "En direct" porte du contenu (avis live), pas
      décoratif. Sans le défilement, la moitié des chips est invisible hors

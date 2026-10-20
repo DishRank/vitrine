@@ -44,7 +44,7 @@ function n(v: unknown): number | null {
 }
 
 const cardCls =
-  'rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--card-shadow)] sm:p-5';
+  'rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 sm:p-5';
 
 // ── Étoiles (fraction dorée clippée) ─────────────────────────────────────────
 function Stars({ rating }: { rating: number }) {

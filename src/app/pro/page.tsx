@@ -154,7 +154,7 @@ export default async function ProLandingPage() {
           >
             Votre établissement,
             <br className="hidden sm:block" />{' '}
-            <span className="hero-gradient-text">piloté au plat près.</span>
+            <span className="accent-text">piloté au plat près.</span>
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-[17px] leading-relaxed text-[var(--text2)]">
@@ -165,7 +165,7 @@ export default async function ProLandingPage() {
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href={primaryHref}
-              className="cta-shadow inline-flex items-center gap-2 rounded-full bg-[var(--primary)] px-7 py-3.5 text-base font-bold text-white hover:bg-[var(--primary-light)]"
+              className="cta-btn inline-flex items-center gap-2 rounded-full bg-[var(--primary)] px-7 py-3.5 text-base font-bold text-white hover:bg-[var(--primary-light)]"
             >
               {primaryLabel}
             </Link>
@@ -200,7 +200,7 @@ export default async function ProLandingPage() {
             {BENEFITS.map((b) => (
               <div
                 key={b.title}
-                className="feature-card surface-card p-5"
+                className="surface-card p-5"
                 style={featColor(b.color)}
               >
                 <div
@@ -268,7 +268,7 @@ export default async function ProLandingPage() {
                 </p>
                 <Link
                   href={primaryHref}
-                  className="cta-shadow mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--primary)] px-6 py-3 text-[15px] font-bold text-white hover:bg-[var(--primary-light)]"
+                  className="cta-btn mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--primary)] px-6 py-3 text-[15px] font-bold text-white hover:bg-[var(--primary-light)]"
                 >
                   {primaryLabel}
                 </Link>

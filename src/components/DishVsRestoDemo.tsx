@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
  * Affichée uniquement sur la home (pas les pages filtrées catégorie/ville
  * où le visiteur est déjà en shopping intent).
  *
- * Layout : card single, glow violet, illustration à gauche (carte restaurant
+ * Layout : card single, à plat, illustration à gauche (carte restaurant
  * synthétique avec 2 plats aux notes opposées), copy à droite. Stack sur
  * mobile.
  */
@@ -15,7 +15,7 @@ export default function DishVsRestoDemo() {
   const t = useTranslations('dishVsResto');
 
   const emGradient = (chunks: React.ReactNode) => (
-    <span className="not-italic hero-gradient-text">{chunks}</span>
+    <span className="not-italic accent-text">{chunks}</span>
   );
 
   const bold = (chunks: React.ReactNode) => (
@@ -25,16 +25,6 @@ export default function DishVsRestoDemo() {
   return (
     <section className="relative max-w-[1100px] mx-auto px-4 sm:px-8 mt-2 sm:mt-4 mb-10 sm:mb-14">
       <div className="relative rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-6 sm:p-8 lg:p-10 overflow-hidden">
-        {/* Glow violet en haut-droite — discret */}
-        <div
-          className="absolute -top-24 -right-24 w-72 h-72 rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(closest-side, var(--primary-glow), transparent 70%)',
-            filter: 'blur(40px)',
-          }}
-          aria-hidden="true"
-        />
-
         <div className="relative flex flex-col lg:flex-row items-center gap-7 lg:gap-12">
           {/* LEFT — Illustration */}
           <div className="w-full lg:flex-1 lg:max-w-[420px]">
@@ -48,10 +38,7 @@ export default function DishVsRestoDemo() {
             >
               <div
                 className="w-11 h-11 rounded-lg flex items-center justify-center text-white shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-warm) 75%, white) 0%, var(--accent-warm) 100%)',
-                  boxShadow: '0 4px 12px -4px color-mix(in srgb, var(--accent-warm) 60%, transparent)',
-                }}
+                style={{ background: 'var(--accent-warm)' }}
                 aria-hidden="true"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">

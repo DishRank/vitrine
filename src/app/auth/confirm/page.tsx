@@ -126,9 +126,9 @@ function ConfirmContent() {
 const C = {
   bg: '#14100E',
   surface: '#211A17',
-  border: '#2E2A4A',
+  border: '#3D322C',
   text: '#FAF7F2',
-  text2: '#B2BEC3',
+  text2: '#BDB3AB',
   primary: '#C2452D',
   primaryLight: '#E8846A',
   success: '#5FD39A',
@@ -142,10 +142,9 @@ const S: Record<string, React.CSSProperties> = {
   body: { fontSize: 15, color: C.text2, lineHeight: 1.6, margin: 0, maxWidth: 320 },
   cta: {
     display: 'inline-block', marginTop: 28,
-    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`,
+    background: C.primary,
     color: '#fff', fontSize: 16, fontWeight: 700, textDecoration: 'none',
     padding: '15px 38px', borderRadius: 999,
-    boxShadow: `0 10px 30px -8px ${C.primary}`,
   },
   secondary: {
     display: 'inline-block', marginTop: 16, color: C.text2,
@@ -164,14 +163,13 @@ function Card({ children }: { children: React.ReactNode }) {
         border: `1px solid ${C.border}`,
         borderRadius: 24,
         padding: '44px 32px 40px',
-        boxShadow: `0 24px 60px -20px rgba(194,69,45,0.45), 0 2px 8px rgba(0,0,0,0.4)`,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/img/icon-v2.webp" alt="DishRank" width={56} height={56}
-        style={{ borderRadius: 16, marginBottom: 24, boxShadow: `0 8px 20px -6px ${C.primary}` }}
+        style={{ borderRadius: 16, marginBottom: 24 }}
       />
       {children}
     </div>
@@ -190,12 +188,7 @@ function IconBadge({ variant }: { variant: 'success' | 'error' }) {
       style={{
         width: 72, height: 72, borderRadius: '50%', marginBottom: 22,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: isSuccess
-          ? `linear-gradient(135deg, ${C.success}, #3FB985)`
-          : `linear-gradient(135deg, ${C.warm}, #E85C2B)`,
-        boxShadow: isSuccess
-          ? '0 12px 30px -8px rgba(95,211,154,0.55)'
-          : '0 12px 30px -8px rgba(255,122,61,0.55)',
+        background: isSuccess ? '#2F9E6A' : '#D9622B',
       }}
     >
       <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
@@ -212,18 +205,17 @@ export default function ConfirmPage() {
         margin: 0, padding: '40px 20px', minHeight: '100vh',
         fontFamily: FONT, color: C.text, textAlign: 'center',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: `radial-gradient(900px 500px at 50% -10%, rgba(194,69,45,0.28), transparent 60%), ${C.bg}`,
+        background: C.bg,
       }}
     >
       <style>{`
         .dr-card { animation: dr-up 0.5s cubic-bezier(0.16,1,0.3,1) both; }
-        .dr-cta { transition: transform 0.15s ease, box-shadow 0.15s ease; }
-        .dr-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 38px -8px ${C.primary}; }
-        .dr-cta:active { transform: translateY(0); }
+        .dr-cta { transition: background-color 0.15s ease; }
+        .dr-cta:hover { background-color: #A63A25 !important; }
         .dr-link:hover { color: ${C.primaryLight}; }
         .dr-spinner {
           width: 56px; height: 56px; margin-bottom: 24px; border-radius: 50%;
-          border: 4px solid rgba(162,155,254,0.18);
+          border: 4px solid rgba(232,132,106,0.18);
           border-top-color: ${C.primaryLight};
           animation: dr-spin 0.8s linear infinite;
         }

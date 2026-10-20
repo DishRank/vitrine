@@ -204,7 +204,7 @@ export default function MenuBoard({
       {/* Aperçu qui suit le curseur pendant le glissement. */}
       <DragOverlay dropAnimation={null}>
         {active ? (
-          <div className="pointer-events-none rounded-xl border border-[var(--primary)] bg-[var(--surface)] px-3 py-2 text-sm font-bold shadow-[0_12px_32px_var(--card-shadow)]">
+          <div className="pointer-events-none rounded-xl border border-[var(--primary)] bg-[var(--surface)] px-3 py-2 text-sm font-bold shadow-[0_8px_24px_-8px_var(--card-shadow)]">
             {active.type === 'container' ? '' : active.label}
           </div>
         ) : null}

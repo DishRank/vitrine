@@ -75,7 +75,7 @@ export default async function CockpitPage({ params }: { params: Promise<{ id: st
               <Link
                 key={a.label}
                 href={a.href}
-                className="flex items-center gap-3 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_var(--card-shadow)] transition-colors hover:border-[var(--primary)]"
+                className="flex items-center gap-3 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--primary)]"
                 style={{ animation: 'fadeUp 0.4s ease-out both', animationDelay: `${i * 55}ms` }}
               >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--primary-container)] text-[var(--primary)]">

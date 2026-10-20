@@ -43,7 +43,7 @@ export default function BetaModal() {
 
   return (
     <div
-      className={`fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 ${closing ? 'backdrop-out' : 'backdrop-in'}`}
+      className={`fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4 ${closing ? 'backdrop-out' : 'backdrop-in'}`}
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <div

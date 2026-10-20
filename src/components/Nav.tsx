@@ -161,16 +161,11 @@ export default function Nav() {
     <>
       <nav
         aria-label="Main navigation"
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-        style={scrolled ? {
-          background: 'color-mix(in srgb, var(--bg) 78%, transparent)',
-          backdropFilter: 'saturate(160%) blur(14px)',
-          WebkitBackdropFilter: 'saturate(160%) blur(14px)',
-          boxShadow: '0 1px 0 var(--border)',
-        } : {
-          background: 'color-mix(in srgb, var(--bg) 60%, transparent)',
-          backdropFilter: 'saturate(160%) blur(10px)',
-          WebkitBackdropFilter: 'saturate(160%) blur(10px)',
+        className="fixed top-0 left-0 right-0 z-50 transition-shadow duration-300"
+        // Fond plein (plus d'effet verre dépoli) ; le filet n'apparaît qu'au scroll.
+        style={{
+          background: 'var(--bg)',
+          boxShadow: scrolled ? '0 1px 0 var(--border2)' : 'none',
         }}
       >
         <div className="max-w-[1280px] mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
@@ -246,7 +241,7 @@ export default function Nav() {
       {/* Backdrop — fade-in court (200ms). */}
       <div
         onClick={() => setDrawerOpen(false)}
-        className={`lg:hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`lg:hidden fixed inset-0 z-[60] bg-black/60 transition-opacity duration-200 ${
           drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         aria-hidden="true"
@@ -272,7 +267,7 @@ export default function Nav() {
           transition: 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1)',
           willChange: 'transform',
         }}
-        className="lg:hidden fixed top-0 right-0 bottom-0 z-[61] w-[88%] max-w-[360px] bg-[var(--bg)] border-l border-[var(--border2)] shadow-2xl flex flex-col"
+        className="lg:hidden fixed top-0 right-0 bottom-0 z-[61] w-[88%] max-w-[360px] bg-[var(--bg)] border-l border-[var(--border2)] flex flex-col"
       >
         {/* Drawer header : logo + close */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--border)]">

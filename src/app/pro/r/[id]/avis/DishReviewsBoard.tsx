@@ -299,7 +299,7 @@ export default function DishReviewsBoard({
                   key={g.name}
                   type="button"
                   onClick={() => setOpen({ kind: "dish", group: g })}
-                  className="flex gap-3 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-3 text-left shadow-[0_2px_10px_var(--card-shadow)] transition-colors hover:border-[var(--primary)]"
+                  className="flex gap-3 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-3 text-left transition-colors hover:border-[var(--primary)]"
                 >
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element

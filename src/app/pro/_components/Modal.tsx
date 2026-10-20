@@ -82,7 +82,7 @@ export default function Modal({
         aria-label={title}
         // flex column + max-h : centrée, et si le contenu dépasse la hauteur
         // de l'écran c'est le CORPS qui scrolle (l'en-tête reste visible).
-        className={`flex max-h-[calc(100dvh-2rem)] w-full ${maxWidth} flex-col rounded-2xl border border-[var(--border2)] bg-[var(--surface)] shadow-2xl outline-none`}
+        className={`flex max-h-[calc(100dvh-2rem)] w-full ${maxWidth} flex-col rounded-2xl border border-[var(--border2)] bg-[var(--surface)] shadow-lg outline-none`}
         style={{ animation: 'fadeUp 0.15s ease-out both' }}
       >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--border2)] p-5 sm:p-6">

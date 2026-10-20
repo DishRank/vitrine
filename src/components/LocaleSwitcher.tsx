@@ -135,7 +135,7 @@ export default function LocaleSwitcher({ variant = 'nav' }: Props) {
         aria-expanded={open}
         aria-haspopup="listbox"
         disabled={isPending}
-        className="cursor-pointer w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-xl rounded-lg hover:bg-[var(--surface-var)] hover:scale-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-wait"
+        className="cursor-pointer w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-xl rounded-lg hover:bg-[var(--surface-var)] transition-all duration-200 disabled:opacity-50 disabled:cursor-wait"
       >
         <span aria-hidden="true">{current.flag}</span>
       </button>
@@ -147,7 +147,7 @@ export default function LocaleSwitcher({ variant = 'nav' }: Props) {
           // par le bas (dropDownOut) → ressenti "goutte" cohérent.
           // `forwards` sur la sortie pour que l'état final (opacity 0,
           // translateY 10px) reste pendant le timeout avant l'unmount.
-          className={`absolute right-0 top-full mt-2 z-[100] bg-[var(--surface)] border border-[var(--border2)] rounded-xl shadow-xl py-1 min-w-[170px] ${
+          className={`absolute right-0 top-full mt-2 z-[100] bg-[var(--surface)] border border-[var(--border2)] rounded-xl shadow-lg py-1 min-w-[170px] ${
             closing
               ? 'animate-[dropDownOut_0.18s_ease_forwards] pointer-events-none'
               : 'animate-[dropDownIn_0.18s_ease]'

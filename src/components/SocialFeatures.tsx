@@ -143,9 +143,9 @@ export default function SocialFeatures() {
   const steps = t.raw('barycentre.steps') as BarycentreStep[];
   const items = t.raw('items') as FeatureItem[];
 
-  // <em> dans les titres → portion en gradient violet (cohérent avec Hero).
+  // <em> dans les titres → portion en couleur d'accent (cohérent avec Hero).
   const emGradient = (chunks: React.ReactNode) => (
-    <span className="hero-gradient-text not-italic">{chunks}</span>
+    <span className="accent-text not-italic">{chunks}</span>
   );
 
   return (
@@ -173,16 +173,6 @@ export default function SocialFeatures() {
       <article
         className="relative rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-[var(--surface)] border border-[var(--border2)]"
       >
-        {/* Glow violet — discret, signale "feature premium" */}
-        <div
-          className="absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(closest-side, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%)',
-            filter: 'blur(50px)',
-          }}
-          aria-hidden="true"
-        />
-
         <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 p-6 sm:p-8 lg:p-12">
           {/* Illustration */}
           <div className="flex items-center justify-center text-[var(--primary)]">
@@ -244,25 +234,9 @@ export default function SocialFeatures() {
             <article
               key={i}
               data-reveal-child
-              className="feature-card relative rounded-2xl p-6 sm:p-7 bg-[var(--surface)] border border-[var(--border2)] flex flex-col"
-              style={{
-                // CSS var consommée par `.feature-card:hover` dans globals.css.
-                // Chaque card a sa signature couleur propre (groups=violet,
-                // poll=orange, list=vert) au lieu d'un primary uniforme.
-                ['--feat-color' as string]: style.color,
-                ['--ri' as string]: i,
-              }}
+              className="relative rounded-2xl p-6 sm:p-7 bg-[var(--surface)] border border-[var(--border2)] flex flex-col"
+              style={{ ['--ri' as string]: i }}
             >
-              {/* Glow ambient teinté à la couleur de la feature */}
-              <div
-                className="absolute -top-12 -left-12 w-36 h-36 rounded-full pointer-events-none"
-                style={{
-                  background: `radial-gradient(closest-side, ${style.color}33, transparent 70%)`,
-                  filter: 'blur(30px)',
-                }}
-                aria-hidden="true"
-              />
-
               {/* Icon + pill row */}
               <div className="relative flex items-center justify-between mb-5">
                 <div

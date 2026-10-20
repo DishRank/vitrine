@@ -77,7 +77,7 @@ export default function RelatedFilterLink({ href, label }: Props) {
       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--border2)] bg-[var(--surface)] transition-all duration-200 capitalize ${
         loading
           ? 'cursor-wait opacity-60 border-[var(--primary)] text-[var(--primary)]'
-          : 'text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--primary)] hover:-translate-y-0.5'
+          : 'text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
       }`}
     >
       {loading && (

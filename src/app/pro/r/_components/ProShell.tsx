@@ -595,7 +595,7 @@ function NotifBell({
         <div
           // Mobile : ancré au viewport (la cloche n'est pas au bord droit, un
           // panneau ancré déborderait à gauche) ; desktop : ancré à la cloche.
-          className="fixed inset-x-4 top-[72px] z-50 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-2 shadow-[0_12px_32px_var(--card-shadow)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80"
+          className="fixed inset-x-4 top-[72px] z-50 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-2 shadow-[0_8px_24px_-8px_var(--card-shadow)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80"
           style={{ animation: 'dropDownIn 0.15s ease-out both' }}
         >
           <p className="px-2.5 pb-1.5 pt-1 text-[11px] font-bold uppercase tracking-wider text-[var(--text3)]">
@@ -753,7 +753,7 @@ function RestoSwitcher({
           role="listbox"
           // `inset-x-0` : le panneau épouse la largeur de la sidebar (w-60) ou du
           // tiroir (w-72). Une largeur fixe w-72 débordait de la sidebar desktop.
-          className="absolute inset-x-0 top-full z-50 mt-2 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-2 shadow-[0_12px_32px_var(--card-shadow)]"
+          className="absolute inset-x-0 top-full z-50 mt-2 rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-2 shadow-[0_8px_24px_-8px_var(--card-shadow)]"
           style={{ animation: 'dropDownIn 0.15s ease-out both' }}
         >
           <div className="max-h-80 overflow-y-auto">

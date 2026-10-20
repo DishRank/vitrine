@@ -101,7 +101,7 @@ export default function SearchSection({
       </h2>
 
       {/* Search bar (max-width 880, with Chercher button inside on the right) */}
-      <div className="relative max-w-[880px] mx-auto" style={{ boxShadow: '0 20px 60px -20px rgba(124,108,247,0.25)' }}>
+      <div className="relative max-w-[880px] mx-auto">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-[var(--surface)] border border-[var(--border2)] rounded-2xl sm:rounded-full px-3 py-2 sm:px-1.5 sm:py-1.5 gap-2 sm:gap-0 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary-container)] transition-all">
           {/* City */}
           <div className="flex items-center gap-1.5 sm:pl-3 sm:pr-3 shrink-0">
@@ -137,13 +137,13 @@ export default function SearchSection({
             </button>
           )}
         </div>
-        {/* "Chercher" button — pill purple with periodic shine sweep + hover lift.
-            Animation classes (search-btn-shine, search-arrow) defined in globals.css. */}
+        {/* Bouton « Chercher » — aplat ; seule la flèche répond au survol
+            (classes search-btn / search-arrow dans globals.css). */}
         <button
           type="button"
           onClick={() => navigate(category, city, query)}
           aria-label={t('cta')}
-          className="search-btn-shine hidden sm:inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-full bg-[var(--primary)] hover:bg-[#D4553A] text-white text-sm font-bold shrink-0"
+          className="search-btn hidden sm:inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-full bg-[var(--primary)] hover:bg-[#A63A25] text-white text-sm font-bold shrink-0"
         >
           <span className="relative z-10">{t('cta')}</span>
           <svg
@@ -167,7 +167,7 @@ export default function SearchSection({
         {cityDropdownOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setCityDropdownOpen(false)} />
-            <div className="absolute left-3 sm:left-4 top-full mt-1 z-50 bg-[var(--surface)] border border-[var(--border2)] rounded-xl shadow-xl max-h-60 overflow-y-auto min-w-[200px] py-1 animate-[fadeUp_0.15s_ease]">
+            <div className="absolute left-3 sm:left-4 top-full mt-1 z-50 bg-[var(--surface)] border border-[var(--border2)] rounded-xl shadow-lg max-h-60 overflow-y-auto min-w-[200px] py-1 animate-[fadeUp_0.15s_ease]">
               <button
                 type="button"
                 onClick={() => { setCity(''); setCityDropdownOpen(false); navigate(category, '', query, true); }}
@@ -198,7 +198,7 @@ export default function SearchSection({
             <button
               key={c.slug}
               onClick={() => selectCategory(c.slug)}
-              className={`cursor-pointer px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all duration-200 shrink-0 hover:-translate-y-0.5 hover:scale-[1.03] ${
+              className={`cursor-pointer px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all duration-200 shrink-0 ${
                 c.slug === category
                   ? 'bg-[var(--primary)] border-[var(--primary)] text-white font-semibold'
                   : 'bg-[var(--surface)] border-[var(--border2)] text-[var(--text2)] hover:border-[var(--primary)] hover:text-[var(--text)]'
@@ -214,7 +214,7 @@ export default function SearchSection({
         {isMobile && (
           <button
             onClick={() => setSheetOpen(true)}
-            className="cursor-pointer px-3 py-1 rounded-full text-xs font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] hover:-translate-y-0.5 transition-all duration-200"
+            className="cursor-pointer px-3 py-1 rounded-full text-xs font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] transition-all duration-200"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
             {t('more')}
@@ -224,7 +224,7 @@ export default function SearchSection({
         {!isMobile && chipLevel > 0 && (
           <button
             onClick={() => { setPrevLimit(0); setChipLevel(0); }}
-            className="cursor-pointer px-4 py-1.5 rounded-full text-sm font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] hover:-translate-y-0.5 transition-all duration-200"
+            className="cursor-pointer px-4 py-1.5 rounded-full text-sm font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] transition-all duration-200"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
             {t('less')}
@@ -233,7 +233,7 @@ export default function SearchSection({
         {!isMobile && hasMore && (
           <button
             onClick={() => { setPrevLimit(limit); setChipLevel((l) => Math.min(l + 1, CHIP_STEPS.length)); }}
-            className="cursor-pointer px-4 py-1.5 rounded-full text-sm font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] hover:-translate-y-0.5 transition-all duration-200"
+            className="cursor-pointer px-4 py-1.5 rounded-full text-sm font-medium border border-[var(--primary)] text-[var(--primary)] inline-flex items-center gap-1 hover:bg-[var(--primary-container)] transition-all duration-200"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
             {t('more')}
@@ -244,7 +244,7 @@ export default function SearchSection({
       {/* Mobile bottom sheet for categories */}
       {sheetOpen && (
         <div
-          className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-end justify-center animate-[fadeIn_0.2s_ease]"
+          className="fixed inset-0 z-[200] bg-black/50 flex items-end justify-center animate-[fadeIn_0.2s_ease]"
           onClick={(e) => { if (e.target === e.currentTarget) setSheetOpen(false); }}
         >
           <div role="dialog" aria-modal="true" className="bg-[var(--surface)] rounded-t-3xl w-full max-h-[70vh] flex flex-col animate-[sheetUp_0.3s_ease]">

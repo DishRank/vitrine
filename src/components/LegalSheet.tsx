@@ -240,7 +240,7 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
 
   return (
     <div
-      className={`fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-end justify-center overscroll-contain ${closing ? 'backdrop-out' : 'backdrop-in'}`}
+      className={`fixed inset-0 z-[300] bg-black/50 flex items-end justify-center overscroll-contain ${closing ? 'backdrop-out' : 'backdrop-in'}`}
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <div
@@ -271,8 +271,7 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
             // close() — on ne pose RIEN inline sur transform/opacity ici
             // (sinon React écraserait l'animation impérative à chaque
             // re-render qui surviendrait pendant la fermeture).
-            // Hint compositor pour la fluidité (backdrop-blur derrière =
-            // composer GPU coûteux, willChange aide).
+            // Hint compositor pour la fluidité du glissement.
             base.willChange = 'transform, opacity';
           } else if (dragY > 0) {
             base.transform = `translateY(${dragY}px)`;
@@ -294,7 +293,7 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
           onTouchEnd={onHandleTouchEnd}
         >
           <div className="w-9 h-1 bg-[var(--border2)] rounded-full mx-auto mb-3" />
-          <button onClick={close} aria-label="Fermer" className="cursor-pointer absolute top-3 right-4 w-8 h-8 flex items-center justify-center bg-[var(--surface-var)] rounded-full text-[var(--text2)] hover:text-[var(--text)] hover:bg-[var(--border2)] hover:scale-110 hover:rotate-90 transition-all duration-300">
+          <button onClick={close} aria-label="Fermer" className="cursor-pointer absolute top-3 right-4 w-8 h-8 flex items-center justify-center bg-[var(--surface-var)] rounded-full text-[var(--text2)] hover:text-[var(--text)] hover:bg-[var(--border2)] hover:rotate-90 transition-all duration-300">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
           <div className="flex gap-1 pb-3 border-b border-[var(--border)]">

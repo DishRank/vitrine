@@ -25,18 +25,6 @@ export default function RestaurantLoading() {
         id="main-content"
         className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4 py-24"
       >
-        {/* Glow violet — match le hero pour cohérence visuelle */}
-        <div
-          className="absolute top-[80px] left-1/2 -translate-x-1/2 rounded-full pointer-events-none"
-          style={{
-            width: 'min(700px, 100vw)',
-            height: 'min(400px, 50vw)',
-            background: 'radial-gradient(closest-side, rgba(124,108,247,0.18), transparent 70%)',
-            filter: 'blur(40px)',
-          }}
-          aria-hidden="true"
-        />
-
         <div className="relative z-10 flex flex-col items-center">
           <M3Spinner size={56} />
           <p className="mt-7 text-sm text-[var(--text2)] font-medium tracking-wide">

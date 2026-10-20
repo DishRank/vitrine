@@ -87,52 +87,33 @@ export default function DishGrid({
               role="button"
               tabIndex={0}
               aria-label={`${d.dish_name} — ${d.restaurant_name}${d.restaurant_city ? `, ${d.restaurant_city}` : ''} — ${d.avg_rating}/5`}
-              className="dish-card group relative bg-[var(--surface)] rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-[var(--card-shadow)] transition-all duration-300 animate-[fadeUp_0.4s_ease_both] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
-              style={{ animationDelay: `${i * 40}ms` }}
-              onMouseMove={(e) => {
-                // Track cursor pour le shine radial. On stocke en CSS var
-                // sur la card (`--mx`/`--my` en %) → l'overlay
-                // `.dish-card-shine` consomme via `radial-gradient` qui se
-                // recalcule à chaque paint (donc à chaque pointermove).
-                // Throttle naturel : pointermove vient déjà capé à ~60Hz.
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const mx = ((e.clientX - rect.left) / rect.width) * 100;
-                const my = ((e.clientY - rect.top) / rect.height) * 100;
-                e.currentTarget.style.setProperty('--mx', `${mx}%`);
-                e.currentTarget.style.setProperty('--my', `${my}%`);
-              }}
+              className="dish-card lift group relative bg-[var(--surface)] border border-[var(--border2)] rounded-2xl overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
               onClick={() => window.dispatchEvent(new CustomEvent('open-dish', { detail: d }))}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('open-dish', { detail: d })); } }}
             >
-              {/* Shine radial qui suit le curseur — overlay au-dessus de tout
-                  le contenu mais sous les badges (z-index 1). pointer-events
-                  none pour ne pas bloquer le click. */}
-              <div className="dish-card-shine pointer-events-none absolute inset-0 z-[1] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-hidden="true" />
               <div className="relative h-36 overflow-hidden">
                 <Image
                   src={d.cover_photo_url}
                   alt={`${d.dish_name} chez ${d.restaurant_name}${d.restaurant_city ? ` à ${d.restaurant_city}` : ''}`}
                   fill
-                  className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                  className="object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                   priority={i === 0}
                   loading={i < 4 ? 'eager' : 'lazy'}
                   fetchPriority={i === 0 ? 'high' : undefined}
                 />
-                {/* Subtle dark overlay on hover for depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-bold text-white group-hover:bg-black/80 group-hover:scale-105 transition-all duration-300">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="#F9CA24" className="group-hover:rotate-[20deg] transition-transform duration-300"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/70 rounded-lg px-2 py-1 text-xs font-bold text-white">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="#F9CA24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                   {d.avg_rating}
                 </div>
-                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-semibold text-white group-hover:bg-black/80 transition-colors duration-300 inline-flex items-center gap-1">
+                <div className="absolute top-2 left-2 bg-black/70 rounded-lg px-2 py-1 text-xs font-semibold text-white inline-flex items-center gap-1">
                   <span>{d.review_count}</span>
                   <span>{t('reviewsLabel', { count: d.review_count })}</span>
                 </div>
-                {/* Rank #X badge bottom-left, big, with text-shadow so it pops on photos */}
+                {/* Rang #X en bas à gauche — ombre de texte courte, juste pour la lisibilité sur photo */}
                 <div
                   className="absolute bottom-2 left-2.5 inline-flex items-baseline gap-0.5 text-white pointer-events-none"
-                  style={{ textShadow: '0 2px 14px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5)' }}
+                  style={{ textShadow: '0 1px 3px rgba(0,0,0,0.75)' }}
                   aria-label={`Rang ${i + 1}`}
                 >
                   <span className="font-extrabold opacity-80" style={{ fontSize: 11 }}>#</span>

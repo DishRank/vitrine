@@ -95,7 +95,7 @@ export default function SectionBlock({
     <section
       ref={setNodeRef}
       style={style}
-      className={`overflow-hidden rounded-2xl border bg-[var(--surface)] ${isDragging ? 'z-10 border-[var(--primary)] shadow-[0_12px_32px_var(--card-shadow)]' : 'border-[var(--border2)]'} ${section.is_visible ? '' : 'opacity-60'}`}
+      className={`overflow-hidden rounded-2xl border bg-[var(--surface)] ${isDragging ? 'z-10 border-[var(--primary)] shadow-[0_8px_24px_-8px_var(--card-shadow)]' : 'border-[var(--border2)]'} ${section.is_visible ? '' : 'opacity-60'}`}
     >
       {/* En-tête de catégorie */}
       <header className="flex items-start justify-between gap-2 border-b border-[var(--border2)] bg-[var(--surface-var)]/40 p-4">

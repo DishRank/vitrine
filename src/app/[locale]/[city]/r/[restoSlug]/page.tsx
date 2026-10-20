@@ -473,18 +473,6 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
         {/* Hero compact spécifique resto — pas le gros Hero de la home,
             on garde le focus sur les plats. */}
         <section className="relative pt-24 pb-8 sm:pb-12 text-center overflow-hidden">
-          <div
-            className="absolute -top-[80px] left-1/2 -translate-x-1/2 rounded-full pointer-events-none"
-            style={{
-              width: 'min(900px, 100vw)',
-              height: 'min(500px, 55vw)',
-              background: 'radial-gradient(closest-side, rgba(124,108,247,0.20), transparent 70%)',
-              filter: 'blur(40px)',
-              contain: 'paint',
-            }}
-            aria-hidden="true"
-          />
-
           <div className="relative z-10 max-w-[1100px] mx-auto px-4 sm:px-8">
             {/* Breadcrumb */}
             <nav aria-label="Breadcrumb" className="mb-5 text-xs sm:text-sm text-[var(--text3)]">

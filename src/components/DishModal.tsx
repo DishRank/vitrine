@@ -37,7 +37,7 @@ export default function DishModal() {
 
   return (
     <div
-      className={`fixed inset-0 z-[250] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 ${closing ? 'animate-[fadeOut_0.25s_ease_forwards]' : 'animate-[fadeIn_0.2s_ease]'}`}
+      className={`fixed inset-0 z-[250] bg-black/50 flex items-center justify-center p-4 ${closing ? 'animate-[fadeOut_0.25s_ease_forwards]' : 'animate-[fadeIn_0.2s_ease]'}`}
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <div
@@ -47,7 +47,7 @@ export default function DishModal() {
       >
         {/* Hero image */}
         <div className="group/hero relative h-44 sm:h-52 shrink-0 bg-[var(--surface-var)] flex items-center justify-center overflow-hidden">
-          <button onClick={close} aria-label="Close" className="cursor-pointer absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center bg-black/50 rounded-full text-white hover:bg-black/80 hover:scale-110 hover:rotate-90 transition-all duration-300">
+          <button onClick={close} aria-label="Close" className="cursor-pointer absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center bg-black/50 rounded-full text-white hover:bg-black/80 hover:rotate-90 transition-all duration-300">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -116,7 +116,7 @@ export default function DishModal() {
 
           {/* Price */}
           {dish.latest_price && (
-            <span className="inline-block text-sm font-bold text-[var(--primary)] bg-[var(--primary-container)] px-3 py-1 rounded-lg mb-4 hover:bg-[var(--primary)] hover:text-white hover:scale-105 transition-all duration-300 cursor-default">
+            <span className="inline-block text-sm font-bold text-[var(--primary)] bg-[var(--primary-container)] px-3 py-1 rounded-lg mb-4 hover:bg-[var(--primary)] hover:text-white transition-all duration-300 cursor-default">
               {Number(dish.latest_price).toFixed(2)} {dish.currency || 'EUR'}
             </span>
           )}

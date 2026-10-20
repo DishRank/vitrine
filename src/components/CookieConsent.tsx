@@ -162,9 +162,9 @@ export default function CookieConsent() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="cookie-customize-title"
-        className={`fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm ${closingCustomize ? 'backdrop-out' : 'backdrop-in'}`}
+        className={`fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 ${closingCustomize ? 'backdrop-out' : 'backdrop-in'}`}
       >
-        <div className={`relative w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border2)] rounded-2xl shadow-2xl ${closingCustomize ? 'modal-down' : 'modal-up'}`}>
+        <div className={`relative w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border2)] rounded-2xl shadow-lg ${closingCustomize ? 'modal-down' : 'modal-up'}`}>
           {/* Header */}
           <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--border)]">
             <h2 id="cookie-customize-title" className="font-bold text-xl text-[var(--text)]">
@@ -275,17 +275,9 @@ export default function CookieConsent() {
       }}
     >
       <div
-        className="relative bg-[var(--surface)] border-2 border-[var(--primary)]/30 rounded-2xl px-5 sm:px-7 py-5 sm:py-6 shadow-2xl"
-        style={{ boxShadow: '0 20px 60px -15px rgba(194, 69, 45, 0.4), 0 8px 25px -8px rgba(0, 0, 0, 0.25)' }}
+        className="relative bg-[var(--surface)] border border-[var(--border2)] rounded-2xl px-5 sm:px-7 py-5 sm:py-6"
+        style={{ boxShadow: '0 8px 24px -12px var(--card-shadow)' }}
       >
-        {/* Glow décoratif violet en arrière-plan */}
-        <div
-          className="absolute inset-0 rounded-2xl pointer-events-none -z-10"
-          aria-hidden="true"
-          style={{
-            background: 'radial-gradient(circle at 0% 0%, rgba(194, 69, 45, 0.12), transparent 50%)',
-          }}
-        />
 
         {/* Title + description */}
         <h2 id="cookie-banner-title" className="font-bold text-base sm:text-lg text-[var(--text)] mb-2">

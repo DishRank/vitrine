@@ -26,7 +26,7 @@ export default function AuthShell({
         </span>
       </Link>
 
-      <div className="w-full max-w-[420px] rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-6 sm:p-8 shadow-[0_10px_40px_var(--card-shadow)]">
+      <div className="w-full max-w-[420px] rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-6 sm:p-8">
         <h1 className="text-2xl font-extrabold tracking-tight mb-1">{title}</h1>
         {subtitle ? <p className="text-sm text-[var(--text2)] mb-6">{subtitle}</p> : <div className="mb-6" />}
         {children}

@@ -79,10 +79,8 @@ export default function WhySection() {
         style={{ border: '1px solid var(--border2)', borderRadius: 18 }}
       >
         {items.map((item, i) => {
-          // Première cellule mise en valeur — gradient violet très léger en
-          // diagonale, taille d'icône bumpée, numéro plus contrasté. Casse la
-          // grille 3×2 égale (pattern AI flag par le skill) sans toucher la
-          // structure des borders internes.
+          // Première cellule mise en valeur par un aplat teinté et une icône
+          // plus grande — pas de dégradé, de reflet ni de halo (oct. 2026).
           const featured = i === 0;
           return (
             <div
@@ -92,30 +90,12 @@ export default function WhySection() {
               style={{
                 ['--ri' as string]: i,
                 ...(featured ? {
-                  background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, transparent) 0%, color-mix(in srgb, var(--primary) 3%, transparent) 55%, transparent 100%)',
+                  background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
                 } : {}),
               }}
             >
-              {/* Featured "Top" ribbon — tiny pill upper-right, only sur la
-                  première cell. `.shimmer` ajoute un sweep diagonal périodique
-                  toutes les ~3s pour attirer subtilement l'œil. */}
-              {featured && (
-                <span
-                  className="shimmer absolute top-3 right-3 sm:top-4 sm:right-4 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tabular pointer-events-none"
-                  style={{
-                    letterSpacing: '1.2px',
-                    background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
-                    color: 'var(--primary)',
-                    border: '1px solid color-mix(in srgb, var(--primary) 28%, transparent)',
-                  }}
-                  aria-hidden="true"
-                >
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className="relative z-[1]"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                  <span className="relative z-[1]">Top</span>
-                </span>
-              )}
-              {/* Icon + number row */}
-              <div className="flex items-center justify-between mb-5">
+              {/* Icône */}
+              <div className="flex items-center mb-5">
                 <div
                   className="flex items-center justify-center text-[var(--primary)] bg-[var(--primary-container)]"
                   style={{
@@ -125,24 +105,10 @@ export default function WhySection() {
                     border: featured
                       ? '1px solid color-mix(in srgb, var(--primary) 38%, transparent)'
                       : '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
-                    boxShadow: featured
-                      ? '0 8px 20px -10px color-mix(in srgb, var(--primary) 60%, transparent)'
-                      : undefined,
                   }}
                 >
                   <WhyIcon kind={ICONS[i] || 'plate'} />
                 </div>
-                <span
-                  className="font-bold text-[var(--primary)] tabular"
-                  style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace',
-                    fontSize: 12,
-                    letterSpacing: 1,
-                    opacity: featured ? 1 : 0.7,
-                  }}
-                >
-                  {String(i + 1).padStart(2, '0')}
-                </span>
               </div>
 
               <h3

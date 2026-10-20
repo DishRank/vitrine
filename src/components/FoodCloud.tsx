@@ -156,17 +156,14 @@ export default function FoodCloud() {
   return (
     <section
       ref={sectionRef}
-      // overflow-visible : laisse les emojis dépasser quand ils sont en
-      // périphérie et que le parallax les pousse au-delà des bords.
-      className="relative max-w-[1280px] mx-auto px-4 py-16 sm:py-24 lg:py-32 min-h-[400px] sm:min-h-[500px] lg:min-h-[560px] flex items-center justify-center overflow-visible"
+      // overflow-hidden : les emojis restent dans la section (avant, le
+      // parallax les faisait déborder sur les titres voisins et élargissait
+      // la page au-delà de l'écran).
+      className="relative max-w-[1280px] mx-auto px-4 py-16 sm:py-24 lg:py-32 min-h-[400px] sm:min-h-[500px] lg:min-h-[560px] flex items-center justify-center overflow-hidden"
     >
       {/* Decorative emoji cloud (background, ignored by screen readers).
-          Two-level transform pour combiner parallax + float-slow :
-            • Outer span : reçoit la position absolue + le transform de
-              parallax (mis à jour en JS au scroll).
-            • Inner span : porte l'animation `float-slow` (CSS, bobbing
-              vertical permanent même quand le scroll est immobile). Durée
-              et délai sont varies par index pour casser le sync uniforme. */}
+          Outer span : position absolue + transform de parallax (JS au scroll).
+          Plus de flottement permanent ni d'ombre portée (oct. 2026). */}
       <div className="absolute inset-0 z-0" aria-hidden="true">
         {emojis.map((emoji, i) => (
           <span
@@ -181,15 +178,7 @@ export default function FoodCloud() {
               transition: i < revealed ? 'opacity 0.4s ease' : 'transform 0.5s ease, opacity 0.4s ease',
             }}
           >
-            <span
-              className="block float-slow text-xl sm:text-2xl lg:text-3xl"
-              style={{
-                // Vary timing per emoji so the cloud doesn't bob in unison
-                animationDuration: `${4 + (i % 5)}s`,
-                animationDelay: `${(i * 0.27) % 3}s`,
-                filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.25))',
-              }}
-            >
+            <span className="block text-xl sm:text-2xl lg:text-3xl">
               {emoji}
             </span>
           </span>

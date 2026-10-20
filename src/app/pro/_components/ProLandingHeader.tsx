@@ -13,7 +13,7 @@ import AnimatedLogo from '@/components/AnimatedLogo';
  */
 export default function ProLandingHeader({ authed }: { authed: boolean }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--border2)] bg-[var(--surface)]/85 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-[var(--border2)] bg-[var(--surface)]">
       <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-8 lg:px-14">
         <Link href="/pro" className="flex items-center gap-2.5 text-[var(--text)]">
           <AnimatedLogo size={28} />

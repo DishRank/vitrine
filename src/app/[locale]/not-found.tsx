@@ -31,7 +31,6 @@ export default function NotFound() {
         </Link>
       </nav>
       <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10 relative overflow-hidden min-h-[70vh]">
-        <div className="absolute top-[-30%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-[radial-gradient(circle,var(--primary-glow)_0%,transparent_70%)] pointer-events-none" />
         <div className="relative z-10">
           <p className="text-[clamp(5rem,14vw,9rem)] font-black leading-none tracking-tighter text-[var(--primary)] opacity-25 -mb-4">
             404
@@ -45,7 +44,7 @@ export default function NotFound() {
           <div className="flex flex-col items-center gap-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 px-7 py-3.5 bg-[var(--primary)] text-white font-semibold rounded-full hover:bg-[var(--primary-light)] hover:-translate-y-0.5 hover:shadow-[0_10px_30px_var(--primary-glow)] transition-all"
+              className="inline-flex items-center gap-2 px-7 py-3.5 bg-[var(--primary)] text-white font-semibold rounded-full hover:bg-[var(--primary-light)] transition-colors"
             >
               {t('backHome')}
             </Link>

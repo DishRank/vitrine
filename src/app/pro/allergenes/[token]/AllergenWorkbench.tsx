@@ -468,7 +468,7 @@ export default function AllergenWorkbench({ token, payload }: { token: string; p
 
       {/* ── Barre d'action (écran) ─────────────────────────────────────────── */}
       {!removed && items.length > 0 ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--border2)] bg-[var(--surface)]/95 backdrop-blur print:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--border2)] bg-[var(--surface)] print:hidden">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
               <p className="text-sm font-bold">

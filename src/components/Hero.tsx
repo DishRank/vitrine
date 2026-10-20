@@ -21,8 +21,8 @@ type Props = {
  *   • Label "Note les plats · pas les restos" entouré de 2 traits horizontaux
  *     (24px × 1px, color #EE9A82 @ 40% opacity), uppercase tracked, tinted
  *     #EE9A82 (T.violetHi) — pas la couleur primary qui est plus foncée.
- *   • Titre H1 92px, blanc — gradient violet 3 stops (#EE9A82 → #D4553A →
- *     #9E3420) UNIQUEMENT sur la portion <em> (gérée par le rich text i18n).
+ *   • Titre H1 92px — la portion <em> (rich text i18n) en aplat paprika.
+ *     Plus de texte en dégradé ni de halos en fond (oct. 2026).
  *   • Subtitle 18px, ligne hauteur 1.55, max-width 560px, color textSoft
  *     (#bfb8e8).
  *   • Stats line : "200+" / "100%" en blanc bold, le reste en muted.
@@ -68,8 +68,8 @@ export default function Hero({ category, city, bestCategory }: Props) {
    *   • ES : "Mejor burger"                → prefix "Mejor ", label "burger"
    *
    * Le résultat : seul le premier mot (article FR / "Best" en EN) est en
-   * plain text, tout le reste (qualifier + plats + label) passe en gradient
-   * violet. Match le pattern du H1 home `Le <em>meilleur plat</em>...`.
+   * plain text, tout le reste (qualifier + plats + label) passe en
+   * couleur d'accent. Match le pattern du H1 home `Le <em>meilleur plat</em>...`.
    */
   const splitParts = (() => {
     if (!bestCategory) {
@@ -97,23 +97,9 @@ export default function Hero({ category, city, bestCategory }: Props) {
   };
   const isFiltered = !!(category || city);
 
-  // V3 gradient applied ONLY on the <em> portion of the title (white default
-  // for everything else). 3-stop gradient — saturation lowered (skill flags
-  // 100% S as the "AI purple" tell). Same hue (~247°), saturations now
-  // 70/60/51 instead of 100/89/51.
+  // Portion <em> du titre : aplat de la couleur d'accent.
   const emGradient = (chunks: React.ReactNode) => (
-    <span
-      className="not-italic"
-      style={{
-        background: 'linear-gradient(120deg, #E8A08C 0%, #B5402A 50%, #9E3420 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
-        color: 'transparent',
-      }}
-    >
-      {chunks}
-    </span>
+    <span className="not-italic text-[var(--primary)]">{chunks}</span>
   );
 
   // Bold-number wrapper for the stats line (200+, 100%, Sans pub).
@@ -126,34 +112,7 @@ export default function Hero({ category, city, bestCategory }: Props) {
   const statBold = (chunks: React.ReactNode) => <b className="text-[var(--text)] font-bold">{chunks}</b>;
 
   return (
-    <section className="relative pt-24 pb-10 sm:pb-12 text-center overflow-hidden" style={{ contain: 'layout paint' }}>
-      {/* Radial glow principal — derive lentement (mesh-blob), width clamps
-          so it never overflows on mobile. */}
-      <div
-        className="mesh-blob absolute -top-[80px] sm:-top-[120px] left-1/2 rounded-full pointer-events-none"
-        style={{
-          width: 'min(1000px, 100vw)',
-          height: 'min(540px, 60vw)',
-          background: 'radial-gradient(closest-side, rgba(124,108,247,0.28), transparent 70%)',
-          filter: 'blur(40px)',
-          contain: 'paint',
-        }}
-        aria-hidden="true"
-      />
-      {/* Mesh blob secondaire — accent orange chaud en off-center pour
-          casser le mono-violet. Très transparent, dérive en phase inverse
-          → impression de "lumière qui vit" dans le fond. */}
-      <div
-        className="mesh-blob-2 absolute top-[40px] right-[-100px] sm:right-[-60px] rounded-full pointer-events-none hidden sm:block"
-        style={{
-          width: 'min(420px, 50vw)',
-          height: 'min(420px, 50vw)',
-          background: 'radial-gradient(closest-side, color-mix(in srgb, var(--accent-warm) 18%, transparent), transparent 70%)',
-          filter: 'blur(50px)',
-        }}
-        aria-hidden="true"
-      />
-
+    <section className="relative pt-24 pb-10 sm:pb-12 text-center">
       <div className="relative z-10 max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-14 flex flex-col items-center">
         {/* Label avec lignes horizontales sur les côtés.
             tracking se réduit sur mobile pour éviter de devoir wrap le texte. */}
@@ -172,7 +131,7 @@ export default function Hero({ category, city, bestCategory }: Props) {
           />
         </div>
 
-        {/* Title — white default, gradient ONLY on <em> portions */}
+        {/* Titre — portion <em> en couleur d'accent */}
         <h1
           className="font-bold text-[var(--text)] text-center max-w-5xl mb-4 sm:mb-5"
           style={{
@@ -240,7 +199,7 @@ export default function Hero({ category, city, bestCategory }: Props) {
             }}
           >
             <span
-              className="pulse-dot inline-block rounded-full"
+              className="inline-block rounded-full"
               style={{ width: 7, height: 7, background: 'var(--accent-success)' }}
             />
             {t('betaOpen')}

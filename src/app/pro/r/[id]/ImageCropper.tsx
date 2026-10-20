@@ -227,7 +227,7 @@ export default function ImageCropper({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-2xl border border-[var(--border2)] bg-[var(--surface)] shadow-2xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-2xl border border-[var(--border2)] bg-[var(--surface)] shadow-lg"
         style={{ animation: 'fadeUp 0.15s ease-out both' }}
       >
         <div className="flex items-center justify-between gap-4 border-b border-[var(--border2)] p-5 sm:p-6">
