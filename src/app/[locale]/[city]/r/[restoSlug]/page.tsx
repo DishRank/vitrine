@@ -12,6 +12,7 @@ import {
   fetchDishesForRestaurant,
   fetchReviewsForRestaurant,
 } from '@/lib/supabase';
+import { displayMode, orderDishes } from '@/lib/ranking';
 import { cityFromSlug, citySlug, restaurantSlug } from '@/lib/slug';
 import { jsonLdHtml } from '@/lib/jsonLd';
 import Nav from '@/components/Nav';
@@ -249,7 +250,11 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
   const restaurant = await fetchRestaurantBySlug(cityName, restoSlug);
   if (!restaurant) notFound();
 
+  // Tous les plats notés du resto (stats, moyenne, JSON-LD) ; la grille
+  // n'affiche que ceux qui ont une photo.
   const dishes = await fetchDishesForRestaurant(restaurant.id).catch(() => []);
+  const gridMode = displayMode(dishes, 3);
+  const gridDishes = orderDishes(dishes.filter((d) => d.cover_photo_url), gridMode);
 
   // Aucun plat noté : la fiche vaut quand même d'exister SI sa carte est publiée
   // (relevée sur le site du restaurant, mig. 186-191). Elle affiche alors la carte
@@ -365,7 +370,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
     '@id': `${canonical}#restaurant`,
     name: restaurant.name,
     url: canonical,
-    image: dishes[0]?.cover_photo_url || `${SITE}/img/play_store_feature_graphic-v2.webp`,
+    image: gridDishes[0]?.cover_photo_url || `${SITE}/img/play_store_feature_graphic-v2.webp`,
     address: {
       '@type': 'PostalAddress',
       streetAddress: restaurantAddress || undefined,
@@ -415,7 +420,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
         hasMenuItem: dishes.map((d) => ({
           '@type': 'MenuItem',
           name: d.dish_name,
-          image: d.cover_photo_url,
+          image: d.cover_photo_url || undefined,
           offers: d.latest_price ? {
             '@type': 'Offer',
             price: Number(d.latest_price).toFixed(2),
@@ -529,7 +534,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
         </section>
 
         {/* Liste des plats du resto — reuse DishGrid (limité à 10 max) */}
-        <DishGrid initialDishes={dishes} title={topDishesTitle} />
+        <DishGrid initialDishes={gridDishes} title={topDishesTitle} mode={gridMode} />
 
         {/* CTA download — capture les visiteurs qui ont scrollé jusqu'aux plats */}
         <CtaBanner />

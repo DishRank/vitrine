@@ -443,15 +443,16 @@ export function fetchRestaurantBySlug(
 }
 
 /**
- * Fetch all moderated dishes for a single restaurant, sorted by rating.
+ * Tous les plats notés (avis modérés) d'un restaurant, AVEC ou SANS photo.
  *
- * Implementation note : on s'appuie sur la RPC `get_feed_dishes` existante
- * pour profiter de l'agrégation (review_count, avg_rating, latest_price)
- * déjà calculée côté DB, puis on filtre par `restaurant_id` côté Node.
- * Acceptable tant que l'inventaire de plats par resto reste faible
- * (< 30 plats pour 99% des restos). Quand la base grossit, ajouter
- * une RPC dédiée `get_dishes_by_restaurant(restaurant_id)` qui filtre
- * côté SQL.
+ * On s'appuie sur la RPC `get_feed_dishes` (agrégation déjà faite côté DB)
+ * puis on filtre par `restaurant_id` côté Node. Oct. 2026 : avant, la limite
+ * de 500 portait sur TOUTE la plateforme (les plats les moins bien notés d'un
+ * resto pouvaient sortir du lot) et les plats sans photo étaient écartés —
+ * la moyenne du resto était donc gonflée. La limite est maintenant assez
+ * haute pour couvrir la base ; quand elle grossira, remplacer par une RPC
+ * dédiée `get_dishes_by_restaurant(restaurant_id)` filtrée côté SQL.
+ * Les composants qui affichent une photo filtrent eux-mêmes `cover_photo_url`.
  */
 export function fetchDishesForRestaurant(restaurantId: string): Promise<DishRow[]> {
   const cacheKey = `restaurant-dishes:${restaurantId}`;
@@ -462,11 +463,10 @@ export function fetchDishesForRestaurant(restaurantId: string): Promise<DishRow[
       radius_km: 50,
       p_category_slugs: null,
       p_sort: 'rating',
-      p_limit: 500,
+      p_limit: 100000,
     });
     if (error) throw error;
-    return ((data || []) as DishRow[])
-      .filter((d) => d.restaurant_id === restaurantId && d.cover_photo_url);
+    return ((data || []) as DishRow[]).filter((d) => d.restaurant_id === restaurantId);
   });
 }
 
