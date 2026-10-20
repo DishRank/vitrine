@@ -33,33 +33,29 @@ export default function FAQ({ nonce }: { nonce?: string }) {
     <section id="faq" className="max-w-[800px] mx-auto px-4 sm:px-8 py-16 sm:py-20">
       <script type="application/ld+json" nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: jsonLdHtml(faqJsonLd) }} />
       <h2
-        className="font-black tracking-tight text-center mb-3"
-        style={{ fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)' }}
+        className="display text-center mb-3"
+        style={{ fontSize: 'clamp(2.6rem, 6.5vw, 5rem)' }}
       >
         {t('title')}
       </h2>
       <p className="text-center text-[var(--text2)] mb-10 sm:mb-12 text-sm sm:text-base">
         {t('subtitle')}
       </p>
-      <div className="space-y-3">
+      <div className="border-b border-[var(--border2)]">
         {items.map((item, i) => {
           const isOpen = open === i;
           return (
             <div
               key={i}
-              className={`rounded-2xl bg-[var(--surface)] border overflow-hidden transition-colors duration-200 ${
-                isOpen
-                  ? 'border-[var(--primary)]/40 faq-open'
-                  : 'border-[var(--border2)] hover:border-[var(--primary)]/30'
-              }`}
+              className={`border-t border-[var(--border2)] ${isOpen ? 'faq-open' : ''}`}
             >
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? null : i)}
                 aria-expanded={isOpen}
-                className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-5 text-left cursor-pointer"
+                className="group w-full flex items-center justify-between gap-4 py-5 sm:py-6 text-left cursor-pointer"
               >
-                <span className="font-semibold text-[var(--text)] text-base sm:text-lg pr-2">
+                <span className="font-bold text-[var(--text)] text-[17px] sm:text-xl pr-2 group-hover:text-[var(--primary)] transition-colors duration-150">
                   {item.q}
                 </span>
                 {/* Chevron SVG plutôt qu'un `+` glyph : taille stable cross-browser
@@ -82,7 +78,7 @@ export default function FAQ({ nonce }: { nonce?: string }) {
               {/* Animated collapse using grid-rows 0fr→1fr transition (CSS) */}
               <div className={`faq-collapse ${isOpen ? 'is-open' : ''}`}>
                 <div className="faq-collapse-inner">
-                  <div className="px-5 sm:px-6 pb-5 -mt-1 text-[var(--text2)] text-sm sm:text-base leading-relaxed">
+                  <div className="pb-6 -mt-1 max-w-[42rem] text-[var(--text2)] text-[15px] sm:text-base leading-relaxed">
                     {item.a}
                   </div>
                 </div>

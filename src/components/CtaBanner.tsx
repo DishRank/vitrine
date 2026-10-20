@@ -22,8 +22,8 @@ export default function CtaBanner() {
             <AnimatedLogo size={48} />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg sm:text-xl font-bold mb-1 tracking-tight">{t('title')}</h2>
-            <p className="text-xs sm:text-sm text-white/85">{t('subtitle')}</p>
+            <h2 className="display mb-2" style={{ fontSize: 'clamp(2rem, 4.4vw, 3.25rem)' }}>{t('title')}</h2>
+            <p className="text-sm sm:text-base text-white/85 max-w-[34rem]">{t('subtitle')}</p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
             {showPlayStore && (

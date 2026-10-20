@@ -13,6 +13,7 @@
   },
   "hero": {
     "label": "Note les plats · pas les restos",
+    "podium": "Les trois plats les mieux notés en ce moment",
     "title": "Le <em>meilleur plat</em> près de chez toi.",
     "tagline": "Et l'app qui aide ton groupe à choisir où sortir — sans le débat <em>WhatsApp</em> sans fin.",
     "downloadCta": "Télécharger l'app",

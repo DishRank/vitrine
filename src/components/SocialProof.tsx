@@ -145,8 +145,8 @@ export default function SocialProof({ reviews }: Props) {
       <div className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-14 mb-6 sm:mb-9">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4">
           <h3
-            className="font-bold tracking-tight text-[var(--text)]"
-            style={{ fontSize: 'clamp(1.25rem, 3.2vw, 1.625rem)', lineHeight: 1.2 }}
+            className="display text-[var(--text)]"
+            style={{ fontSize: 'clamp(2rem, 4.6vw, 3.4rem)' }}
           >
             Les derniers plats notés
           </h3>

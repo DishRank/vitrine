@@ -23,8 +23,8 @@ export default function RestaurateurBand() {
         <div>
           <h2
             id="restaurateurs-titre"
-            className="font-extrabold tracking-tight text-[var(--text)]"
-            style={{ fontSize: 'clamp(1.6rem, 3.6vw, 2.25rem)', lineHeight: 1.12 }}
+            className="display text-[var(--text)]"
+            style={{ fontSize: 'clamp(2.4rem, 5.2vw, 3.75rem)' }}
           >
             Vous tenez un restaurant ?
           </h2>

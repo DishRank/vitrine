@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { Outfit } from 'next/font/google';
+import localFont from 'next/font/local';
 import Script from 'next/script';
 import { headers } from 'next/headers';
 import { routing } from '@/i18n/routing';
@@ -10,6 +11,16 @@ import FlagPolyfill from '@/components/FlagPolyfill';
 import '../globals.css';
 
 const outfit = Outfit({ subsets: ['latin'], display: 'swap', variable: '--font-outfit' });
+// Police d'affiche (titres, rangs, notes) — Bricolage Grotesque variable,
+// axes graisse 200–800 et chasse 75–100 %. Auto-hébergée (OFL) : pas de
+// dépendance à Google Fonts au build. Utilisée condensée (font-stretch 75 %).
+const display = localFont({
+  src: '../../fonts/bricolage-grotesque-latin-wdth.woff2',
+  variable: '--font-display',
+  weight: '200 800',
+  display: 'swap',
+  declarations: [{ prop: 'font-stretch', value: '75% 100%' }],
+});
 
 /**
  * Global metadata defaults — `metadataBase` is required so that relative paths
@@ -61,7 +72,7 @@ export default async function LocaleLayout({
   return (
     <html
       lang={locale}
-      className={outfit.variable}
+      className={`${outfit.variable} ${display.variable}`}
       // Indique à Next.js que `scroll-behavior: smooth` est appliqué sur
       // <html> (cf. globals.css) — il peut donc désactiver temporairement
       // le smooth scroll pendant les transitions de route (sinon Next 16

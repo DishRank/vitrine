@@ -124,9 +124,10 @@ export default function Showcase() {
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         {/* Info */}
         <div className="flex flex-col gap-3 items-center text-center md:items-end md:text-right">
-          <p className="text-xs font-semibold uppercase tracking-[2px] text-[var(--primary)]">{t('label')}</p>
+          <p className="text-[15px] font-semibold text-[var(--primary)]">{t('label')}</p>
           <h2
-            className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-tight transition-all duration-300 ${animating ? 'opacity-0 translate-x-8' : 'opacity-100 translate-x-0'}`}
+            className={`display transition-all duration-300 ${animating ? 'opacity-0 translate-x-8' : 'opacity-100 translate-x-0'}`}
+            style={{ fontSize: 'clamp(2.25rem, 4.6vw, 3.6rem)' }}
           >
             {slides[idx].title}
           </h2>

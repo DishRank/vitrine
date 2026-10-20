@@ -13,6 +13,7 @@
   },
   "hero": {
     "label": "Valuta i piatti, non i ristoranti.",
+    "podium": "I tre piatti più votati del momento",
     "title": "Il <em>miglior piatto</em> vicino a te.",
     "tagline": "E l'app che aiuta il tuo gruppo a scegliere dove uscire — senza il dibattito <em>WhatsApp</em> infinito.",
     "downloadCta": "Scarica l'app",

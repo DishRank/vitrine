@@ -1,154 +1,62 @@
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 /**
- * Démo visuelle "même resto, plats opposés" — sert de preuve immédiate du
- * value prop "on note les plats, pas les restos".
+ * « Même resto, verdicts opposés » — bande moutarde pleine (carte du jour,
+ * oct. 2026). À droite, une addition de restaurant : la note Google du resto
+ * en tête, puis deux plats aux notes opposées en chiffres d'affiche. L'objet
+ * réel (un ticket) plutôt qu'un schéma : on comprend en un regard que la
+ * moyenne du resto cache l'essentiel.
  *
  * Affichée uniquement sur la home (pas les pages filtrées catégorie/ville
  * où le visiteur est déjà en shopping intent).
- *
- * Layout : card single, à plat, illustration à gauche (carte restaurant
- * synthétique avec 2 plats aux notes opposées), copy à droite. Stack sur
- * mobile.
  */
 export default function DishVsRestoDemo() {
   const t = useTranslations('dishVsResto');
+  const locale = useLocale();
+  const fmt = (n: number) => new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
 
-  const emGradient = (chunks: React.ReactNode) => (
-    <span className="not-italic accent-text">{chunks}</span>
-  );
+  // Le titre « Même resto. <em>Verdicts opposés.</em> » passe sur deux lignes.
+  const emLine = (chunks: React.ReactNode) => <span className="block">{chunks}</span>;
+  const bold = (chunks: React.ReactNode) => <strong className="font-bold text-[var(--text)]">{chunks}</strong>;
 
-  const bold = (chunks: React.ReactNode) => (
-    <strong className="text-[var(--text)] font-bold">{chunks}</strong>
-  );
+  const rows = [
+    { name: t('dish1Name'), reviews: t('dish1Reviews'), score: 4.8, color: 'var(--basilic)' },
+    { name: t('dish2Name'), reviews: t('dish2Reviews'), score: 2.1, color: 'var(--paprika)' },
+  ];
 
   return (
-    <section className="relative max-w-[1100px] mx-auto px-4 sm:px-8 mt-2 sm:mt-4 mb-10 sm:mb-14">
-      <div className="relative rounded-2xl border border-[var(--border2)] bg-[var(--surface)] p-6 sm:p-8 lg:p-10 overflow-hidden">
-        <div className="relative flex flex-col lg:flex-row items-center gap-7 lg:gap-12">
-          {/* LEFT — Illustration */}
-          <div className="w-full lg:flex-1 lg:max-w-[420px]">
-            {/* Restaurant header */}
-            <div
-              className="flex items-center gap-3 mb-3 p-3 rounded-xl"
-              style={{
-                background: 'var(--surface-var)',
-                border: '1px solid var(--border2)',
-              }}
-            >
-              <div
-                className="w-11 h-11 rounded-lg flex items-center justify-center text-white shrink-0"
-                style={{ background: 'var(--accent-warm)' }}
-                aria-hidden="true"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 2v9a2 2 0 0 0 2 2v8a1 1 0 0 0 2 0v-8a2 2 0 0 0 2-2V2" />
-                  <path d="M8 2v6" />
-                  <path d="M10 2v6" />
-                  <path d="M17 2v20" />
-                  <path d="M21 8c0-3.3-1.8-6-4-6v10h4" />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-[var(--text)] truncate">
-                  {t('restaurantName')}
-                </div>
-                <div className="text-[11px] text-[var(--text3)] flex items-center gap-1.5">
-                  <span>{t('restaurantMeta')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Dish 1 — well-rated */}
-            <div
-              className="flex items-center justify-between gap-3 p-3 rounded-xl mb-2"
-              style={{
-                background: 'color-mix(in srgb, var(--accent-success) 8%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--accent-success) 40%, transparent)',
-              }}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="text-2xl shrink-0" aria-hidden="true">🍔</span>
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-[var(--text)] truncate">
-                    {t('dish1Name')}
-                  </div>
-                  <div className="text-[11px] text-[var(--text3)]">{t('dish1Reviews')}</div>
-                </div>
-              </div>
-              <div
-                className="text-base sm:text-lg font-bold tabular shrink-0 flex items-center gap-1"
-                style={{ color: 'var(--accent-success)' }}
-              >
-                4.8
-                <span style={{ color: 'var(--star)' }}>★</span>
-              </div>
-            </div>
-
-            {/* Dish 2 — poorly-rated */}
-            <div
-              className="flex items-center justify-between gap-3 p-3 rounded-xl"
-              style={{
-                background: 'color-mix(in srgb, var(--accent-warm) 8%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--accent-warm) 40%, transparent)',
-              }}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="text-2xl shrink-0" aria-hidden="true">🥩</span>
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-[var(--text)] truncate">
-                    {t('dish2Name')}
-                  </div>
-                  <div className="text-[11px] text-[var(--text3)]">{t('dish2Reviews')}</div>
-                </div>
-              </div>
-              <div
-                className="text-base sm:text-lg font-bold tabular shrink-0 flex items-center gap-1"
-                style={{ color: 'var(--accent-warm)' }}
-              >
-                2.1
-                <span style={{ color: 'var(--star)' }}>★</span>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT — Copy */}
-          <div className="w-full lg:flex-1 text-center lg:text-left">
-            <div
-              className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-bold uppercase whitespace-nowrap"
-              style={{
-                background: 'var(--primary-container)',
-                color: 'var(--primary)',
-                border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
-                letterSpacing: '1.5px',
-              }}
-            >
-              {t('badge')}
-            </div>
-            <h2
-              className="font-extrabold tracking-tight text-[var(--text)] mb-4"
-              style={{
-                fontSize: 'clamp(1.5rem, 4vw, 2.25rem)',
-                lineHeight: 1.08,
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {t.rich('title', { em: emGradient })}
-            </h2>
-            <p
-              className="text-[var(--text2)] mb-3"
-              style={{
-                fontSize: 'clamp(0.95rem, 1.6vw, 1.0625rem)',
-                lineHeight: 1.55,
-              }}
-            >
-              {t.rich('body', { strong: bold })}
-            </p>
-            <p className="text-[var(--text3)] text-xs sm:text-sm italic">
-              {t('footnote')}
-            </p>
-          </div>
+    <section className="band-moutarde">
+      <div className="max-w-[1180px] mx-auto px-4 sm:px-8 lg:px-14 py-16 sm:py-24 grid grid-cols-1 lg:grid-cols-[1fr_0.85fr] items-center gap-12 lg:gap-16">
+        <div>
+          <h2 className="display text-[var(--text)]" style={{ fontSize: 'clamp(2.9rem, 7.4vw, 5.75rem)' }}>
+            {t.rich('title', { em: emLine })}
+          </h2>
+          <p className="mt-6 max-w-[31rem] text-[17px] sm:text-lg leading-relaxed text-[var(--text2)]">
+            {t.rich('body', { strong: bold })}
+          </p>
+          <p className="mt-4 text-sm font-semibold text-[var(--text)]">{t('footnote')}</p>
         </div>
+
+        {/* L'addition */}
+        <figure className="receipt mx-auto w-full max-w-[420px] rotate-[1.5deg] bg-[var(--surface)] px-6 sm:px-8 pt-7 pb-12 text-[var(--text)]">
+          <figcaption className="flex items-baseline justify-between gap-4 border-b border-dashed border-[var(--border2)] pb-4">
+            <span className="display text-[26px] sm:text-[30px] leading-none">{t('restaurantName')}</span>
+            <span className="shrink-0 text-[13px] text-[var(--text3)]">{t('restaurantMeta')}</span>
+          </figcaption>
+          <ul>
+            {rows.map((r) => (
+              <li key={r.name} className="flex items-center justify-between gap-4 border-b border-dashed border-[var(--border2)] py-5">
+                <div className="min-w-0">
+                  <p className="text-[17px] font-bold leading-tight">{r.name}</p>
+                  <p className="mt-1 text-[13px] text-[var(--text3)]">{r.reviews}</p>
+                </div>
+                <p className="display shrink-0 leading-none" style={{ fontSize: 'clamp(3.5rem, 8vw, 4.75rem)', color: r.color }}>
+                  {fmt(r.score)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </figure>
       </div>
     </section>
   );

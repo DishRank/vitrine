@@ -79,7 +79,7 @@ export default function Footer() {
   const showPlayStore = !mounted || platform === 'desktop' || platform === 'android';
 
   return (
-    <footer className="border-t border-[var(--border)] bg-[var(--bg)] mt-12">
+    <footer className="band-deep">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12 sm:py-16">
         {/* 3 columns grid : Brand (2x wide) | Produit | Légal.
             La colonne "Communauté" (Instagram + contact) a été fusionnée

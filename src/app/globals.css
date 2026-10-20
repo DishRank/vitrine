@@ -110,11 +110,15 @@ html, body {
    `text-wrap: pretty` (p) → optimise le wrapping mais sans le coût perf
    de balance sur des paragraphes longs.
    Supporté Chrome 114+ / Safari 17.5+ / Firefox 121+ — graceful fallback. */
+/* Longhand `text-wrap-style` uniquement : le raccourci `text-wrap` remet aussi
+   text-wrap-mode à `wrap`, ce qui écrasait `white-space: nowrap` des
+   utilitaires Tailwind (`truncate`, en couche) — les textes tronqués
+   passaient à la ligne. */
 h1, h2, h3 {
-  text-wrap: balance;
+  text-wrap-style: balance;
 }
 p {
-  text-wrap: pretty;
+  text-wrap-style: pretty;
 }
 
 /* Curseur « main » sur tout élément cliquable — les <button> natifs ont un
@@ -569,3 +573,119 @@ label:has(> input[type='radio']:not(:disabled)) {
   .dr-logo-fork, .dr-logo-crown { animation: none; }
 }
 
+
+/* ────── « Carte du jour » (oct. 2026) ─────────────────────────────────
+   Typo d'affiche condensée pour les titres, rangs et notes ; bandes de
+   couleur pleine pour rythmer la page (moutarde, espresso, paprika) au lieu
+   de cartes ombrées. Les bandes REDÉFINISSENT les jetons de couleur pour
+   leurs enfants : un composant posé dedans s'adapte sans changer de code. */
+:root {
+  --paprika: #C2452D;
+  --moutarde: #E9A92B;
+  --espresso: #23160F;
+  --basilic: #2F7D4F;
+}
+
+.display {
+  font-family: var(--font-display), var(--font-outfit, system-ui), sans-serif;
+  font-stretch: 75%;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.band-moutarde {
+  --bg: #E9A92B;
+  --surface: #FFF8E9;
+  --surface-var: #F7E2AE;
+  --text: #23160F;
+  --text2: #4B3527;
+  --text3: #6E5440;
+  --border2: rgba(35, 22, 15, 0.2);
+  --primary-container: rgba(194, 69, 45, 0.14);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.band-espresso {
+  --bg: #23160F;
+  --surface: #2F2019;
+  --surface-var: #3B2A21;
+  --text: #FBF3E8;
+  --text2: #D4C5B7;
+  --text3: #A39182;
+  --border2: rgba(251, 243, 232, 0.14);
+  --primary: #E2694D;
+  --primary-container: rgba(226, 105, 77, 0.16);
+  background: var(--bg);
+  color: var(--text);
+}
+/* Sur fond sombre, une bande espresso disparaîtrait : elle s'inverse en crème. */
+.dark .band-espresso {
+  --bg: #F3E8D8;
+  --surface: #FFF9F0;
+  --surface-var: #EADCC7;
+  --text: #23160F;
+  --text2: #4B3527;
+  --text3: #7A6250;
+  --border2: rgba(35, 22, 15, 0.16);
+  --primary: #C2452D;
+  --primary-container: rgba(194, 69, 45, 0.12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .band-espresso {
+    --bg: #F3E8D8;
+    --surface: #FFF9F0;
+    --surface-var: #EADCC7;
+    --text: #23160F;
+    --text2: #4B3527;
+    --text3: #7A6250;
+    --border2: rgba(35, 22, 15, 0.16);
+    --primary: #C2452D;
+    --primary-container: rgba(194, 69, 45, 0.12);
+  }
+}
+
+/* Tickets du haut de page : distribués comme une main de cartes, une seule
+   fois au chargement. C'est le seul mouvement non déclenché de la page. */
+@keyframes ticket-deal {
+  from { opacity: 0; transform: translate(var(--from-x, 0), 60px) rotate(0deg); }
+  to   { opacity: 1; transform: translate(var(--x, 0), var(--y, 0)) rotate(var(--r, 0deg)); }
+}
+.ticket {
+  transform: translate(var(--x, 0), var(--y, 0)) rotate(var(--r, 0deg));
+  animation: ticket-deal 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticket { animation: none; }
+}
+
+/* Addition (bande « verdicts opposés ») : bord inférieur dentelé comme un
+   ticket de caisse, découpé par un masque — pas de dégradé visible. */
+.receipt {
+  --z: 9px;
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / calc(2 * var(--z)) 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / calc(2 * var(--z)) 100%;
+}
+
+/* Pied de page : espresso en clair, presque noir en sombre (il clôt la page). */
+.band-deep {
+  --bg: #23160F;
+  --surface: #2F2019;
+  --surface-var: #3B2A21;
+  --text: #FBF3E8;
+  --text2: #D4C5B7;
+  --text3: #A39182;
+  --border: rgba(251, 243, 232, 0.1);
+  --border2: rgba(251, 243, 232, 0.14);
+  --primary: #E2694D;
+  --primary-container: rgba(226, 105, 77, 0.16);
+  background: var(--bg);
+  color: var(--text);
+}
+.dark .band-deep { --bg: #0C0806; }
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .band-deep { --bg: #0C0806; }
+}

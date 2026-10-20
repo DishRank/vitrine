@@ -95,8 +95,7 @@ export default function SearchSection({
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 sm:px-8 pb-4">
-      {/* Title H2 — match v3 size (~30px on desktop) */}
-      <h2 className="text-2xl sm:text-3xl font-bold text-center text-[var(--text)] tracking-tight mt-4 sm:mt-8 mb-5 sm:mb-7">
+      <h2 className="display text-center text-[var(--text)] mt-14 sm:mt-24 mb-6 sm:mb-9" style={{ fontSize: 'clamp(2.4rem, 6vw, 4.5rem)' }}>
         {t('label')}
       </h2>
 

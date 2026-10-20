@@ -1,5 +1,7 @@
 import { useTranslations } from 'next-intl';
 import DownloadButtons from './DownloadButtons';
+import HeroTickets from './HeroTickets';
+import type { DishRow } from '@/lib/supabase';
 
 type Props = {
   /** Localized category label (e.g. "pizza", "pâtes") */
@@ -12,25 +14,21 @@ type Props = {
    * have to re-compute it in a client component.
    */
   bestCategory?: string;
+  /** Plats classés (avec photo) — les 3 premiers deviennent les tickets du héros. */
+  dishes?: DishRow[];
 };
 
 /**
- * Hero v3 — fidèle au prototype `site-v3/landing.jsx`.
+ * Héros « carte du jour » (oct. 2026).
  *
- * Design key points:
- *   • Label "Note les plats · pas les restos" entouré de 2 traits horizontaux
- *     (24px × 1px, color #EE9A82 @ 40% opacity), uppercase tracked, tinted
- *     #EE9A82 (T.violetHi) — pas la couleur primary qui est plus foncée.
- *   • Titre H1 92px — la portion <em> (rich text i18n) en aplat paprika.
- *     Plus de texte en dégradé ni de halos en fond (oct. 2026).
- *   • Subtitle 18px, ligne hauteur 1.55, max-width 560px, color textSoft
- *     (#bfb8e8).
- *   • Stats line : "200+" / "100%" en blanc bold, le reste en muted.
- *   • Sur les pages filtrées (city/category), le SEO `intro` paragraph est
- *     toujours rendu sous la subtitle pour garder le maillage sémantique
- *     long-tail. Sur la home, on garde le hero épuré façon v3.
+ *   • Texte aligné à gauche, titre en typo d'affiche condensée (`.display`).
+ *   • À droite, les 3 meilleurs plats réels en tickets photo (<HeroTickets />).
+ *     Sans au moins 3 plats avec photo, le héros reste en une colonne.
+ *   • Plus d'accent coloré sur un mot du titre : la taille et la typo portent
+ *     le titre. Sur les pages filtrées (ville/catégorie), le paragraphe SEO
+ *     `intro` reste rendu sous le sous-titre.
  */
-export default function Hero({ category, city, bestCategory }: Props) {
+export default function Hero({ category, city, bestCategory, dishes = [] }: Props) {
   const t = useTranslations('hero');
 
   // Pick the right keys based on filter
@@ -97,10 +95,8 @@ export default function Hero({ category, city, bestCategory }: Props) {
   };
   const isFiltered = !!(category || city);
 
-  // Portion <em> du titre : aplat de la couleur d'accent.
-  const emGradient = (chunks: React.ReactNode) => (
-    <span className="not-italic text-[var(--primary)]">{chunks}</span>
-  );
+  // Portion <em> des messages : rendue sans accent (le titre tient par sa typo).
+  const emPlain = (chunks: React.ReactNode) => <span className="not-italic">{chunks}</span>;
 
   // Bold-number wrapper for the stats line (200+, 100%, Sans pub).
   // `<CountUpStat>` auto-détecte si chunks contient un nombre :
@@ -111,108 +107,51 @@ export default function Hero({ category, city, bestCategory }: Props) {
   // viewport, donc l'utilisateur voit toujours l'animation au premier scroll.
   const statBold = (chunks: React.ReactNode) => <b className="text-[var(--text)] font-bold">{chunks}</b>;
 
+  const withTickets = dishes.filter((d) => d.cover_photo_url).length >= 3;
+
   return (
-    <section className="relative pt-24 pb-10 sm:pb-12 text-center">
-      <div className="relative z-10 max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-14 flex flex-col items-center">
-        {/* Label avec lignes horizontales sur les côtés.
-            tracking se réduit sur mobile pour éviter de devoir wrap le texte. */}
-        <div
-          className="inline-flex items-center gap-2 sm:gap-3 mb-6 sm:mb-7 text-[10px] sm:text-[11px] font-bold uppercase whitespace-nowrap text-[var(--primary)]"
-          style={{ letterSpacing: '1.8px' }}
-        >
-          <span
-            className="inline-block h-px bg-[var(--primary)]"
-            style={{ width: 'clamp(16px, 4vw, 24px)', opacity: 0.4 }}
-          />
-          <span>{t('label')}</span>
-          <span
-            className="inline-block h-px bg-[var(--primary)]"
-            style={{ width: 'clamp(16px, 4vw, 24px)', opacity: 0.4 }}
-          />
-        </div>
+    <section className="relative pt-24 sm:pt-28 pb-12 sm:pb-20">
+      <div
+        className={`max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-14 grid grid-cols-1 items-center gap-10 ${
+          withTickets ? 'lg:grid-cols-[1.1fr_1fr] lg:gap-8' : ''
+        }`}
+      >
+        <div className="min-w-0">
+          <p className="mb-4 sm:mb-5 text-[15px] sm:text-base font-semibold text-[var(--primary)]">{t('label')}</p>
 
-        {/* Titre — portion <em> en couleur d'accent */}
-        <h1
-          className="font-bold text-[var(--text)] text-center max-w-5xl mb-4 sm:mb-5"
-          style={{
-            fontSize: 'clamp(2.25rem, 8vw, 5.75rem)',
-            lineHeight: 0.98,
-            letterSpacing: '-0.025em',
-          }}
-        >
-          {t.rich(titleKey, { em: emGradient, ...args })}
-        </h1>
+          <h1 className="display text-[var(--text)]" style={{ fontSize: 'clamp(3.4rem, 10vw, 7.75rem)' }}>
+            {t.rich(titleKey, { em: emPlain, ...args })}
+          </h1>
 
-        {/* Tagline émotionnelle — uniquement sur la home (pas filtré).
-            Évite de diluer le focus SEO des pages catégorie/ville où le
-            visiteur est arrivé via une intention précise ("burger Lyon"). */}
-        {!isFiltered && (
-          <p
-            className="text-center text-[var(--text)] font-semibold mb-5 sm:mb-6 px-2"
-            style={{
-              fontSize: 'clamp(1.1rem, 2.4vw, 1.5rem)',
-              lineHeight: 1.35,
-              letterSpacing: '-0.01em',
-              maxWidth: 640,
-            }}
-          >
-            {t.rich('tagline', { em: emGradient })}
+          {!isFiltered && (
+            <p className="mt-6 sm:mt-7 max-w-[34rem] text-lg sm:text-xl font-semibold leading-snug text-[var(--text)]">
+              {t.rich('tagline', { em: emPlain })}
+            </p>
+          )}
+
+          <p className="mt-3 max-w-[34rem] text-[15px] sm:text-base leading-relaxed text-[var(--text2)]">
+            {t(subtitleKey, args)}
           </p>
-        )}
 
-        {/* Subtitle */}
-        <p
-          className="text-center mb-8 px-2 text-[var(--text2)]"
-          style={{
-            fontSize: 'clamp(0.95rem, 1.6vw, 1.125rem)',
-            lineHeight: 1.55,
-            maxWidth: 560,
-          }}
-        >
-          {t(subtitleKey, args)}
-        </p>
+          {/* Paragraphe SEO : pages filtrées uniquement (maillage longue traîne) */}
+          {isFiltered && (
+            <p className="mt-4 max-w-[38rem] text-sm leading-relaxed text-[var(--text2)] opacity-80">{t(introKey, args)}</p>
+          )}
 
-        {/* SEO intro paragraph: only on filtered pages (kept for long-tail SEO) */}
-        {isFiltered && (
-          <p className="text-sm text-[var(--text2)] max-w-[680px] leading-relaxed mb-8 px-2 opacity-80">
-            {t(introKey, args)}
-          </p>
-        )}
+          {!isFiltered && <DownloadButtons size="lg" align="start" className="mt-8" />}
 
-        {/* Download CTA — home only. Placé avant la beta pill / stats pour
-            capturer l'intention dès le viewport initial. Sur les pages
-            filtrées, le visiteur arrive via une intention SEO précise
-            ("burger Lyon") : on le laisse scroller vers les plats avant de
-            pousser le CTA (qui revient plus bas via <CtaBanner />). */}
-        {!isFiltered && (
-          <DownloadButtons size="lg" className="mb-7 sm:mb-8" />
-        )}
-
-        {/* Beta pill + stats stacked */}
-        <div className="inline-flex flex-col items-center gap-4">
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold"
-            style={{
-              background: 'color-mix(in srgb, var(--accent-success) 12%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--accent-success) 32%, transparent)',
-              color: 'var(--accent-success)',
-            }}
-          >
-            <span
-              className="inline-block rounded-full"
-              style={{ width: 7, height: 7, background: 'var(--accent-success)' }}
-            />
-            {t('betaOpen')}
-          </div>
-
-          <div className="tabular flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-7 gap-y-2 text-xs font-medium text-[var(--text3)]">
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[var(--text2)]">
+            <span className="inline-flex items-center gap-2 font-semibold text-[var(--basilic)] dark:text-[var(--accent-success)]">
+              <span className="inline-block h-[7px] w-[7px] rounded-full bg-current" aria-hidden="true" />
+              {t('betaOpen')}
+            </span>
             <span>{t.rich('categories', { b: statBold })}</span>
-            <span style={{ opacity: 0.3 }} className="hidden sm:inline">·</span>
             <span>{t.rich('free', { b: statBold })}</span>
-            <span style={{ opacity: 0.3 }} className="hidden sm:inline">·</span>
             <span>{t.rich('noAds', { b: statBold })}</span>
           </div>
         </div>
+
+        {withTickets && <HeroTickets dishes={dishes.filter((d) => d.cover_photo_url)} />}
       </div>
     </section>
   );

@@ -50,8 +50,7 @@ export default function DishGrid({
 
   return (
     <div id="top10" className="max-w-[1200px] mx-auto px-5 sm:px-8 pb-8 min-h-[300px]">
-      {/* Title H3 — match v3 sizing (~28px desktop) and align to the left like v3 Top10 */}
-      <h2 className="text-xl sm:text-3xl font-bold tracking-tight pt-4 pb-5 sm:pb-7 text-center sm:text-left">{title}</h2>
+      <h2 className="display pt-8 pb-6 sm:pb-9 text-left" style={{ fontSize: 'clamp(2rem, 4.6vw, 3.4rem)' }}>{title}</h2>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -80,18 +79,18 @@ export default function DishGrid({
           <DownloadButtons size="lg" />
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8 sm:gap-x-5">
           {dishes.map((d, i) => (
             <article
               key={`${d.restaurant_id}::${d.dish_name}`}
               role="button"
               tabIndex={0}
               aria-label={`${d.dish_name} — ${d.restaurant_name}${d.restaurant_city ? `, ${d.restaurant_city}` : ''} — ${d.avg_rating}/5`}
-              className="dish-card lift group relative bg-[var(--surface)] border border-[var(--border2)] rounded-2xl overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-2"
+              className="dish-card group relative cursor-pointer rounded-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--bg)]"
               onClick={() => window.dispatchEvent(new CustomEvent('open-dish', { detail: d }))}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.dispatchEvent(new CustomEvent('open-dish', { detail: d })); } }}
             >
-              <div className="relative h-36 overflow-hidden">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-[18px] bg-[var(--surface-var)]">
                 <Image
                   src={d.cover_photo_url}
                   alt={`${d.dish_name} chez ${d.restaurant_name}${d.restaurant_city ? ` à ${d.restaurant_city}` : ''}`}
@@ -102,31 +101,21 @@ export default function DishGrid({
                   loading={i < 4 ? 'eager' : 'lazy'}
                   fetchPriority={i === 0 ? 'high' : undefined}
                 />
-                <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/70 rounded-lg px-2 py-1 text-xs font-bold text-white">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="#F9CA24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  {d.avg_rating}
-                </div>
-                <div className="absolute top-2 left-2 bg-black/70 rounded-lg px-2 py-1 text-xs font-semibold text-white inline-flex items-center gap-1">
-                  <span>{d.review_count}</span>
-                  <span>{t('reviewsLabel', { count: d.review_count })}</span>
+                <div className="display absolute top-2.5 right-2.5 flex items-center gap-1 rounded-full bg-[var(--surface)] px-2.5 py-1 text-[17px] leading-none text-[var(--text)]">
+                  {Number(d.avg_rating).toFixed(1).replace('.', locale === 'en' ? '.' : ',')}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--moutarde)" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 </div>
                 {/* Rang #X en bas à gauche — ombre de texte courte, juste pour la lisibilité sur photo */}
-                <div
-                  className="absolute bottom-2 left-2.5 inline-flex items-baseline gap-0.5 text-white pointer-events-none"
-                  style={{ textShadow: '0 1px 3px rgba(0,0,0,0.75)' }}
+                <span
+                  className="display absolute bottom-1 left-3 text-white leading-none pointer-events-none"
+                  style={{ fontSize: 'clamp(3rem, 6vw, 4.25rem)', textShadow: '0 2px 8px rgba(0,0,0,0.45)' }}
                   aria-label={`Rang ${i + 1}`}
                 >
-                  <span className="font-extrabold opacity-80" style={{ fontSize: 11 }}>#</span>
-                  <span
-                    className="font-extrabold leading-none"
-                    style={{ fontSize: 30, letterSpacing: '-1.5px' }}
-                  >
-                    {i + 1}
-                  </span>
-                </div>
+                  {i + 1}
+                </span>
               </div>
-              <div className="p-3">
-                <h3 className="text-sm font-bold truncate group-hover:text-[var(--primary)] transition-colors duration-300">{d.dish_name}</h3>
+              <div className="px-0.5 pt-3">
+                <h3 className="text-[15px] font-bold leading-snug truncate group-hover:text-[var(--primary)] transition-colors duration-200">{d.dish_name}</h3>
                 {/* Nom du resto cliquable → page resto. stopPropagation pour ne
                     pas déclencher l'ouverture du DishModal de la card parent.
                     Hyperlien `<a>` SSR-friendly pour que Google suive le
@@ -147,11 +136,10 @@ export default function DishGrid({
                     {d.restaurant_name}
                   </p>
                 )}
-                {d.latest_price && (
-                  <span className="inline-block mt-1 text-xs font-bold text-[var(--primary)] bg-[var(--primary-container)] px-2 py-0.5 rounded-md group-hover:bg-[var(--primary)] group-hover:text-white transition-colors duration-300">
-                    {Number(d.latest_price).toFixed(2)} {d.currency || 'EUR'}
-                  </span>
-                )}
+                <p className="mt-1 text-xs text-[var(--text3)]">
+                  {t('reviews', { count: d.review_count })}
+                  {d.latest_price ? ` · ${Number(d.latest_price).toFixed(2).replace('.', locale === 'en' ? '.' : ',')} ${d.currency === 'EUR' || !d.currency ? '€' : d.currency}` : ''}
+                </p>
               </div>
             </article>
           ))}

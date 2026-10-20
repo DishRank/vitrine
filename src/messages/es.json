@@ -13,6 +13,7 @@
   },
   "hero": {
     "label": "Califica los platos, no los restaurantes.",
+    "podium": "Los tres platos mejor valorados ahora mismo",
     "title": "El <em>mejor plato</em> cerca de ti.",
     "tagline": "Y la app que ayuda a tu grupo a elegir dónde salir — sin el debate eterno de <em>WhatsApp</em>.",
     "downloadCta": "Descargar la app",

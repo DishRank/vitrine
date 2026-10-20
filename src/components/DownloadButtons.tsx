@@ -34,9 +34,12 @@ function PlayIcon({ size = 14 }: { size?: number }) {
 export default function DownloadButtons({
   size = 'md',
   className = '',
+  align = 'center',
 }: {
   size?: Size;
   className?: string;
+  /** Alignement de la rangée de boutons (centre par défaut ; gauche dans le héros). */
+  align?: 'center' | 'start';
 }) {
   const [platform, setPlatform] = useState<Platform>('desktop');
   const [mounted, setMounted] = useState(false);
@@ -101,5 +104,6 @@ export default function DownloadButtons({
     buttons = playStoreBtn;
   }
 
-  return <div className={`flex flex-wrap items-center justify-center gap-3 ${className}`}>{buttons}</div>;
+  const justify = align === 'start' ? 'justify-start' : 'justify-center';
+  return <div className={`flex flex-wrap items-center ${justify} gap-3 ${className}`}>{buttons}</div>;
 }

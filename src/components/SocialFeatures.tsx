@@ -22,9 +22,9 @@ interface FeatureStyle {
 
 /** Style par feature (ordre = ordre dans messages.*.json socialFeatures.items) */
 const FEATURE_STYLES: FeatureStyle[] = [
-  { hue: 280, color: '#D4553A', icon: 'groups' },
-  { hue: 30, color: '#ff7a3d', icon: 'poll' },
-  { hue: 130, color: '#22C55E', icon: 'list' },
+  { hue: 10, color: 'var(--primary)', icon: 'groups' },
+  { hue: 40, color: 'var(--moutarde)', icon: 'poll' },
+  { hue: 140, color: '#5FB97A', icon: 'list' },
 ];
 
 interface FeatureItem {
@@ -143,25 +143,18 @@ export default function SocialFeatures() {
   const steps = t.raw('barycentre.steps') as BarycentreStep[];
   const items = t.raw('items') as FeatureItem[];
 
-  // <em> dans les titres → portion en couleur d'accent (cohérent avec Hero).
-  const emGradient = (chunks: React.ReactNode) => (
-    <span className="accent-text not-italic">{chunks}</span>
-  );
+  // <em> dans les titres : rendu neutre (la typo d'affiche porte le titre).
+  const emGradient = (chunks: React.ReactNode) => <span className="not-italic">{chunks}</span>;
 
   return (
-    <section
-      id="social"
-      className="relative max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-14 py-14 sm:py-20 lg:py-24 overflow-hidden"
-    >
-      {/* Header */}
-      <div className="text-center mb-12 sm:mb-16 px-2">
-        <h2
-          className="font-black tracking-[-0.02em] leading-[1.04] mb-4"
-          style={{ fontSize: 'clamp(1.5rem, 5.5vw, 3.5rem)' }}
-        >
+    <section id="social" className="band-espresso">
+    <div className="relative max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-14 py-16 sm:py-24 lg:py-28">
+      {/* En-tête — aligné à gauche, titre d'affiche */}
+      <div className="mb-12 sm:mb-16 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 lg:gap-12 items-end">
+        <h2 className="display text-[var(--text)]" style={{ fontSize: 'clamp(2.75rem, 7vw, 5.5rem)' }}>
           {t.rich('headline', { em: emGradient })}
         </h2>
-        <p className="text-[var(--text2)] text-sm sm:text-base lg:text-lg max-w-2xl mx-auto leading-relaxed">
+        <p className="text-[var(--text2)] text-base lg:text-lg max-w-xl leading-relaxed lg:pb-2">
           {t('subtitle')}
         </p>
       </div>
@@ -183,15 +176,12 @@ export default function SocialFeatures() {
               puis 4 étapes title-only. On laisse le titre + la séquence des
               steps raconter l'histoire, pas de paragraphe redondant. */}
           <div>
-            <h3
-              className="font-extrabold tracking-tight text-[var(--text)] mb-3 leading-[1.08]"
-              style={{ fontSize: 'clamp(1.5rem, 3.4vw, 2.25rem)' }}
-            >
+            <h3 className="display text-[var(--text)] mb-3" style={{ fontSize: 'clamp(2rem, 4.2vw, 3rem)' }}>
               {t.rich('barycentre.title', { em: emGradient })}
             </h3>
             {/* Ligne types de lieux — donne le scope (resto / bar / café…)
                 en 1 ligne, remplace le paragraphe explicatif. */}
-            <p className="text-[var(--text3)] text-xs sm:text-sm font-semibold uppercase tracking-[1.8px] mb-7">
+            <p className="text-[var(--text2)] text-sm sm:text-base font-semibold mb-7">
               {t('barycentre.venues')}
             </p>
 
@@ -221,9 +211,7 @@ export default function SocialFeatures() {
       </article>
 
       {/* Sous-titre transition vers les 3 features secondaires */}
-      <p className="text-center text-xs sm:text-sm font-semibold uppercase tracking-[2px] text-[var(--text3)] mb-6 sm:mb-8">
-        {t('andAlso')}
-      </p>
+      <p className="text-sm sm:text-base font-semibold text-[var(--text2)] mb-5 sm:mb-6">{t('andAlso')}</p>
 
       {/* 3 cards en grille — stack mobile, 3 cols à md+. Reveal stagger :
           chaque card animée au scroll-in avec un delay basé sur son index DOM. */}
@@ -242,27 +230,16 @@ export default function SocialFeatures() {
                 <div
                   className="flex items-center justify-center w-14 h-14 rounded-2xl"
                   style={{
-                    background: `${style.color}1a`,
-                    border: `1.5px solid ${style.color}40`,
+                    background: `color-mix(in srgb, ${style.color} 14%, transparent)`,
                     color: style.color,
                   }}
                 >
                   <FeatureIcon kind={style.icon} size={32} />
                 </div>
-                <span
-                  className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-[1.4px]"
-                  style={{
-                    background: `${style.color}1f`,
-                    border: `1px solid ${style.color}55`,
-                    color: style.color,
-                  }}
-                >
-                  {item.pill}
-                </span>
               </div>
 
               {/* Title + desc */}
-              <h3 className="relative font-extrabold tracking-tight text-[var(--text)] text-xl sm:text-2xl mb-3 leading-tight">
+              <h3 className="relative display text-[var(--text)] text-[28px] sm:text-[32px] mb-3">
                 {item.title}
               </h3>
               <p className="relative text-[var(--text2)] text-sm sm:text-base leading-relaxed mb-5 flex-1">
@@ -292,6 +269,7 @@ export default function SocialFeatures() {
           );
         })}
       </Reveal>
+    </div>
     </section>
   );
 }

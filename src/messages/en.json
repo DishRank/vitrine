@@ -13,6 +13,7 @@
   },
   "hero": {
     "label": "Rate the dishes, not the restaurants.",
+    "podium": "The three top-rated dishes right now",
     "title": "The <em>best dish</em> near you.",
     "tagline": "And the app that helps your group pick a spot — without the endless <em>WhatsApp</em> debate.",
     "downloadCta": "Download the app",

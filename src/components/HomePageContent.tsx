@@ -13,7 +13,6 @@ import SearchSection from './SearchSection';
 import DishGrid from './DishGrid';
 import SocialProof from './SocialProof';
 import SocialFeatures from './SocialFeatures';
-import FoodCloud from './FoodCloud';
 import WhySection from './WhySection';
 import FAQ from './FAQ';
 import Showcase from './Showcase';
@@ -397,6 +396,7 @@ export default async function HomePageContent({
           category={categoryLabel || undefined}
           city={cityLabel || undefined}
           bestCategory={bestCategory || undefined}
+          dishes={dishes}
         />
         {/* Démo "même resto, plats opposés" — preuve visuelle immédiate du
             value prop. Home uniquement : sur les pages filtrées catégorie/
@@ -453,9 +453,6 @@ export default async function HomePageContent({
           category={category}
           allCities={allCities}
         />
-        {/* Transition visuelle nuage d'emojis flottants — affiché sur toutes
-            les pages (décoratif universel, pas de cost SEO). */}
-        <FoodCloud />
         <WhySection />
         {/* FAQ accordéon — uniquement sur la home pour ne pas dupliquer le
             JSON-LD FAQPage avec celui de WhySection sur les pages filtrées

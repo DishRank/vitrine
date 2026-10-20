@@ -13,6 +13,7 @@
   },
   "hero": {
     "label": "Bewerte die Gerichte, nicht die Restaurants.",
+    "podium": "Die drei bestbewerteten Gerichte gerade",
     "title": "Das <em>beste Gericht</em> in deiner Nähe.",
     "tagline": "Und die App, die deiner Gruppe hilft, ein Lokal zu wählen — ohne die endlose <em>WhatsApp</em>-Debatte.",
     "downloadCta": "App herunterladen",

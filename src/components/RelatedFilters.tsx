@@ -149,7 +149,7 @@ export default async function RelatedFilters({ locale, city, category, allCities
                 : ''
             }
           >
-            <h2 className="text-base font-bold text-[var(--text)] mb-3">{leftTitle}</h2>
+            <h2 className="display text-[var(--text)] text-[26px] sm:text-[30px] mb-4">{leftTitle}</h2>
             <ul
               className={`flex flex-wrap gap-2 ${
                 singleColumn
@@ -169,7 +169,7 @@ export default async function RelatedFilters({ locale, city, category, allCities
         )}
         {rightLinks.length > 0 && (
           <div className={singleColumn ? 'text-center' : ''}>
-            <h2 className="text-base font-bold text-[var(--text)] mb-3">{rightTitle}</h2>
+            <h2 className="display text-[var(--text)] text-[26px] sm:text-[30px] mb-4">{rightTitle}</h2>
             <ul className={`flex flex-wrap gap-2 ${singleColumn ? 'justify-center' : ''}`}>
               {rightLinks.map((link) => (
                 <li key={link.href}>
