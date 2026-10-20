@@ -143,7 +143,7 @@ export default function SearchSection({
           type="button"
           onClick={() => navigate(category, city, query)}
           aria-label={t('cta')}
-          className="search-btn-shine hidden sm:inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-full bg-[var(--primary)] hover:bg-[#7c6cf7] text-white text-sm font-bold shrink-0"
+          className="search-btn-shine hidden sm:inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-full bg-[var(--primary)] hover:bg-[#D4553A] text-white text-sm font-bold shrink-0"
         >
           <span className="relative z-10">{t('cta')}</span>
           <svg

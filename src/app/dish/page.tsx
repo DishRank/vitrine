@@ -29,21 +29,21 @@ export default function DishPage() {
         <meta property="og:image" content="https://dishrank.fr/img/play_store_feature_graphic.webp" />
         <link rel="icon" type="image/webp" href="/img/icon.webp" />
       </head>
-      <body style={{ fontFamily: "'Outfit', -apple-system, sans-serif", background: '#0F0D1A', color: '#FFFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: 24, margin: 0 }}>
+      <body style={{ fontFamily: "'Outfit', -apple-system, sans-serif", background: '#14100E', color: '#FFFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: 24, margin: 0 }}>
         <div style={{ maxWidth: 400 }}>
           <Image src="/img/icon.webp" alt="DishRank" width={64} height={64} style={{ borderRadius: 16, marginBottom: 16 }} />
           <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Voir ce plat sur DishRank</h1>
-          <p style={{ color: '#9B97B0', fontSize: 15, marginBottom: 24, lineHeight: 1.5 }}>
+          <p style={{ color: '#A39A92', fontSize: 15, marginBottom: 24, lineHeight: 1.5 }}>
             Installez DishRank pour decouvrir les avis de la communaute sur ce plat et des milliers d&apos;autres.
           </p>
           <a
             href={PLAY_STORE_URL}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#6C5CE7', color: '#fff', padding: '14px 28px', borderRadius: 14, fontSize: 16, fontWeight: 600, textDecoration: 'none' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#C2452D', color: '#fff', padding: '14px 28px', borderRadius: 14, fontSize: 16, fontWeight: 600, textDecoration: 'none' }}
           >
             Installer l&apos;app
           </a>
-          <p style={{ color: '#9B97B0', fontSize: 13, marginTop: 16 }}>
-            Ou visitez <a href="/" style={{ color: '#A29BFE', textDecoration: 'none' }}>dishrank.fr</a>
+          <p style={{ color: '#A39A92', fontSize: 13, marginTop: 16 }}>
+            Ou visitez <a href="/" style={{ color: '#E8846A', textDecoration: 'none' }}>dishrank.fr</a>
           </p>
         </div>
         <script

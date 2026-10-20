@@ -76,7 +76,7 @@ export default async function LocaleLayout({
             sont auto-générés ; on garde uniquement les tags qui sortent du
             scope du `Metadata` object). */}
         <meta name="google-site-verification" content="2eAhok2-Sg89V8rG2zC2vZ2vZsAPb_theQuN0GSc0QA" />
-        <meta name="theme-color" content="#0F0D1A" />
+        <meta name="theme-color" content="#14100E" />
         <meta name="color-scheme" content="light dark" />
         {/* Standard PWA tag (supersedes the deprecated apple-mobile-web-app-capable).
             We keep the Apple-prefixed version for older iOS versions that still require it. */}

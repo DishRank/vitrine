@@ -125,7 +125,7 @@ export async function POST(request: Request) {
 
   const html = `
     <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:640px;line-height:1.5;color:#222;">
-      <h2 style="margin:0 0 8px;color:#6C5CE7;">Nouveau ticket support</h2>
+      <h2 style="margin:0 0 8px;color:#C2452D;">Nouveau ticket support</h2>
       <p style="margin:0 0 16px;color:#666;font-size:13px;">${escapeHtml(CATEGORY_LABEL[ticket.category] || ticket.category)}</p>
       <table style="border-collapse:collapse;font-size:13px;color:#333;">
         <tr><td style="padding:4px 12px 4px 0;color:#888;">De</td><td>${escapeHtml(authorName)}${authorEmail ? ` &lt;${escapeHtml(authorEmail)}&gt;` : ''}</td></tr>
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
         ${ticket.screenshot_url ? `<tr><td style="padding:4px 12px 4px 0;color:#888;">Screenshot</td><td><a href="${escapeHtml(ticket.screenshot_url)}">Ouvrir</a></td></tr>` : ''}
       </table>
       <h3 style="margin:24px 0 8px;font-size:14px;color:#444;">Message</h3>
-      <div style="background:#f7f6fc;border-radius:8px;padding:14px;white-space:pre-wrap;font-size:14px;">${escapeHtml(ticket.message || '(vide)')}</div>
+      <div style="background:#F9F6F1;border-radius:8px;padding:14px;white-space:pre-wrap;font-size:14px;">${escapeHtml(ticket.message || '(vide)')}</div>
     </div>
   `;
 

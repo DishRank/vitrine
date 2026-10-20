@@ -22,7 +22,7 @@ interface FeatureStyle {
 
 /** Style par feature (ordre = ordre dans messages.*.json socialFeatures.items) */
 const FEATURE_STYLES: FeatureStyle[] = [
-  { hue: 280, color: '#7c6cf7', icon: 'groups' },
+  { hue: 280, color: '#D4553A', icon: 'groups' },
   { hue: 30, color: '#ff7a3d', icon: 'poll' },
   { hue: 130, color: '#22C55E', icon: 'list' },
 ];
@@ -111,7 +111,7 @@ function BarycentreIllustration({ ariaLabel }: { ariaLabel: string }) {
 
       {/* Ami 1 — top-left */}
       <g>
-        <circle cx="48" cy="60" r="20" fill="#7c6cf7" />
+        <circle cx="48" cy="60" r="20" fill="#D4553A" />
         <text x="48" y="68" textAnchor="middle" fontSize="22" fill="white">🧑</text>
       </g>
       {/* Ami 2 — top-right */}

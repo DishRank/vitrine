@@ -28,7 +28,7 @@ export interface StyledQrOptions {
 
 export function buildStyledQrSvg(
   text: string,
-  { level, dark = '#1A1832', light = '#FFFFFF', margin = 4 }: StyledQrOptions
+  { level, dark = '#2A1F1A', light = '#FFFFFF', margin = 4 }: StyledQrOptions
 ): string {
   const qr = QRCode.create(text, { errorCorrectionLevel: level });
   const N = qr.modules.size;

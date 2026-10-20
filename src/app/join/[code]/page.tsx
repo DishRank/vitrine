@@ -103,7 +103,7 @@ export default async function JoinPage({ params }: PageProps) {
       <body
         style={{
           fontFamily: "'Outfit', -apple-system, sans-serif",
-          background: '#0F0D1A',
+          background: '#14100E',
           color: '#FFFDF5',
           display: 'flex',
           alignItems: 'center',
@@ -143,7 +143,7 @@ export default async function JoinPage({ params }: PageProps) {
                     height={88}
                     style={{
                       borderRadius: 999,
-                      border: '3px solid #6C5CE7',
+                      border: '3px solid #C2452D',
                       objectFit: 'cover',
                     }}
                   />
@@ -153,7 +153,7 @@ export default async function JoinPage({ params }: PageProps) {
                       width: 88,
                       height: 88,
                       borderRadius: 999,
-                      background: '#6C5CE7',
+                      background: '#C2452D',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -171,7 +171,7 @@ export default async function JoinPage({ params }: PageProps) {
               </div>
               <p
                 style={{
-                  color: '#9B97B0',
+                  color: '#A39A92',
                   fontSize: 15,
                   marginBottom: 28,
                   lineHeight: 1.5,
@@ -187,7 +187,7 @@ export default async function JoinPage({ params }: PageProps) {
               </h1>
               <p
                 style={{
-                  color: '#9B97B0',
+                  color: '#A39A92',
                   fontSize: 15,
                   marginBottom: 28,
                   lineHeight: 1.5,
@@ -215,7 +215,7 @@ export default async function JoinPage({ params }: PageProps) {
                 justifyContent: 'center',
                 gap: 8,
                 background: '#fff',
-                color: '#0F0D1A',
+                color: '#14100E',
                 padding: '14px 28px',
                 borderRadius: 14,
                 fontSize: 15,
@@ -234,7 +234,7 @@ export default async function JoinPage({ params }: PageProps) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                background: '#6C5CE7',
+                background: '#C2452D',
                 color: '#fff',
                 padding: '14px 28px',
                 borderRadius: 14,
@@ -249,9 +249,9 @@ export default async function JoinPage({ params }: PageProps) {
             </a>
           </div>
 
-          <p style={{ color: '#9B97B0', fontSize: 13, marginTop: 20 }}>
+          <p style={{ color: '#A39A92', fontSize: 13, marginTop: 20 }}>
             Ou visite{' '}
-            <a href="/" style={{ color: '#A29BFE', textDecoration: 'none' }}>
+            <a href="/" style={{ color: '#E8846A', textDecoration: 'none' }}>
               dishrank.fr
             </a>
           </p>

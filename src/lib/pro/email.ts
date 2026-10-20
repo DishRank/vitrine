@@ -116,11 +116,11 @@ export function buildDigestEmail(uid: string, items: DigestItem[]): { subject: s
 
   const html =
     `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;color:#2A241E">` +
-    `<h2 style="color:#6C5CE7;margin-bottom:4px">DishRank <span style="font-weight:400">Pro</span></h2>` +
+    `<h2 style="color:#C2452D;margin-bottom:4px">DishRank <span style="font-weight:400">Pro</span></h2>` +
     `<p>Vos clients ont laissé <strong>${total} nouvel${plural === 's' ? 'x' : ''} avis</strong> sans réponse${items.length > 1 ? ' sur vos établissements' : ''} :</p>` +
     `<table style="width:100%;border-collapse:collapse;margin:12px 0">${rows}</table>` +
     `<p style="margin:20px 0">` +
-    `<a href="${SITE}/pro/espace" style="background:#6C5CE7;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:700;display:inline-block">Répondre aux avis</a>` +
+    `<a href="${SITE}/pro/espace" style="background:#C2452D;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:700;display:inline-block">Répondre aux avis</a>` +
     `</p>` +
     `<p style="color:#8C8478;font-size:12px;margin-top:24px">Répondre publiquement montre à vos clients que vous êtes à l'écoute — et améliore votre image sur DishRank.</p>` +
     `<p style="color:#B2AEA6;font-size:11px;margin-top:16px">Vous recevez cet email en tant que responsable d'établissement sur DishRank. ` +

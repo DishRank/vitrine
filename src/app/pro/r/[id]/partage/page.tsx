@@ -9,7 +9,7 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://dishrank.fr';
 // Quiet zone = 4 modules (spec ISO 18004). Était à 1 → le PNG 512px cuisait une
 // marge trop fine ; 4 fiabilise le scan, surtout imprimé.
 const MARGIN = 4;
-const QR_DARK = '#1A1832';
+const QR_DARK = '#2A1F1A';
 
 /**
  * Préfixe Storage public autorisé pour le logo. GARDE ANTI-SSRF : `logo_url`

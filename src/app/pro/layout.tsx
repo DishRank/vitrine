@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   // La barre d'adresse garde la couleur de marque…
-  themeColor: '#6C5CE7',
+  themeColor: '#C2452D',
   // …mais on déclare le support des deux schémas → l'UA suit l'OS dès le rendu
   // serveur (avant le script d'init), et bascule le rendu natif en dark si l'OS
   // est en dark. Le script d'init la fige ensuite si une préférence existe.

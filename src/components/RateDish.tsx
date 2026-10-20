@@ -36,8 +36,8 @@ export interface RateDishTheme {
   dark: boolean;
 }
 
-const BRAND = '#6C5CE7';
-const BRAND_DARK = '#A29BFE';
+const BRAND = '#C2452D';
+const BRAND_DARK = '#E8846A';
 
 export default function RateDish({
   restaurantId,

@@ -124,13 +124,13 @@ function ConfirmContent() {
 // ── Brand palette (mirrors globals.css tokens — this page renders outside the
 //    [locale] layout, so it can't read the CSS vars and inlines them) ──
 const C = {
-  bg: '#0D0B1A',
-  surface: '#1E1B35',
+  bg: '#14100E',
+  surface: '#211A17',
   border: '#2E2A4A',
-  text: '#F8F7FC',
+  text: '#FAF7F2',
   text2: '#B2BEC3',
-  primary: '#6C5CE7',
-  primaryLight: '#A29BFE',
+  primary: '#C2452D',
+  primaryLight: '#E8846A',
   success: '#5FD39A',
   warm: '#FF7A3D',
 };
@@ -164,7 +164,7 @@ function Card({ children }: { children: React.ReactNode }) {
         border: `1px solid ${C.border}`,
         borderRadius: 24,
         padding: '44px 32px 40px',
-        boxShadow: `0 24px 60px -20px rgba(108,92,231,0.45), 0 2px 8px rgba(0,0,0,0.4)`,
+        boxShadow: `0 24px 60px -20px rgba(194,69,45,0.45), 0 2px 8px rgba(0,0,0,0.4)`,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}
     >
@@ -212,7 +212,7 @@ export default function ConfirmPage() {
         margin: 0, padding: '40px 20px', minHeight: '100vh',
         fontFamily: FONT, color: C.text, textAlign: 'center',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: `radial-gradient(900px 500px at 50% -10%, rgba(108,92,231,0.28), transparent 60%), ${C.bg}`,
+        background: `radial-gradient(900px 500px at 50% -10%, rgba(194,69,45,0.28), transparent 60%), ${C.bg}`,
       }}
     >
       <style>{`

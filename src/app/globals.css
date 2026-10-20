@@ -15,53 +15,56 @@ html {
 }
 
 :root {
-  --primary: #6C5CE7;
-  --primary-light: #A29BFE;
-  --primary-container: rgba(108, 92, 231, 0.12);
-  --primary-glow: rgba(108, 92, 231, 0.2);
+  --primary: #C2452D;
+  --primary-light: #E8846A;
+  --primary-container: rgba(194, 69, 45, 0.12);
+  --primary-glow: rgba(194, 69, 45, 0.2);
   --star: #F9CA24;
   /* Accents secondaires — formalisés à partir des couleurs déjà utilisées
      ponctuellement (badge "NEW" orange, badge "BETA" vert) pour casser le
-     mono-violet et donner de la respiration à la palette. */
+     mono-couleur et donner de la respiration à la palette. Palette « cuisine »
+     (oct. 2026) : paprika en principal, fonds crème, sombre espresso — le
+     violet faisait « appli d'IA », pas « restaurant ». */
   --accent-warm: #ff7a3d;
   --accent-success: #5fd39a;
 }
 
 /* Light theme (default) */
 :root {
-  --bg: #F8F7FC;
+  --bg: #FAF7F2;
   --surface: #FFFFFF;
-  --surface-var: #F1F0F7;
-  --text: #2D3436;
-  --text2: #636E72;
-  --text3: #B2BEC3;
+  --surface-var: #F3EEE6;
+  --text: #2B2522;
+  --text2: #6B625C;
+  --text3: #B5ABA3;
   --border: rgba(0,0,0,0.06);
-  --border2: #E8E6F0;
-  --loader-color: #6C5CE7;
-  --card-shadow: rgba(108,92,231,0.1);
+  --border2: #EAE2D7;
+  --loader-color: #C2452D;
+  --card-shadow: rgba(194,69,45,0.1);
   /* Store buttons (App Store / Google Play) — dark gray instead of pure
      black in light mode so the contrast n'est pas trop agressif. Reste
      vraiment "dark button" mais pas un bloc noir massif sur fond clair. */
-  --store-btn-bg: #2A2533;
-  --store-btn-bg-hover: #3a3543;
-  --store-btn-border: #3a3543;
+  --store-btn-bg: #2B2420;
+  --store-btn-bg-hover: #3A322D;
+  --store-btn-border: #3A322D;
 }
 
 /* Dark theme */
 .dark {
-  --bg: #0D0B1A;
-  --surface: #1E1B35;
-  --surface-var: #2A2650;
-  --text: #F8F7FC;
-  --text2: #B2BEC3;
-  --text3: #636E72;
+  --primary: #D4553A;
+  --bg: #14100E;
+  --surface: #211A17;
+  --surface-var: #2D2420;
+  --text: #FAF7F2;
+  --text2: #BDB3AB;
+  --text3: #6E645D;
   --border: rgba(255,255,255,0.08);
-  --border2: #38345A;
+  --border2: #3D322C;
   --loader-color: #FFF;
   /* Shadow teintée violet (au lieu d'un noir générique) — conforme à la
      règle skill "Tint shadows to match the background hue". Garde de la
      présence sur fond sombre tout en restant cohérent avec la palette. */
-  --card-shadow: rgba(108,92,231,0.22);
+  --card-shadow: rgba(194,69,45,0.22);
   /* Off-black tinté plutôt que pur #000 — convention Apple/Google
      conservée mais sans le contraste agressif d'un noir pur. */
   --store-btn-bg: #0a0a0a;
@@ -71,16 +74,17 @@ html {
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --bg: #0D0B1A;
-    --surface: #1E1B35;
-    --surface-var: #2A2650;
-    --text: #F8F7FC;
-    --text2: #B2BEC3;
-    --text3: #636E72;
+    --primary: #D4553A;
+    --bg: #14100E;
+    --surface: #211A17;
+    --surface-var: #2D2420;
+    --text: #FAF7F2;
+    --text2: #BDB3AB;
+    --text3: #6E645D;
     --border: rgba(255,255,255,0.08);
-    --border2: #38345A;
+    --border2: #3D322C;
     --loader-color: #FFF;
-    --card-shadow: rgba(108,92,231,0.22);
+    --card-shadow: rgba(194,69,45,0.22);
     --store-btn-bg: #0a0a0a;
     --store-btn-bg-hover: #1f1f1f;
     --store-btn-border: #2d2d2d;
@@ -317,7 +321,7 @@ label:has(> input[type='radio']:not(:disabled)) {
    `emGradient` côté React). Triplet 70/60/51% au lieu du 100/76/51 d'origine
    pour atténuer le pattern "AI purple". */
 .hero-gradient-text {
-  background: linear-gradient(120deg, #aba0e8 0%, #7669d0 50%, #5B4FC2 100%);
+  background: linear-gradient(120deg, #E8A08C 0%, #B5402A 50%, #9E3420 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -340,7 +344,7 @@ label:has(> input[type='radio']:not(:disabled)) {
   isolation: isolate;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
-  box-shadow: 0 4px 14px -4px rgba(108, 92, 231, 0.5);
+  box-shadow: 0 4px 14px -4px rgba(194, 69, 45, 0.5);
 }
 .search-btn-shine::after {
   content: '';
@@ -356,7 +360,7 @@ label:has(> input[type='radio']:not(:disabled)) {
 }
 .search-btn-shine:hover {
   transform: scale(1.04);
-  box-shadow: 0 8px 22px -4px rgba(108, 92, 231, 0.65);
+  box-shadow: 0 8px 22px -4px rgba(194, 69, 45, 0.65);
 }
 .search-btn-shine:active {
   transform: scale(0.97);

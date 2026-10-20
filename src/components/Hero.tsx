@@ -20,10 +20,10 @@ type Props = {
  *
  * Design key points:
  *   • Label "Note les plats · pas les restos" entouré de 2 traits horizontaux
- *     (24px × 1px, color #a99bff @ 40% opacity), uppercase tracked, tinted
- *     #a99bff (T.violetHi) — pas la couleur primary qui est plus foncée.
- *   • Titre H1 92px, blanc — gradient violet 3 stops (#a99bff → #7c6cf7 →
- *     #5b4fc2) UNIQUEMENT sur la portion <em> (gérée par le rich text i18n).
+ *     (24px × 1px, color #EE9A82 @ 40% opacity), uppercase tracked, tinted
+ *     #EE9A82 (T.violetHi) — pas la couleur primary qui est plus foncée.
+ *   • Titre H1 92px, blanc — gradient violet 3 stops (#EE9A82 → #D4553A →
+ *     #9E3420) UNIQUEMENT sur la portion <em> (gérée par le rich text i18n).
  *   • Subtitle 18px, ligne hauteur 1.55, max-width 560px, color textSoft
  *     (#bfb8e8).
  *   • Stats line : "200+" / "100%" en blanc bold, le reste en muted.
@@ -106,7 +106,7 @@ export default function Hero({ category, city, bestCategory }: Props) {
     <span
       className="not-italic"
       style={{
-        background: 'linear-gradient(120deg, #aba0e8 0%, #7669d0 50%, #5b4fc2 100%)',
+        background: 'linear-gradient(120deg, #E8A08C 0%, #B5402A 50%, #9E3420 100%)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',

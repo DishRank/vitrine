@@ -54,12 +54,12 @@ export default function QrKit({
       key={key}
       className={
         compact
-          ? 'flex break-inside-avoid flex-col items-center rounded-xl border border-dashed border-[#C9C4D8] bg-white p-4 text-center text-[#1A1832]'
-          : 'mx-auto max-w-[380px] rounded-3xl border border-[var(--border2)] bg-white p-8 text-center text-[#1A1832] shadow-sm'
+          ? 'flex break-inside-avoid flex-col items-center rounded-xl border border-dashed border-[#D6CCBF] bg-white p-4 text-center text-[#2A1F1A]'
+          : 'mx-auto max-w-[380px] rounded-3xl border border-[var(--border2)] bg-white p-8 text-center text-[#2A1F1A] shadow-sm'
       }
     >
       <p className={compact ? 'text-lg font-extrabold leading-tight tracking-tight' : 'text-2xl font-extrabold tracking-tight'}>{name}</p>
-      <p className={compact ? 'mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#6C5CE7]' : 'mt-1 text-sm font-semibold uppercase tracking-widest text-[#6C5CE7]'}>Notre menu</p>
+      <p className={compact ? 'mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-[#C2452D]' : 'mt-1 text-sm font-semibold uppercase tracking-widest text-[#C2452D]'}>Notre menu</p>
       <div className={`relative mx-auto ${compact ? 'mt-3 w-[150px]' : 'mt-5 w-56'}`}>
         <div dangerouslySetInnerHTML={{ __html: svg }} />
         {withLogo ? (
@@ -69,7 +69,7 @@ export default function QrKit({
           >
             <div
               className="flex h-[86%] w-[86%] items-center justify-center rounded-full"
-              style={{ border: '1.5px solid #6C5CE7', padding: '10%' }}
+              style={{ border: '1.5px solid #C2452D', padding: '10%' }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={logo as string} alt="" className="h-full w-full object-contain" />
@@ -78,7 +78,7 @@ export default function QrKit({
         ) : null}
       </div>
       <p className={compact ? 'mt-3 text-xs font-bold' : 'mt-5 text-sm font-bold'}>Scannez pour voir la carte</p>
-      <p className={compact ? 'mt-2 text-[9px] font-semibold text-[#6C5CE7]' : 'mt-4 text-[11px] font-semibold text-[#6C5CE7]'}>Propulsé par DishRank</p>
+      <p className={compact ? 'mt-2 text-[9px] font-semibold text-[#C2452D]' : 'mt-4 text-[11px] font-semibold text-[#C2452D]'}>Propulsé par DishRank</p>
     </div>
   );
 

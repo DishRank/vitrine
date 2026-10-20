@@ -110,7 +110,7 @@ export function DownloadPngButton({
             ctx.beginPath();
             ctx.arc(c, c, R * 0.86, 0, Math.PI * 2);
             ctx.lineWidth = size * 0.005;
-            ctx.strokeStyle = '#6C5CE7';
+            ctx.strokeStyle = '#C2452D';
             ctx.stroke();
             try {
               const logoImg = await loadImage(logo);

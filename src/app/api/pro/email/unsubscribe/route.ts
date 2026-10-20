@@ -16,7 +16,7 @@ function page(title: string, body: string, status: number): Response {
     `<!doctype html><html lang="fr"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head>` +
     `<body style="font-family:system-ui,sans-serif;max-width:480px;margin:60px auto;padding:0 20px;text-align:center;color:#2A241E">` +
-    `<h2 style="color:#6C5CE7">DishRank Pro</h2>${body}</body></html>`;
+    `<h2 style="color:#C2452D">DishRank Pro</h2>${body}</body></html>`;
   return new Response(html, { status, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     'Désabonné',
     `<p>C'est fait — vous ne recevrez plus les rappels d'avis à répondre.</p>` +
       `<p style="color:#8C8478;font-size:13px;margin-top:16px">Vous pouvez réactiver ces rappels à tout moment depuis votre espace ` +
-      `<a href="/pro/compte" style="color:#6C5CE7">compte</a>.</p>`,
+      `<a href="/pro/compte" style="color:#C2452D">compte</a>.</p>`,
     200
   );
 }

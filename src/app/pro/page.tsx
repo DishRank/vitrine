@@ -75,7 +75,7 @@ const BENEFITS = [
   },
   {
     emoji: '📊',
-    color: '#A29BFE',
+    color: '#E8846A',
     title: 'Statistiques & personnalisation',
     body: 'Suivez vues et avis, personnalisez le thème de votre carte, épinglez vos plats signature.',
     tag: 'Premium',

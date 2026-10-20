@@ -276,14 +276,14 @@ export default function CookieConsent() {
     >
       <div
         className="relative bg-[var(--surface)] border-2 border-[var(--primary)]/30 rounded-2xl px-5 sm:px-7 py-5 sm:py-6 shadow-2xl"
-        style={{ boxShadow: '0 20px 60px -15px rgba(108, 92, 231, 0.4), 0 8px 25px -8px rgba(0, 0, 0, 0.25)' }}
+        style={{ boxShadow: '0 20px 60px -15px rgba(194, 69, 45, 0.4), 0 8px 25px -8px rgba(0, 0, 0, 0.25)' }}
       >
         {/* Glow décoratif violet en arrière-plan */}
         <div
           className="absolute inset-0 rounded-2xl pointer-events-none -z-10"
           aria-hidden="true"
           style={{
-            background: 'radial-gradient(circle at 0% 0%, rgba(108, 92, 231, 0.12), transparent 50%)',
+            background: 'radial-gradient(circle at 0% 0%, rgba(194, 69, 45, 0.12), transparent 50%)',
           }}
         />
 

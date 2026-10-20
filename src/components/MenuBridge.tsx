@@ -164,7 +164,7 @@ export async function buildMenuMetadata(id: string): Promise<Metadata> {
 // Le look « carte de restaurant » est piloté par un THÈME (premium) résolu par
 // requête (resolveMenuTheme). Défaut = ivoire chaud. Le violet DishRank n'est
 // jamais thémé : réservé à la petite mention app.
-const BRAND = '#6C5CE7';
+const BRAND = '#C2452D';
 // Police de CORPS (noms de plats, textes courants) — 100 % système, CSP-safe.
 const SANS =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
@@ -1281,7 +1281,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
               <div style={{ borderTop: `1px solid ${theme.line}`, paddingTop: 28, textAlign: 'center' }}>
                 <p style={{ fontSize: 14.5, color: theme.text, margin: 0, fontWeight: 600 }}>
                   <span style={{ color: theme.accent }}>★</span> {ui.likedTitle}{' '}
-                  <span style={{ color: theme.dark ? '#A29BFE' : BRAND }}>{ui.rateInvite}</span>
+                  <span style={{ color: theme.dark ? '#E8846A' : BRAND }}>{ui.rateInvite}</span>
                 </p>
                 <div style={{ marginTop: 14 }}>
                   <StoreBadges theme={theme} ui={ui} platform={platform} />

@@ -24,7 +24,7 @@ export default function NotFound() {
         <Link
           href="/"
           aria-label="DishRank — accueil"
-          className="flex items-center gap-2.5 font-extrabold text-lg text-[#6C5CE7] dark:text-white"
+          className="flex items-center gap-2.5 font-extrabold text-lg text-[#C2452D] dark:text-white"
         >
           <AnimatedLogo size={32} />
           <span className="text-[var(--text)]">DishRank</span>
