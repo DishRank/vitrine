@@ -158,8 +158,8 @@ export default async function ProLandingPage() {
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-[17px] leading-relaxed text-[var(--text2)]">
-            DishRank Pro réunit votre fiche, votre menu numérique avec QR de table et les avis
-            de vos clients dans un seul espace. Simple, en français, pensé pour le service.
+            DishRank Pro réunit votre fiche, votre carte avec ses allergènes, le QR de table et
+            les avis de vos clients dans un seul espace. Simple, en français, pensé pour le service.
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
