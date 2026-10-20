@@ -194,6 +194,7 @@ export default function Footer() {
               <li><a href="/?page=privacy" onClick={(e) => openLegal(e, 'privacy')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tl('privacy')}</a></li>
               <li><a href="/?page=terms" onClick={(e) => openLegal(e, 'terms')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tl('terms')}</a></li>
               <li><a href="/?page=delete" onClick={(e) => openLegal(e, 'delete')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tl('delete')}</a></li>
+              <li><a href="/?page=reviews" onClick={(e) => openLegal(e, 'reviews')} className="footer-link text-[var(--text2)] hover:text-[var(--text)]">{tl('reviews')}</a></li>
               <li><a href="#" onClick={openCookieSettings} className="footer-link text-[var(--text2)] hover:text-[var(--text)] cursor-pointer">{t('cookies')}</a></li>
             </ul>
           </div>

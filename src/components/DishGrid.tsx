@@ -8,6 +8,7 @@ import type { DisplayMode } from '@/lib/ranking';
 import { citySlug, restaurantSlug } from '@/lib/slug';
 import DownloadButtons from './DownloadButtons';
 import M3Spinner from './M3Spinner';
+import LegalLink from './LegalLink';
 
 export default function DishGrid({
   initialDishes,
@@ -21,6 +22,7 @@ export default function DishGrid({
   mode?: DisplayMode;
 }) {
   const t = useTranslations('feed');
+  const tw = useTranslations('why');
   const sp = useSearchParams();
   const routeParams = useParams<{ locale?: string }>();
   const locale = routeParams?.locale || 'fr';
@@ -59,7 +61,12 @@ export default function DishGrid({
           {mode === 'fresh' ? t('freshTitle') : title}
         </h2>
         {mode === 'fresh' && (
-          <p className="mt-3 max-w-[40rem] text-[15px] leading-relaxed text-[var(--text2)]">{t('freshNote')}</p>
+          <p className="mt-3 max-w-[40rem] text-[15px] leading-relaxed text-[var(--text2)]">
+            {t('freshNote')}{' '}
+            <LegalLink page="reviews" className="font-semibold text-[var(--primary)] underline decoration-1 underline-offset-2 hover:opacity-80">
+              {tw('reviewsLink')}
+            </LegalLink>
+          </p>
         )}
       </div>
 

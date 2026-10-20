@@ -2,7 +2,7 @@
 import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const TABS = ['privacy', 'terms', 'delete'] as const;
+const TABS = ['privacy', 'terms', 'delete', 'reviews'] as const;
 type Tab = (typeof TABS)[number];
 
 /**
@@ -296,12 +296,12 @@ export default function LegalSheet({ initialPage }: { initialPage: string }) {
           <button onClick={close} aria-label="Fermer" className="cursor-pointer absolute top-3 right-4 w-8 h-8 flex items-center justify-center bg-[var(--surface-var)] rounded-full text-[var(--text2)] hover:text-[var(--text)] hover:bg-[var(--border2)] hover:rotate-90 transition-all duration-300">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
           </button>
-          <div className="flex gap-1 pb-3 border-b border-[var(--border)]">
+          <div className="no-scrollbar flex gap-1 pb-3 border-b border-[var(--border)] overflow-x-auto">
             {TABS.map((tb) => (
               <button
                 key={tb}
                 onClick={() => switchTab(tb)}
-                className={`cursor-pointer px-4 py-2 rounded-full text-sm font-medium transition-all ${tb === tab ? 'bg-[var(--primary-container)] text-[var(--primary)] font-semibold' : 'text-[var(--text3)] hover:text-[var(--text)]'}`}
+                className={`shrink-0 cursor-pointer px-4 py-2 rounded-full text-sm font-medium transition-all ${tb === tab ? 'bg-[var(--primary-container)] text-[var(--primary)] font-semibold' : 'text-[var(--text3)] hover:text-[var(--text)]'}`}
               >
                 {t(tb)}
               </button>

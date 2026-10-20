@@ -1124,6 +1124,8 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                       ) : null}
                       {venue.google_rating ? (
                         <span style={{ color: theme.text }}>
+                          {/* Note Google : toujours attribuée (ce n'est pas une note DishRank). */}
+                          <span style={{ color: theme.sub, fontWeight: 500 }}>Google </span>
                           <span style={{ color: theme.accent }}>★</span> {venue.google_rating.toFixed(1)}
                           {venue.google_review_count ? (
                             <span style={{ color: theme.sub, fontWeight: 500 }}> · {venue.google_review_count}</span>
