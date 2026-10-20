@@ -21,6 +21,7 @@ import CtaBanner from './CtaBanner';
 import Footer from './Footer';
 import RelatedFilters from './RelatedFilters';
 import CityGuide from './CityGuide';
+import RestaurateurBand from './RestaurateurBand';
 import TrackInView from './TrackInView';
 
 // ─── Lazy-loaded modals ────────────────────────────────────────────────
@@ -459,6 +460,9 @@ export default async function HomePageContent({
         {/* FAQ accordéon — uniquement sur la home pour ne pas dupliquer le
             JSON-LD FAQPage avec celui de WhySection sur les pages filtrées
             (sinon Search Console flagge "duplicate FAQPage"). */}
+        {/* Restaurateurs : ceux qui reçoivent le tableau des allergènes vérifient
+            le site avant de cliquer — d'où vient leur carte, comment la retirer. */}
+        {isHome && locale === 'fr' && <RestaurateurBand />}
         {isHome && <FAQ nonce={nonce} />}
         <Showcase />
       </main>

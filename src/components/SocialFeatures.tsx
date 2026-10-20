@@ -155,10 +155,6 @@ export default function SocialFeatures() {
     >
       {/* Header */}
       <div className="text-center mb-12 sm:mb-16 px-2">
-        <span className="inline-flex items-center gap-2 px-3 py-1.5 mb-5 rounded-full bg-[#ff7a3d]/12 border border-[#ff7a3d]/35 text-[#ff7a3d] text-[10px] sm:text-[11px] font-bold uppercase tracking-[1.5px] whitespace-nowrap">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#ff7a3d] pulse-dot shrink-0" />
-          {t('pill')}
-        </span>
         <h2
           className="font-black tracking-[-0.02em] leading-[1.04] mb-4"
           style={{ fontSize: 'clamp(1.5rem, 5.5vw, 3.5rem)' }}
@@ -197,16 +193,6 @@ export default function SocialFeatures() {
               puis 4 étapes title-only. On laisse le titre + la séquence des
               steps raconter l'histoire, pas de paragraphe redondant. */}
           <div>
-            <span
-              className="inline-flex items-center gap-2 px-2.5 py-1 mb-4 rounded-full text-[10px] font-bold uppercase tracking-[1.4px]"
-              style={{
-                background: 'var(--primary-container)',
-                color: 'var(--primary)',
-                border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
-              }}
-            >
-              {t('barycentre.pill')}
-            </span>
             <h3
               className="font-extrabold tracking-tight text-[var(--text)] mb-3 leading-[1.08]"
               style={{ fontSize: 'clamp(1.5rem, 3.4vw, 2.25rem)' }}

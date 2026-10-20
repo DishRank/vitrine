@@ -62,16 +62,6 @@ export default function WhySection() {
 
   return (
     <section id="why" className="max-w-[1280px] mx-auto px-4 sm:px-14 py-16 sm:py-24">
-      {/* Eyebrow label — visual rhythm with Hero / SocialFeatures sections.
-          Wrapped in a flex so the lines/label stay perfectly centered. */}
-      <div
-        className="inline-flex items-center gap-3 mb-5 text-[10px] sm:text-[11px] font-bold uppercase text-[var(--primary)] w-full justify-center"
-        style={{ letterSpacing: '1.8px' }}
-      >
-        <span className="inline-block h-px bg-[var(--primary)] opacity-40" style={{ width: 'clamp(16px, 4vw, 24px)' }} />
-        <span>{t('eyebrow')}</span>
-        <span className="inline-block h-px bg-[var(--primary)] opacity-40" style={{ width: 'clamp(16px, 4vw, 24px)' }} />
-      </div>
       <h2
         className="font-bold text-[var(--text)] text-center mb-10 sm:mb-14 tracking-tight"
         style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', lineHeight: 1.04, letterSpacing: '-1.5px' }}

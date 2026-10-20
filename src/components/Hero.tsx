@@ -1,6 +1,5 @@
 import { useTranslations } from 'next-intl';
 import DownloadButtons from './DownloadButtons';
-import CountUpStat from './CountUpStat';
 
 type Props = {
   /** Localized category label (e.g. "pizza", "pâtes") */
@@ -124,9 +123,7 @@ export default function Hero({ category, city, bestCategory }: Props) {
   //   • "Sans pub" → texte rendu tel quel (pas de chiffre, pas d'animation)
   // Déclenché par IntersectionObserver à la première intersection avec le
   // viewport, donc l'utilisateur voit toujours l'animation au premier scroll.
-  const statBold = (chunks: React.ReactNode) => (
-    <CountUpStat className="text-[var(--text)] font-bold">{chunks}</CountUpStat>
-  );
+  const statBold = (chunks: React.ReactNode) => <b className="text-[var(--text)] font-bold">{chunks}</b>;
 
   return (
     <section className="relative pt-24 pb-10 sm:pb-12 text-center overflow-hidden" style={{ contain: 'layout paint' }}>

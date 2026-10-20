@@ -19,7 +19,7 @@
     "titleWithCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} près de chez toi.",
     "titleWithCity": "Les meilleurs plats à <em>{city}</em>",
     "titleWithCityCategory": "{bestPrefix}<em>{bestLabel}</em>{bestSuffix} à {city}",
-    "subtitle": "Cherche, compare et trouve où manger le meilleur burger, sushi, pizza de ta ville. Avis vérifiés par notre communauté de gourmets.",
+    "subtitle": "Cherche, compare et trouve où manger le meilleur burger, sushi, pizza de ta ville. Chaque plat est noté par la communauté.",
     "subtitleWithCategory": "Top {category} classés par les avis de la communauté DishRank.",
     "subtitleWithCity": "Où manger à {city} ? Les plats les mieux notés par la communauté DishRank.",
     "subtitleWithCityCategory": "Top {category} à {city}, classés par les avis de la communauté DishRank.",
@@ -95,6 +95,10 @@
       {
         "q": "Pourquoi noter les plats et pas les restos ?",
         "a": "Un resto à 4,2★ sur Google peut servir une excellente salade et un plat de pâtes catastrophique. La note moyenne ne te dit rien sur ce que TOI tu vas commander. DishRank note chaque plat individuellement — tu sais exactement quoi prendre, et tu peux comparer les choix de tes amis dans un groupe."
+      },
+      {
+        "q": "Je suis restaurateur : d'où vient ma carte sur DishRank ?",
+        "a": "Nous relevons les cartes que les restaurants publient sur leur propre site, pour que chaque plat puisse être noté. Vous pouvez revendiquer votre fiche gratuitement pour corriger la carte, publier vos allergènes et répondre aux avis, depuis l'espace restaurateur (dishrank.fr/pro). Si vous préférez que votre carte n'apparaisse pas, écrivez à contact@dishrank.fr : nous la retirons et ne la relevons plus."
       },
       {
         "q": "Sur quelles villes l'app est dispo ?",

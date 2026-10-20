@@ -137,10 +137,6 @@ export default function SocialProof({ reviews }: Props) {
     };
   });
 
-  // Stats : nombre total d'avis fournis + contributeurs uniques
-  const totalReviews = events.length;
-  const uniqueContributors = new Set(reviews.map((r) => r.user_id || 'anon')).size;
-
   // Duplicate the array for seamless infinite scroll
   const loop = [...events, ...events];
 
@@ -148,26 +144,12 @@ export default function SocialProof({ reviews }: Props) {
     <section className="py-12 sm:py-14 lg:py-16">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-14 mb-6 sm:mb-9">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4">
-          <div>
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ff7a3d]/12 border border-[#ff7a3d]/35 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ff7a3d] pulse-dot" />
-              <span className="text-[11px] font-bold uppercase tracking-[1.4px] text-[#ff7a3d]">
-                En direct
-              </span>
-            </span>
-            <h3
-              className="font-bold tracking-tight text-[var(--text)]"
-              style={{ fontSize: 'clamp(1.25rem, 3.2vw, 1.625rem)', lineHeight: 1.2 }}
-            >
-              Les avis qui tombent en ce moment
-            </h3>
-          </div>
-          <div className="tabular text-left sm:text-right text-[13px] text-[var(--text3)] leading-snug">
-            <b className="text-[var(--text)] font-bold">{totalReviews} avis</b> récents
-            <span className="sm:hidden"> · </span>
-            <br className="hidden sm:block" />
-            <b className="text-[var(--text)] font-bold">{uniqueContributors} contributeur{uniqueContributors > 1 ? 's' : ''}</b>
-          </div>
+          <h3
+            className="font-bold tracking-tight text-[var(--text)]"
+            style={{ fontSize: 'clamp(1.25rem, 3.2vw, 1.625rem)', lineHeight: 1.2 }}
+          >
+            Les derniers plats notés
+          </h3>
         </div>
       </div>
 
