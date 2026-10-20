@@ -10,10 +10,14 @@ import Turnstile from '../_components/Turnstile';
 export default function SignupForm({
   turnstileSiteKey,
   nonce,
+  next,
 }: {
   turnstileSiteKey?: string;
   nonce?: string;
+  /** Chemin interne où revenir après confirmation de l'email (ex. revendication d'une fiche). */
+  next?: string;
 }) {
+  const loginHref = next ? `/pro/login?next=${encodeURIComponent(next)}` : '/pro/login';
   const [state, action] = useActionState<AuthActionState, FormData>(signUpAction, {});
   const [pw, setPw] = useState('');
   const checks = checkPassword(pw);
@@ -23,7 +27,7 @@ export default function SignupForm({
       <div className="space-y-4">
         <FormSuccess message={state.message} />
         <Link
-          href="/pro/login"
+          href={loginHref}
           className="block w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-center text-[15px] font-bold text-white hover:opacity-90"
         >
           Aller à la connexion
@@ -34,6 +38,7 @@ export default function SignupForm({
 
   return (
     <form action={action} className="space-y-4">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <div>
         <label htmlFor="displayName" className={labelCls}>Votre nom (affiché sur vos réponses aux avis)</label>
         <input
@@ -74,7 +79,7 @@ export default function SignupForm({
       <SubmitButton>Créer mon compte</SubmitButton>
       <p className="text-center text-sm text-[var(--text2)]">
         Déjà un compte ?{' '}
-        <Link href="/pro/login" className="font-semibold text-[var(--primary)] hover:underline">
+        <Link href={loginHref} className="font-semibold text-[var(--primary)] hover:underline">
           Se connecter
         </Link>
       </p>

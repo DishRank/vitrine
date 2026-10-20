@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import {
   searchRestaurantsAction,
   requestClaimCodeAction,
@@ -19,7 +19,17 @@ const btn =
   'rounded-xl bg-[var(--primary)] px-4 py-3 text-[15px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50';
 const linkBtn = 'text-sm font-semibold text-[var(--text2)] hover:text-[var(--primary)]';
 
-export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
+export default function ClaimClient({
+  onDone,
+  initial,
+  returnTo,
+}: {
+  onDone?: () => void;
+  /** Établissement déjà identifié (arrivée depuis le tableau des allergènes). */
+  initial?: RestaurantHit | null;
+  /** Où proposer de revenir une fois la fiche revendiquée. */
+  returnTo?: string;
+} = {}) {
   const router = useRouter();
   const [pending, start] = useTransition();
 
@@ -61,6 +71,14 @@ export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
       } else setStep('intro');
     });
   };
+
+  // Arrivée avec un établissement déjà identifié : on saute la recherche.
+  const autoPicked = useRef(false);
+  useEffect(() => {
+    if (autoPicked.current || !initial) return;
+    autoPicked.current = true;
+    pick(initial);
+  }, [initial]);
 
   const request = (withEmail?: string) =>
     start(async () => {
@@ -112,7 +130,15 @@ export default function ClaimClient({ onDone }: { onDone?: () => void } = {}) {
         <p className="mt-1 text-sm text-[var(--text2)]">
           {picked?.name} vous appartient désormais. Vous pouvez gérer sa fiche et ses avis.
         </p>
-        <button onClick={() => { onDone?.(); router.push(picked ? `/pro/r/${picked.id}` : '/pro/espace'); }} className={`${btn} mt-5 w-full`}>
+        {returnTo ? (
+          <button onClick={() => { onDone?.(); router.push(returnTo); }} className={`${btn} mt-5 w-full`}>
+            Revenir à mon tableau des allergènes
+          </button>
+        ) : null}
+        <button
+          onClick={() => { onDone?.(); router.push(picked ? `/pro/r/${picked.id}` : '/pro/espace'); }}
+          className={returnTo ? `${linkBtn} mt-3 block w-full text-center` : `${btn} mt-5 w-full`}
+        >
           Gérer mon établissement
         </button>
       </div>

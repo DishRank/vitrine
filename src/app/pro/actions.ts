@@ -132,7 +132,9 @@ export async function signUpAction(
       // Sans nom fourni, le profil reste display_name NULL — l'app y verrait
       // un onboarding en cours, l'espace pro s'en accommode (compte unique D3).
       data: displayName ? { display_name: displayName } : undefined,
-      emailRedirectTo: `${origin}/pro/callback?next=${encodeURIComponent('/pro/espace')}`,
+      // Retour après confirmation : /pro/espace par défaut, ou le parcours en
+      // cours (ex. revendication depuis le tableau des allergènes).
+      emailRedirectTo: `${origin}/pro/callback?next=${encodeURIComponent(safeNext(formData.get('next')))}`,
       captchaToken: captchaToken(formData),
     },
   });

@@ -97,7 +97,10 @@ export default function LoginForm({
 
       <p className="mt-6 text-center text-sm text-[var(--text2)]">
         Pas encore de compte ?{' '}
-        <Link href="/pro/signup" className="font-semibold text-[var(--primary)] hover:underline">
+        <Link
+          href={next && next !== '/pro/espace' ? `/pro/signup?next=${encodeURIComponent(next)}` : '/pro/signup'}
+          className="font-semibold text-[var(--primary)] hover:underline"
+        >
           Créer un compte
         </Link>
       </p>

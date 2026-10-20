@@ -171,6 +171,13 @@ function buildCsp(
 // /pro/compte…) exige une session. Match EXACT (`.has(pathname)`) : les
 // sous-chemins restent gardés (ex. /pro/reset/update).
 const PRO_PUBLIC_PATHS = new Set(['/pro', '/pro/login', '/pro/signup', '/pro/reset', '/pro/callback']);
+// Lien personnel « tableau des allergènes » envoyé aux restaurants (mig. 196) :
+// le restaurateur n'a PAS de compte quand il l'ouvre. L'accès est porté par le
+// jeton de l'URL (vérifié en base par haché), jamais par la session. Préfixe
+// strict + format du jeton : aucune autre page /pro ne s'ouvre par ce biais.
+const PRO_PUBLIC_TOKEN_PATH = /^\/pro\/allergenes\/[A-Za-z0-9_-]{32}$/;
+const isProPublic = (pathname: string) =>
+  PRO_PUBLIC_PATHS.has(pathname) || PRO_PUBLIC_TOKEN_PATH.test(pathname);
 
 // CSP /pro : la base stricte + Turnstile (iframe + télémétrie) quand le
 // captcha est configuré (NEXT_PUBLIC_* inliné au build, comme SUPABASE_CONNECT).
@@ -249,7 +256,7 @@ async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
     return finalize(r);
   };
 
-  if (!authenticated && !PRO_PUBLIC_PATHS.has(pathname)) {
+  if (!authenticated && !isProPublic(pathname)) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = '/pro/login';
     // On conserve la QUERY dans `next` : un deep-link partagé (ex.
