@@ -10,7 +10,7 @@ const SITE = 'https://dishrank.fr';
 const OG_IMAGE = `${SITE}/img/play_store_feature_graphic.webp`;
 const TITLE = 'DishRank Pro — Gérez votre établissement';
 const DESCRIPTION =
-  'Fiche, menu numérique avec QR de table et réponse aux avis clients, réunis dans un seul espace. Premium offert 1 an au lancement, sans carte bancaire.';
+  'Fiche, menu numérique avec QR de table, allergènes par plat et réponse aux avis clients, réunis dans un seul espace. Gratuit, sans carte bancaire.';
 
 /**
  * Landing PUBLIQUE de présentation de l'offre restaurateur (segment /pro).
@@ -182,7 +182,7 @@ export default async function ProLandingPage() {
           </div>
 
           <p className="mt-5 text-sm font-semibold text-[var(--accent-success)]">
-            🎉 Premium offert 1 an au lancement — sans carte bancaire.
+            Gratuit, sans carte bancaire. Premium à 19,99 €/mois, sans engagement.
           </p>
         </section>
 
@@ -257,18 +257,19 @@ export default async function ProLandingPage() {
             <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2">
               <div>
                 <span className="inline-block rounded-full bg-[var(--primary-container)] px-3 py-1 text-xs font-extrabold text-[var(--primary)]">
-                  Offre de lancement
+                  Gratuit pour l’essentiel
                 </span>
                 <h2
                   className="mt-4 font-extrabold tracking-tight"
                   style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)' }}
                 >
-                  Gratuit pendant 1 an
+                  L’essentiel reste gratuit
                 </h2>
                 <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[var(--text2)]">
-                  Au lancement, tout le Premium est offert pendant un an, sans carte bancaire.
-                  L’essentiel — fiche, menu numérique, QR de table et réponse aux avis — reste
-                  gratuit ensuite.
+                  Fiche, menu numérique, QR de table, allergènes par plat et réponse aux avis :
+                  gratuits, sans carte bancaire ni limite de durée. Le Premium (19,99 €/mois, sans
+                  engagement) tient vos allergènes à jour quand votre carte change et traduit votre
+                  carte en 5 langues.
                 </p>
                 <Link
                   href={primaryHref}

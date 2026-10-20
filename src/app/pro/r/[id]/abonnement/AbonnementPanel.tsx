@@ -5,12 +5,13 @@ import { createCheckoutSession, createPortalSession, type BillingResult } from '
 import ActivationPoller from './ActivationPoller';
 
 const PRICE = '19,99 €';
+// Offre recentrée sur les allergènes (oct. 2026) : c'est par le tableau offert
+// que les restaurateurs arrivent ; le Premium leur évite de le refaire.
 const FEATURES = [
-  'Traduction automatique du menu (5 langues)',
-  'Thème du menu : ambiance, couleur, police',
+  'Allergènes à jour : quand votre carte change, nous la relevons, vous validez, votre tableau et votre carte QR suivent',
+  'Carte et allergènes traduits automatiquement (5 langues) pour vos clients étrangers',
   'Statistiques & alertes de la fiche',
-  'Réponse épinglée + 5 plats signature',
-  'Logo au centre du QR de table',
+  'Thème du menu, réponse épinglée, 5 plats signature, logo au centre du QR',
 ];
 
 function fmtDate(iso: string | null): string {
@@ -49,7 +50,7 @@ export default function AbonnementPanel({
         return;
       }
       const MAP: Record<string, string> = {
-        coming_soon: 'La souscription en ligne arrive très bientôt — le premium est offert 1 an au lancement.',
+        coming_soon: 'Le paiement en ligne ouvre très bientôt.',
         already_comped: 'Premium déjà offert sur cet établissement.',
         already_premium: 'Votre abonnement est déjà actif.',
         no_subscription: 'Aucun abonnement à gérer.',
@@ -144,8 +145,8 @@ export default function AbonnementPanel({
           {pending ? 'Redirection…' : billingEnabled ? 'Passer Premium' : 'Bientôt disponible'}
         </button>
         {!billingEnabled ? (
-          <p className="mt-2 text-sm font-semibold text-[var(--primary)]">
-            🎁 Le Premium est offert 1 an au lancement — contactez-nous pour l&apos;activer sur votre établissement.
+          <p className="mt-2 text-sm text-[var(--text2)]">
+            Le paiement en ligne ouvre très bientôt. Une question d&apos;ici là : écrivez-nous à contact@dishrank.fr.
           </p>
         ) : null}
         {errEl}
