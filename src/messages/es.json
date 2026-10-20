@@ -6,12 +6,13 @@
     "titleWithCityCategory": "{bestCategory} en {city} 2026 — Top 10 & opiniones | DishRank",
     "titleWithCity": "Dónde comer en {city} 2026 — Mejores platos valorados | DishRank",
     "descWithCategory": "Top {category} 2026: clasificado por opiniones de la comunidad. Direcciones, precios, fotos y valoraciones para encontrar {bestCategory} cerca de ti.",
-    "descWithCity": "Mejores platos de {city} en 2026: hamburguesa, sushi, pizza y más. Ranking por plato con fotos, valoraciones y opiniones verificadas.",
-    "descWithCityCategory": "{bestCategory} de {city} en 2026: Top 10 por opiniones de la comunidad, con direcciones, precios, fotos y valoraciones verificadas.",
+    "descWithCity": "Mejores platos de {city} en 2026: hamburguesa, sushi, pizza y más. Ranking por plato con fotos, valoraciones y opiniones.",
+    "descWithCityCategory": "{bestCategory} de {city} en 2026: Top 10 por opiniones de la comunidad, con direcciones, precios, fotos y valoraciones.",
     "siteTagline": "Valora los platos, no los restaurantes.",
-    "appDescription": "Valora los platos, no los restaurantes. Encuentra la mejor hamburguesa, sushi, pizza de tu ciudad con las opiniones verificadas de la comunidad DishRank. Crea un grupo con tus amigos, votad el sitio de encuentro, DishRank propone la dirección justo en medio de todos."
+    "appDescription": "Valora los platos, no los restaurantes. Encuentra la mejor hamburguesa, sushi, pizza de tu ciudad con las opiniones de la comunidad DishRank. Crea un grupo con tus amigos, votad el sitio de encuentro, DishRank propone la dirección justo en medio de todos."
   },
   "hero": {
+    "freshPodium": "Los últimos platos valorados",
     "label": "Califica los platos, no los restaurantes.",
     "podium": "Los tres platos mejor valorados ahora mismo",
     "title": "El <em>mejor plato</em> cerca de ti.",
@@ -24,8 +25,8 @@
     "subtitleWithCategory": "Top {category} clasificados por las opiniones de la comunidad DishRank.",
     "subtitleWithCity": "¿Dónde comer en {city}? Los platos mejor valorados por la comunidad DishRank.",
     "subtitleWithCityCategory": "Top {category} en {city}, clasificados por las opiniones de la comunidad DishRank.",
-    "intro": "DishRank es la primera red social que valora los platos, no los restaurantes. Encuentra los mejores sitios cerca de ti con opiniones verificadas de nuestra comunidad de gourmets.",
-    "introWithCategory": "Descubre el top {category} de 2026 clasificado por opiniones verificadas de la comunidad DishRank. Más de 200 categorías de platos, valoraciones fiables y direcciones reales cerca de ti — sin publicidad ni recomendaciones algorítmicas.",
+    "intro": "DishRank es la primera red social que valora los platos, no los restaurantes. Encuentra los mejores sitios cerca de ti con opiniones de nuestra comunidad de gourmets.",
+    "introWithCategory": "Descubre el top {category} de 2026 clasificado por opiniones de la comunidad DishRank. Más de 200 categorías de platos, valoraciones de la comunidad y direcciones reales cerca de ti — sin publicidad ni recomendaciones algorítmicas.",
     "introWithCity": "¿Buscas dónde comer en {city}? DishRank te muestra los platos mejor valorados por los gourmets locales: hamburguesa, sushi, pizza, ramen y más. Clasificación por plato (no por restaurante) basada en opiniones reales.",
     "introWithCityCategory": "¿{bestCategory} en {city}? Aquí está el ranking Top 10 basado en valoraciones reales de la comunidad DishRank. Fotos, precios y opiniones detalladas para cada dirección — encuentra dónde comer tu próximo {category} en {city} en un clic.",
     "categories": "<b>200+</b> categorías",
@@ -45,6 +46,8 @@
     "seeAll": "Ver todo"
   },
   "feed": {
+    "freshTitle": "Recién valorados",
+    "freshNote": "El ranking aparecerá cuando los platos tengan al menos 3 reseñas. Mientras tanto, estos son los últimos platos valorados por la comunidad.",
     "topRated": "Los 10 mejores platos",
     "topRatedCity": "Los 10 mejores platos de {city}",
     "topRatedCategory": "Los 10 mejores {category}",
@@ -63,9 +66,7 @@
       { "title": "Cada plato en detalle", "desc": "Foto, nota media, precio, opiniones de la comunidad. Todo lo que necesitas para elegir." },
       { "title": "200+ categorias", "desc": "Hamburguesa, sushi, ramen, postre, bubble tea... Busca por tipo de plato o cocina del mundo." },
       { "title": "Califica tus platos favoritos", "desc": "Toma una foto, califica de 1 a 5 estrellas, agrega el precio y tu veredicto." },
-      { "title": "Tu perfil, tus reglas", "desc": "Idioma, tema, notificaciones, privacidad. Todo es configurable." },
       { "title": "Mapa interactivo", "desc": "Ve los platos a tu alrededor en el mapa. Filtra por categoria y distancia." },
-      { "title": "Ficha del restaurante", "desc": "Nota de Google, direccion, platos valorados por la comunidad. Todo de un vistazo." },
       { "title": "Tu perfil foodie", "desc": "Tus opiniones, tus likes, tus insignias. Construye tu reputacion de foodie." }
     ]
   },
@@ -112,7 +113,7 @@
     ]
   },
   "dishVsResto": {
-    "badge": "Demo",
+    "badge": "Ejemplo",
     "title": "Mismo restaurante. <em>Veredictos opuestos.</em>",
     "body": "La nota de un restaurante no te dice <strong>qué pedir</strong>. DishRank valora cada plato de forma independiente — sabes exactamente qué vale la pena, y qué evitar.",
     "footnote": "Por eso valoramos los platos, no los restaurantes.",

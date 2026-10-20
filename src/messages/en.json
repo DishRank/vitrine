@@ -6,12 +6,13 @@
     "titleWithCityCategory": "{bestCategory} in {city} 2026 — Top 10 & reviews | DishRank",
     "titleWithCity": "Where to eat in {city} 2026 — Top rated dishes | DishRank",
     "descWithCategory": "Top {category} 2026: ranked by community reviews. Addresses, prices, photos and ratings to find {bestCategory} near you.",
-    "descWithCity": "Best dishes in {city} 2026: burger, sushi, pizza and more. Ranked by dish with photos, ratings and verified community reviews.",
-    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 by community reviews, with addresses, prices, photos and verified ratings.",
+    "descWithCity": "Best dishes in {city} 2026: burger, sushi, pizza and more. Ranked by dish with photos, ratings and community reviews.",
+    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 by community reviews, with addresses, prices, photos and ratings.",
     "siteTagline": "Rate the dishes, not the restaurants.",
-    "appDescription": "Rate the dishes, not the restaurants. Find the best burger, sushi, pizza in your city with verified ratings from the DishRank community. Create a group with your friends, vote for the meeting spot, DishRank picks the address right in the middle of everyone."
+    "appDescription": "Rate the dishes, not the restaurants. Find the best burger, sushi, pizza in your city with ratings from the DishRank community. Create a group with your friends, vote for the meeting spot, DishRank picks the address right in the middle of everyone."
   },
   "hero": {
+    "freshPodium": "The latest rated dishes",
     "label": "Rate the dishes, not the restaurants.",
     "podium": "The three top-rated dishes right now",
     "title": "The <em>best dish</em> near you.",
@@ -24,8 +25,8 @@
     "subtitleWithCategory": "Top {category} ranked by the DishRank community.",
     "subtitleWithCity": "Where to eat in {city}? The top rated dishes by the DishRank community.",
     "subtitleWithCityCategory": "Top {category} in {city}, ranked by the DishRank community.",
-    "intro": "DishRank is the first social network that rates dishes, not restaurants. Find the best places near you with verified reviews from our community of foodies.",
-    "introWithCategory": "Discover the top {category} of 2026, ranked by verified reviews from the DishRank community. 200+ dish categories, reliable community ratings and real addresses near you — no ads, no algorithmic bias.",
+    "intro": "DishRank is the first social network that rates dishes, not restaurants. Find the best places near you with reviews from our community of foodies.",
+    "introWithCategory": "Discover the top {category} of 2026, ranked by reviews from the DishRank community. 200+ dish categories, reliable community ratings and real addresses near you — no ads, no algorithmic bias.",
     "introWithCity": "Looking for where to eat in {city}? DishRank shows you the top rated dishes by local foodies: burger, sushi, pizza, ramen and more. Ranked by dish (not by restaurant) based on real reviews.",
     "introWithCityCategory": "{bestCategory} in {city}? Here's the Top 10 ranking based on real ratings from the DishRank community. Photos, prices and detailed reviews for every address — find where to eat your next {category} in {city} in one click.",
     "categories": "<b>200+</b> categories",
@@ -45,6 +46,8 @@
     "seeAll": "See all"
   },
   "feed": {
+    "freshTitle": "Freshly rated",
+    "freshNote": "The ranking will appear once dishes have at least 3 reviews. Until then, here are the latest dishes rated by the community.",
     "topRated": "Top 10 dishes",
     "topRatedCity": "Top 10 dishes in {city}",
     "topRatedCategory": "Top 10 {category}",
@@ -63,9 +66,7 @@
       { "title": "Every dish in detail", "desc": "Photo, average rating, price, community reviews. Everything you need to choose." },
       { "title": "200+ categories", "desc": "Burger, sushi, ramen, dessert, bubble tea... Search by dish type or world cuisine." },
       { "title": "Rate your favorite dishes", "desc": "Take a photo, rate from 1 to 5 stars, add the price and your verdict." },
-      { "title": "Your profile, your rules", "desc": "Language, theme, notifications, privacy. Everything is configurable." },
       { "title": "Interactive map", "desc": "See dishes around you on the map. Filter by category and distance." },
-      { "title": "Restaurant card", "desc": "Google rating, address, dishes rated by the community. All at a glance." },
       { "title": "Your foodie profile", "desc": "Your reviews, your likes, your badges. Build your foodie reputation." }
     ]
   },
@@ -112,7 +113,7 @@
     ]
   },
   "dishVsResto": {
-    "badge": "Demo",
+    "badge": "Example",
     "title": "Same restaurant. <em>Opposite verdicts.</em>",
     "body": "A restaurant's rating doesn't tell you <strong>what to order</strong>. DishRank rates each dish independently — so you know exactly what's worth a try, and what to skip.",
     "footnote": "That's why we rate the dishes, not the restaurants.",

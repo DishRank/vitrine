@@ -105,27 +105,27 @@ function buildRestaurantFaq(
   const byLocale: Record<string, QA[]> = {
     fr: [
       { q: `Quels sont les meilleurs plats chez ${d.name} ?`, a: `Sur DishRank, les plats les mieux notés chez ${d.name} sont : ${dishesList}.` },
-      { q: `Quelle est la note de ${d.name} sur DishRank ?`, a: `${d.name} a une note moyenne de ${d.avg}/5 basée sur ${d.count} avis vérifiés de la communauté DishRank.` },
+      { q: `Quelle est la note de ${d.name} sur DishRank ?`, a: `${d.name} a une note moyenne de ${d.avg}/5 basée sur ${d.count} avis de la communauté DishRank.` },
       { q: `Où se trouve ${d.name} ?`, a: `${d.name} se situe à ${loc}.` },
     ],
     en: [
       { q: `What are the best dishes at ${d.name}?`, a: `On DishRank, the top-rated dishes at ${d.name} are: ${dishesList}.` },
-      { q: `What is ${d.name}'s rating on DishRank?`, a: `${d.name} has an average rating of ${d.avg}/5 based on ${d.count} verified reviews from the DishRank community.` },
+      { q: `What is ${d.name}'s rating on DishRank?`, a: `${d.name} has an average rating of ${d.avg}/5 based on ${d.count} reviews from the DishRank community.` },
       { q: `Where is ${d.name} located?`, a: `${d.name} is located in ${loc}.` },
     ],
     es: [
       { q: `¿Cuáles son los mejores platos de ${d.name}?`, a: `En DishRank, los platos mejor valorados de ${d.name} son: ${dishesList}.` },
-      { q: `¿Qué valoración tiene ${d.name} en DishRank?`, a: `${d.name} tiene una valoración media de ${d.avg}/5 basada en ${d.count} reseñas verificadas de la comunidad DishRank.` },
+      { q: `¿Qué valoración tiene ${d.name} en DishRank?`, a: `${d.name} tiene una valoración media de ${d.avg}/5 basada en ${d.count} reseñas de la comunidad DishRank.` },
       { q: `¿Dónde está ${d.name}?`, a: `${d.name} se encuentra en ${loc}.` },
     ],
     de: [
       { q: `Was sind die besten Gerichte bei ${d.name}?`, a: `Auf DishRank sind die bestbewerteten Gerichte bei ${d.name}: ${dishesList}.` },
-      { q: `Wie ist die Bewertung von ${d.name} auf DishRank?`, a: `${d.name} hat eine Durchschnittsbewertung von ${d.avg}/5 auf Basis von ${d.count} verifizierten Bewertungen der DishRank-Community.` },
+      { q: `Wie ist die Bewertung von ${d.name} auf DishRank?`, a: `${d.name} hat eine Durchschnittsbewertung von ${d.avg}/5 auf Basis von ${d.count} Bewertungen der DishRank-Community.` },
       { q: `Wo befindet sich ${d.name}?`, a: `${d.name} befindet sich in ${loc}.` },
     ],
     it: [
       { q: `Quali sono i piatti migliori da ${d.name}?`, a: `Su DishRank, i piatti più votati da ${d.name} sono: ${dishesList}.` },
-      { q: `Qual è la valutazione di ${d.name} su DishRank?`, a: `${d.name} ha una valutazione media di ${d.avg}/5 basata su ${d.count} recensioni verificate della community DishRank.` },
+      { q: `Qual è la valutazione di ${d.name} su DishRank?`, a: `${d.name} ha una valutazione media di ${d.avg}/5 basata su ${d.count} recensioni della community DishRank.` },
       { q: `Dove si trova ${d.name}?`, a: `${d.name} si trova a ${loc}.` },
     ],
   };
@@ -160,11 +160,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     it: `${restaurant.name} a ${cityName} — Tutti i piatti valutati | DishRank`,
   };
   const descByLocale: Record<string, string> = {
-    fr: `Découvre tous les plats de ${restaurant.name} à ${cityName} notés par la communauté DishRank. Photos, prix, avis vérifiés — sache exactement quoi commander.`,
-    en: `Discover every dish at ${restaurant.name} in ${cityName}, rated by the DishRank community. Photos, prices, verified reviews — know exactly what to order.`,
-    es: `Descubre todos los platos de ${restaurant.name} en ${cityName} valorados por la comunidad DishRank. Fotos, precios, opiniones verificadas — sabe exactamente qué pedir.`,
-    de: `Entdecke alle Gerichte von ${restaurant.name} in ${cityName}, bewertet von der DishRank-Community. Fotos, Preise, verifizierte Bewertungen — wisse genau, was du bestellen sollst.`,
-    it: `Scopri tutti i piatti di ${restaurant.name} a ${cityName} valutati dalla community DishRank. Foto, prezzi, recensioni verificate — sai esattamente cosa ordinare.`,
+    fr: `Découvre tous les plats de ${restaurant.name} à ${cityName} notés par la communauté DishRank. Photos, prix, avis — sache exactement quoi commander.`,
+    en: `Discover every dish at ${restaurant.name} in ${cityName}, rated by the DishRank community. Photos, prices, reviews — know exactly what to order.`,
+    es: `Descubre todos los platos de ${restaurant.name} en ${cityName} valorados por la comunidad DishRank. Fotos, precios, opiniones — sabe exactamente qué pedir.`,
+    de: `Entdecke alle Gerichte von ${restaurant.name} in ${cityName}, bewertet von der DishRank-Community. Fotos, Preise, Bewertungen — wisse genau, was du bestellen sollst.`,
+    it: `Scopri tutti i piatti di ${restaurant.name} a ${cityName} valutati dalla community DishRank. Foto, prezzi, recensioni — sai esattamente cosa ordinare.`,
   };
 
   // Fiche « carte relevée » (aucun plat noté) : le titre ci-dessus promettrait des notes
@@ -550,7 +550,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
             {dishes.length} plat{dishes.length > 1 ? 's' : ''} noté{dishes.length > 1 ? 's' : ''}
             </strong> par la communauté locale de {cityName}. La note moyenne agrégée
             est de <strong className="text-[var(--text)]">{avgRating.toFixed(1)}/5</strong> sur{' '}
-            {totalReviews} avis vérifiés.
+            {totalReviews} avis.
             {topDish && (
               <> Le plat le mieux noté actuellement est <strong className="text-[var(--text)]">
               {topDish.dish_name}</strong> ({Number(topDish.avg_rating).toFixed(1)}/5).</>

@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import DownloadButtons from './DownloadButtons';
 import HeroTickets from './HeroTickets';
 import type { DishRow } from '@/lib/supabase';
+import type { DisplayMode } from '@/lib/ranking';
 
 type Props = {
   /** Localized category label (e.g. "pizza", "pâtes") */
@@ -16,6 +17,8 @@ type Props = {
   bestCategory?: string;
   /** Plats classés (avec photo) — les 3 premiers deviennent les tickets du héros. */
   dishes?: DishRow[];
+  /** `fresh` : tickets sans rang (pas encore assez d'avis pour classer). */
+  mode?: DisplayMode;
 };
 
 /**
@@ -28,7 +31,7 @@ type Props = {
  *     le titre. Sur les pages filtrées (ville/catégorie), le paragraphe SEO
  *     `intro` reste rendu sous le sous-titre.
  */
-export default function Hero({ category, city, bestCategory, dishes = [] }: Props) {
+export default function Hero({ category, city, bestCategory, dishes = [], mode = 'ranking' }: Props) {
   const t = useTranslations('hero');
 
   // Pick the right keys based on filter
@@ -151,7 +154,7 @@ export default function Hero({ category, city, bestCategory, dishes = [] }: Prop
           </div>
         </div>
 
-        {withTickets && <HeroTickets dishes={dishes.filter((d) => d.cover_photo_url)} />}
+        {withTickets && <HeroTickets dishes={dishes.filter((d) => d.cover_photo_url)} mode={mode} />}
       </div>
     </section>
   );

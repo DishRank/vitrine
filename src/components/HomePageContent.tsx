@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { getTranslations } from 'next-intl/server';
 import { fetchDishes, fetchCategories, fetchRecentReviews } from '@/lib/supabase';
 import { localizedCategory } from '@/lib/categoryLabels';
+import { displayMode, orderDishes } from '@/lib/ranking';
 import { jsonLdHtml } from '@/lib/jsonLd';
 import { citySlug, cityFromSlug, restaurantSlug } from '@/lib/slug';
 import { buildFilterPath, buildFilterUrl, buildBestCategoryFragment, buildTopDishesTitle } from '@/lib/seoMetadata';
@@ -94,6 +95,11 @@ export default async function HomePageContent({
       d.restaurant_city?.toLowerCase().includes(city.toLowerCase())
     );
   }
+
+  // Classement seulement quand le volume d'avis le justifie ; sinon les plats
+  // fraîchement notés, sans rang (cf. lib/ranking.ts).
+  const mode = displayMode(dishes, isHome ? 10 : 3);
+  dishes = orderDishes(dishes, mode);
 
   const categoryLabel = category ? localizedCategory(category, locale) : '';
   const cityLabel = city || '';
@@ -212,6 +218,8 @@ export default async function HomePageContent({
               ? `Best ${categoryLabel}`
               : cityLabel
               ? `Best dishes in ${cityLabel}`
+              : mode === 'fresh'
+              ? 'Recently rated dishes'
               : 'Top rated dishes',
           url: pageUrl,
           numberOfItems: dishes.length,
@@ -397,6 +405,7 @@ export default async function HomePageContent({
           city={cityLabel || undefined}
           bestCategory={bestCategory || undefined}
           dishes={dishes}
+          mode={mode}
         />
         {/* Démo "même resto, plats opposés" — preuve visuelle immédiate du
             value prop. Home uniquement : sur les pages filtrées catégorie/
@@ -418,6 +427,7 @@ export default async function HomePageContent({
         <DishGrid
           initialDishes={dishes}
           title={topDishesTitle}
+          mode={mode}
         />
         {/* "Entre amis" — promu juste après le Top 10 pour servir le pitch
             social tôt dans le scroll : tu viens de voir des plats notés,

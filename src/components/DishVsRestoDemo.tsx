@@ -39,6 +39,8 @@ export default function DishVsRestoDemo() {
 
         {/* L'addition */}
         <figure className="receipt mx-auto w-full max-w-[420px] rotate-[1.5deg] bg-[var(--surface)] px-6 sm:px-8 pt-7 pb-12 text-[var(--text)]">
+          {/* Données fictives : on le dit. */}
+          <p className="mb-2 text-[12px] font-semibold text-[var(--text3)]">{t('badge')}</p>
           <figcaption className="flex items-baseline justify-between gap-4 border-b border-dashed border-[var(--border2)] pb-4">
             <span className="display text-[26px] sm:text-[30px] leading-none">{t('restaurantName')}</span>
             <span className="shrink-0 text-[13px] text-[var(--text3)]">{t('restaurantMeta')}</span>

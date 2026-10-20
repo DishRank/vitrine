@@ -4,6 +4,7 @@ import { useSearchParams, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import type { DishRow } from '@/lib/supabase';
+import type { DisplayMode } from '@/lib/ranking';
 import { citySlug, restaurantSlug } from '@/lib/slug';
 import DownloadButtons from './DownloadButtons';
 import M3Spinner from './M3Spinner';
@@ -11,10 +12,13 @@ import M3Spinner from './M3Spinner';
 export default function DishGrid({
   initialDishes,
   title,
+  mode = 'ranking',
 }: {
   initialDishes: DishRow[];
   /** Titre pre-calcule cote serveur (grammaire FR correcte + prefixe "plats" pour les nationalites). */
   title: string;
+  /** `fresh` : pas assez d'avis pour classer → derniers plats notés, sans rang. */
+  mode?: DisplayMode;
 }) {
   const t = useTranslations('feed');
   const sp = useSearchParams();
@@ -50,7 +54,14 @@ export default function DishGrid({
 
   return (
     <div id="top10" className="max-w-[1200px] mx-auto px-5 sm:px-8 pb-8 min-h-[300px]">
-      <h2 className="display pt-8 pb-6 sm:pb-9 text-left" style={{ fontSize: 'clamp(2rem, 4.6vw, 3.4rem)' }}>{title}</h2>
+      <div className="pt-8 pb-6 sm:pb-9">
+        <h2 className="display text-left" style={{ fontSize: 'clamp(2rem, 4.6vw, 3.4rem)' }}>
+          {mode === 'fresh' ? t('freshTitle') : title}
+        </h2>
+        {mode === 'fresh' && (
+          <p className="mt-3 max-w-[40rem] text-[15px] leading-relaxed text-[var(--text2)]">{t('freshNote')}</p>
+        )}
+      </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -109,13 +120,15 @@ export default function DishGrid({
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--moutarde)" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 </div>
                 {/* Rang #X en bas à gauche — ombre de texte courte, juste pour la lisibilité sur photo */}
-                <span
-                  className="display absolute bottom-1 left-3 text-white leading-none pointer-events-none"
-                  style={{ fontSize: 'clamp(3rem, 6vw, 4.25rem)', textShadow: '0 2px 8px rgba(0,0,0,0.45)' }}
-                  aria-label={`Rang ${i + 1}`}
-                >
-                  {i + 1}
-                </span>
+                {mode === 'ranking' && (
+                  <span
+                    className="display absolute bottom-1 left-3 text-white leading-none pointer-events-none"
+                    style={{ fontSize: 'clamp(3rem, 6vw, 4.25rem)', textShadow: '0 2px 8px rgba(0,0,0,0.45)' }}
+                    aria-label={`Rang ${i + 1}`}
+                  >
+                    {i + 1}
+                  </span>
+                )}
               </div>
               <div className="px-0.5 pt-3">
                 <h3 className="text-[15px] font-bold leading-snug truncate group-hover:text-[var(--primary)] transition-colors duration-200">{d.dish_name}</h3>

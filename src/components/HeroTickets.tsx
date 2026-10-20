@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { useLocale, useTranslations } from 'next-intl';
 import type { DishRow } from '@/lib/supabase';
+import type { DisplayMode } from '@/lib/ranking';
 
 /**
  * Les 3 meilleurs plats du moment, en « tickets » photo empilés comme une
@@ -29,7 +30,15 @@ function formatPrice(price: number | null, currency: string | null) {
   return currency && currency !== 'EUR' ? `${s} ${currency}` : `${s} €`;
 }
 
-export default function HeroTickets({ dishes }: { dishes: DishRow[] }) {
+/** « il y a 3 jours », dans la langue de la page. */
+function relativeDay(iso: string, locale: string): string {
+  const days = Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  if (Math.abs(days) < 30) return rtf.format(days, 'day');
+  return rtf.format(Math.round(days / 30), 'month');
+}
+
+export default function HeroTickets({ dishes, mode = 'ranking' }: { dishes: DishRow[]; mode?: DisplayMode }) {
   const t = useTranslations('feed');
   const th = useTranslations('hero');
   const locale = useLocale();
@@ -39,7 +48,7 @@ export default function HeroTickets({ dishes }: { dishes: DishRow[] }) {
   const open = (d: DishRow) => window.dispatchEvent(new CustomEvent('open-dish', { detail: d }));
 
   return (
-    <div className="relative mx-auto w-full max-w-[560px] h-[400px] sm:h-[500px] lg:h-[580px] [--spread:0.72] sm:[--spread:1]" role="group" aria-label={th('podium')}>
+    <div className="relative mx-auto w-full max-w-[560px] h-[400px] sm:h-[500px] lg:h-[580px] [--spread:0.72] sm:[--spread:1]" role="group" aria-label={th(mode === 'fresh' ? 'freshPodium' : 'podium')}>
       {top.map((d, i) => {
         const l = LAYOUT[i];
         const price = formatPrice(d.latest_price, d.currency);
@@ -49,7 +58,7 @@ export default function HeroTickets({ dishes }: { dishes: DishRow[] }) {
             key={`${d.restaurant_id}::${d.dish_name}`}
             type="button"
             onClick={() => open(d)}
-            aria-label={`${i + 1}. ${d.dish_name} — ${d.restaurant_name} — ${d.avg_rating}/5`}
+            aria-label={`${mode === 'ranking' ? `${i + 1}. ` : ''}${d.dish_name} — ${d.restaurant_name} — ${d.avg_rating}/5`}
             className="ticket group absolute left-1/2 top-1/2 -ml-[29%] -mt-[45%] sm:-mt-[42%] w-[58%] text-left rounded-[22px] bg-[var(--surface)] border border-[var(--border2)] p-2.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
             style={{
               zIndex: l.z,
@@ -78,7 +87,8 @@ export default function HeroTickets({ dishes }: { dishes: DishRow[] }) {
                 {rating}
                 <span className="text-[var(--moutarde)] text-[0.75em]" aria-hidden="true">★</span>
               </span>
-              {/* Rang en chiffre d'affiche, posé sur la photo */}
+              {/* Rang en chiffre d'affiche, posé sur la photo (mode classement seulement) */}
+              {mode === 'ranking' && (
               <span
                 className="display absolute left-3 bottom-1 text-white leading-none pointer-events-none"
                 style={{ fontSize: 'clamp(4.5rem, 10vw, 7rem)', textShadow: '0 2px 10px rgba(0,0,0,0.45)' }}
@@ -86,6 +96,7 @@ export default function HeroTickets({ dishes }: { dishes: DishRow[] }) {
               >
                 {i + 1}
               </span>
+              )}
             </div>
             <div className="px-1.5 pt-3 pb-1">
               <p className="font-bold text-[15px] sm:text-[17px] leading-tight text-[var(--text)] truncate">{d.dish_name}</p>
@@ -93,9 +104,10 @@ export default function HeroTickets({ dishes }: { dishes: DishRow[] }) {
                 {d.restaurant_name}
                 {d.restaurant_city ? ` · ${d.restaurant_city}` : ''}
               </p>
-              <p className="mt-0.5 text-[12px] text-[var(--text3)] truncate">
+              <p className="mt-0.5 text-[12px] text-[var(--text3)] truncate" suppressHydrationWarning>
                 {price ? `${price} · ` : ''}
                 {t('reviews', { count: d.review_count })}
+                {mode === 'fresh' && d.latest_review_at ? ` · ${relativeDay(d.latest_review_at, locale)}` : ''}
               </p>
             </div>
           </button>

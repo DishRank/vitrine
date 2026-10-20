@@ -6,12 +6,13 @@
     "titleWithCityCategory": "{bestCategory} in {city} 2026 — Top 10 & Bewertungen | DishRank",
     "titleWithCity": "Wo essen in {city} 2026 — Top bewertete Gerichte | DishRank",
     "descWithCategory": "Top {category} 2026: nach Community-Bewertungen geordnet. Adressen, Preise, Fotos und Bewertungen, um {bestCategory} in deiner Nähe zu finden.",
-    "descWithCity": "Beste Gerichte in {city} 2026: Burger, Sushi, Pizza und mehr. Ranking nach Gericht mit Fotos, Bewertungen und verifizierten Reviews.",
-    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 nach Community-Bewertungen, mit Adressen, Preisen, Fotos und verifizierten Bewertungen.",
+    "descWithCity": "Beste Gerichte in {city} 2026: Burger, Sushi, Pizza und mehr. Ranking nach Gericht mit Fotos, Bewertungen und Reviews der Community.",
+    "descWithCityCategory": "{bestCategory} in {city} 2026: Top 10 nach Community-Bewertungen, mit Adressen, Preisen, Fotos und Bewertungen.",
     "siteTagline": "Bewerte die Gerichte, nicht die Restaurants.",
-    "appDescription": "Bewerte die Gerichte, nicht die Restaurants. Finde den besten Burger, Sushi, Pizza in deiner Stadt mit verifizierten Bewertungen der DishRank-Community. Erstelle eine Gruppe mit deinen Freunden, stimmt für den Treffpunkt ab, DishRank schlägt die Adresse genau in der Mitte aller vor."
+    "appDescription": "Bewerte die Gerichte, nicht die Restaurants. Finde den besten Burger, Sushi, Pizza in deiner Stadt mit Bewertungen der DishRank-Community. Erstelle eine Gruppe mit deinen Freunden, stimmt für den Treffpunkt ab, DishRank schlägt die Adresse genau in der Mitte aller vor."
   },
   "hero": {
+    "freshPodium": "Die zuletzt bewerteten Gerichte",
     "label": "Bewerte die Gerichte, nicht die Restaurants.",
     "podium": "Die drei bestbewerteten Gerichte gerade",
     "title": "Das <em>beste Gericht</em> in deiner Nähe.",
@@ -24,8 +25,8 @@
     "subtitleWithCategory": "Top {category}, bewertet von der DishRank Community.",
     "subtitleWithCity": "Wo essen in {city}? Die am besten bewerteten Gerichte der DishRank Community.",
     "subtitleWithCityCategory": "Top {category} in {city}, bewertet von der DishRank Community.",
-    "intro": "DishRank ist das erste soziale Netzwerk, das Gerichte bewertet, nicht Restaurants. Finde die besten Adressen in deiner Nähe mit verifizierten Bewertungen unserer Foodie-Community.",
-    "introWithCategory": "Entdecke die Top {category} 2026, geordnet nach verifizierten Bewertungen der DishRank Community. Über 200 Gerichtskategorien, zuverlässige Community-Bewertungen und echte Adressen in deiner Nähe — keine Werbung, keine algorithmische Verzerrung.",
+    "intro": "DishRank ist das erste soziale Netzwerk, das Gerichte bewertet, nicht Restaurants. Finde die besten Adressen in deiner Nähe mit Bewertungen unserer Foodie-Community.",
+    "introWithCategory": "Entdecke die Top {category} 2026, geordnet nach Bewertungen der DishRank Community. Über 200 Gerichtskategorien, zuverlässige Community-Bewertungen und echte Adressen in deiner Nähe — keine Werbung, keine algorithmische Verzerrung.",
     "introWithCity": "Du suchst, wo du in {city} essen kannst? DishRank zeigt dir die am besten bewerteten Gerichte lokaler Foodies: Burger, Sushi, Pizza, Ramen und mehr. Geordnet nach Gericht (nicht nach Restaurant) auf Basis echter Bewertungen.",
     "introWithCityCategory": "{bestCategory} in {city}? Hier ist das Top 10 Ranking auf Basis echter Bewertungen der DishRank Community. Fotos, Preise und detaillierte Reviews für jede Adresse — finde deinen nächsten {category} in {city} mit einem Klick.",
     "categories": "<b>200+</b> Kategorien",
@@ -45,6 +46,8 @@
     "seeAll": "Alle anzeigen"
   },
   "feed": {
+    "freshTitle": "Frisch bewertet",
+    "freshNote": "Das Ranking erscheint, sobald Gerichte mindestens 3 Bewertungen haben. Bis dahin siehst du hier die zuletzt bewerteten Gerichte der Community.",
     "topRated": "Top 10 Gerichte",
     "topRatedCity": "Top 10 Gerichte in {city}",
     "topRatedCategory": "Top 10 {category}",
@@ -63,9 +66,7 @@
       { "title": "Jedes Gericht im Detail", "desc": "Foto, Durchschnittsbewertung, Preis, Community-Reviews. Alles was du brauchst." },
       { "title": "200+ Kategorien", "desc": "Burger, Sushi, Ramen, Dessert, Bubble Tea... Suche nach Gerichtart oder Weltküche." },
       { "title": "Bewerte deine Lieblingsgerichte", "desc": "Mach ein Foto, bewerte von 1 bis 5 Sterne, füge den Preis und dein Urteil hinzu." },
-      { "title": "Dein Profil, deine Regeln", "desc": "Sprache, Theme, Benachrichtigungen, Datenschutz. Alles konfigurierbar." },
       { "title": "Interaktive Karte", "desc": "Sieh Gerichte um dich herum auf der Karte. Filtere nach Kategorie und Entfernung." },
-      { "title": "Restaurant-Karte", "desc": "Google-Bewertung, Adresse, von der Community bewertete Gerichte. Alles auf einen Blick." },
       { "title": "Dein Foodie-Profil", "desc": "Deine Bewertungen, deine Likes, deine Abzeichen. Baue deinen Ruf als Foodie auf." }
     ]
   },
@@ -112,7 +113,7 @@
     ]
   },
   "dishVsResto": {
-    "badge": "Demo",
+    "badge": "Beispiel",
     "title": "Gleiches Restaurant. <em>Gegensätzliche Urteile.</em>",
     "body": "Die Bewertung eines Restaurants verrät dir nicht, <strong>was du bestellen sollst</strong>. DishRank bewertet jedes Gericht einzeln — du weißt genau, was sich lohnt und was nicht.",
     "footnote": "Deshalb bewerten wir die Gerichte, nicht die Restaurants.",
