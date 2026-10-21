@@ -99,7 +99,8 @@ export type OutingWinner = {
 };
 
 export type Outing = {
-  id: string;
+  /** null sur la page publique. */
+  id: string | null;
   flow: 'v1' | 'v2';
   status: OutingStatus;
   category: OutingCategory | null;
@@ -108,7 +109,8 @@ export type Outing = {
   decided_at: string | null;
   winner_id: string | null;
   /** `from_group` : centre recalculé au milieu des domiciles des membres. */
-  center: { lat: number; lng: number; label: string | null; from_group: boolean };
+  /** lat/lng null sur la page publique (ni domiciles ni position du créateur). */
+  center: { lat: number | null; lng: number | null; label: string | null; from_group: boolean };
   /** `id` null sur la page publique. */
   group: { id: string | null; name: string; emoji: string | null };
   is_initiator: boolean;

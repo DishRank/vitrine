@@ -171,7 +171,8 @@ export function buildIcs(o: Outing, w: OutingWinner, pageUrl: string): string | 
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:${o.id}@dishrank.fr`,
+    // L'id de la sortie n'est pas public : le jeton du lien identifie l'événement.
+    `UID:dishrank-s-${pageUrl.split('/').pop()}@dishrank.fr`,
     `DTSTAMP:${icsDate(new Date())}`,
     `DTSTART:${icsDate(start)}`,
     `DTEND:${icsDate(end)}`,
