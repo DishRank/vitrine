@@ -3,8 +3,14 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Client Supabase NAVIGATEUR (clé anon publique, protégée par RLS).
 //
-// Ne sert plus QU'À l'abonnement temps réel du menu (MenuLiveSync) : une
-// souscription en LECTURE, que le rôle anon peut ouvrir tel quel.
+// Sert à deux choses, toutes deux sans session :
+//  - l'abonnement temps réel du menu (MenuLiveSync) : une souscription en
+//    LECTURE, que le rôle anon peut ouvrir tel quel ;
+//  - le vote des invités d'une sortie (/s/<jeton>, lib/outing/client.ts) : les
+//    RPC anon `get_shared_outing` / `outing_guest_join` / `outing_guest_toggle`
+//    de la migration 202. L'accès y est porté par le jeton du lien et le secret
+//    d'invité vérifiés EN BASE (haché), avec plafond de 30 invités par sortie :
+//    le serveur n'a rien de plus à contrôler, contrairement à la notation.
 //
 // ⚠️ IL NE SERT PLUS À LA NOTATION. Celle-ci passait par
 // `auth.signInAnonymously()` + INSERT direct dans PostgREST ; ce chemin a été

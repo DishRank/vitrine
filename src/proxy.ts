@@ -354,11 +354,15 @@ export default async function proxy(req: NextRequest) {
   // routage next-intl (ces chemins ne sont pas localisés).
   // /restaurant/<id> = landing des partages + anciens QR ; /menu/<id> = QR de
   // table actuel (jamais intercepté par l'app → toujours le menu web).
+  // /s/<jeton> = vote d'une sortie sans compte ; /g/<code> = invitation à un
+  // groupe (app/(partage)).
   if (
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/join/') ||
     pathname.startsWith('/restaurant/') ||
-    pathname.startsWith('/menu/')
+    pathname.startsWith('/menu/') ||
+    pathname.startsWith('/s/') ||
+    pathname.startsWith('/g/')
   ) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-nonce', nonce);
