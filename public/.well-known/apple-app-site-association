@@ -7,7 +7,9 @@
           { "/": "/dish*", "comment": "Dish detail deep links (incl. /dish?r=&d=)" },
           { "/": "/restaurant*" },
           { "/": "/review*" },
-          { "/": "/join/*" }
+          { "/": "/join/*" },
+          { "/": "/s/*", "comment": "Sortie de groupe (vote) — l'app ouvre la sortie" },
+          { "/": "/g/*", "comment": "Invitation à un groupe — l'app rejoint le groupe" }
         ]
       }
     ]
