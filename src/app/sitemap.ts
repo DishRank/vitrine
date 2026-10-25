@@ -1,19 +1,50 @@
 import { MetadataRoute } from 'next';
-import {
-  fetchCategories,
-  fetchCities,
-  fetchCityCategoryPairs,
-  fetchRestaurantsWithDishes,
-  fetchRestaurantsWithMenu,
-} from '@/lib/supabase';
+import { fetchRestaurantsWithDishes, fetchRestaurantsWithMenu } from '@/lib/supabase';
 import { citySlug, restaurantSlug } from '@/lib/slug';
 import { MIN_PLATS_CARTE, estVilleCarte } from '@/lib/menuOnly';
+import {
+  MIN_DISHES_FOR_INDEX,
+  fetchCategoryIndex,
+  indexableCategories,
+  indexableCities,
+} from '@/lib/indexable';
 
-// Force dynamic rendering (rebuilt on each request — cheap because data is cached)
-export const dynamic = 'force-dynamic';
+/**
+ * Régénéré en arrière-plan toutes les heures (ISR) au lieu d'à chaque requête.
+ * En `force-dynamic`, le sitemap mettait ~22 s à répondre (1,7 Mo, une vingtaine de
+ * requêtes à la base à froid) : Search Console ne l'avait plus relu depuis le
+ * 14/05/2026. Servi depuis le cache, il répond immédiatement. Une heure plutôt que
+ * six : une fiche qui perd son dernier avis répond 404 tout de suite, le sitemap ne
+ * doit pas l'annoncer une demi-journée de plus.
+ */
+export const revalidate = 3600;
+
+/**
+ * Au build, la génération ne doit pas approcher `staticPageGenerationTimeout` (60 s) :
+ * au-delà de 40 s on publie l'accueil seul, régénéré une heure plus tard.
+ */
+const BUILD_TIMEOUT_MS = 40_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`sitemap: plus de ${ms / 1000} s`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
 
 const BASE = 'https://dishrank.fr';
 const LOCALES = ['fr', 'en', 'es', 'de', 'it'];
+
+/**
+ * Langues dont les URLs sont LISTÉES. Les pages existent dans les 5 langues et
+ * chaque entrée déclare les 5 alternates hreflang, mais Google n'indexe pas les
+ * versions es/de/it d'un guide de plats lyonnais (308 URLs « explorées, non
+ * indexées » au 25/10/2026, quasi toutes es/de/it) : les lister ne fait que
+ * consommer le budget d'exploration. L'anglais reste : c'est lui qui reçoit des
+ * impressions (« best burger in lyon », « clermont-ferrand restaurants »).
+ */
+const LOCALES_LISTEES = ['fr', 'en'];
 
 /**
  * BCP-47 hreflang codes pour les alternates du sitemap.
@@ -29,77 +60,27 @@ const HREFLANG_BY_LOCALE: Record<string, string> = {
   it: 'it-IT',
 };
 
-/**
- * Top categories (~30) — these are the only ones included in the sitemap
- * to avoid diluting the crawl budget. The 200+ niche categories are still
- * accessible (and indexable) via internal linking from category pages.
- */
-const TOP_CATEGORY_SLUGS = [
-  // Most searched globally
-  'burger', 'pizza', 'sushi', 'pasta', 'ramen', 'kebab', 'tacos', 'salad',
-  // Popular dish types
-  'steak', 'seafood', 'curry', 'bowl', 'sandwich', 'wrap',
-  // Desserts & breakfast
-  'dessert', 'pastry', 'crepes', 'breakfast', 'brunch', 'ice-cream',
-  // Drinks
-  'coffee', 'tea', 'cocktail', 'wine', 'beer',
-  // Cuisines (high traffic)
-  'french', 'italian', 'japanese', 'chinese', 'indian', 'mexican',
-];
-
-/**
- * Continental / umbrella parents from the hierarchy. These don't exist as
- * rows in `dish_categories` but the page at `/c/<slug>` aggregates every
- * descendant dish (via expandCategorySlug + RPC). Very high SEO value
- * because they capture broad queries like "best european food", "boissons
- * à Lyon", etc. Separate from TOP_CATEGORY_SLUGS because they bypass the
- * DB-slug validation (fetchAllCategorySlugs).
- */
-const HIERARCHY_PARENT_SLUGS = [
-  'asian', 'european', 'middle-eastern', 'latin-american', 'north-american',
-  'african', 'caribbean', 'american', 'drinks',
-];
-
-/**
- * Top cities (~30) — same logic. The other cities in the DB are still indexable
- * via the dynamic routes — they're just not surfaced in the sitemap.
- */
-const TOP_CITY_NAMES = [
-  'Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux', 'Lille', 'Nice', 'Nantes',
-  'Strasbourg', 'Montpellier', 'Rennes', 'Grenoble', 'Rouen', 'Toulon', 'Dijon',
-  'Angers', 'Saint-Étienne', 'Le Havre', 'Reims', 'Clermont-Ferrand', 'Tours',
-  'Limoges', 'Metz', 'Besançon', 'Perpignan', 'Orléans', 'Caen', 'Brest',
-  'Mulhouse', 'Nancy',
-];
-const PRIORITY_CITIES = new Set(['Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux']);
-
-/**
- * Langues listées pour les fiches « carte relevée ». Elles existent dans les 5 langues
- * (et le hreflang les déclare), mais 818 fiches × 5 = 4 090 URLs de pages sans avis : on
- * ne liste que fr + en, là où la demande existe. Les autres se découvrent par hreflang.
- */
-const LOCALES_CARTE = ['fr', 'en'];
-
 function pathFor(locale: string, path: string) {
   const prefix = locale === 'fr' ? '' : `/${locale}`;
   return `${BASE}${prefix}${path}`;
 }
 
 /**
- * Une entrée par langue, chacune déclarant les 5 alternates hreflang.
+ * Une entrée par langue listée, chacune déclarant les 5 alternates hreflang : les
+ * alternates doivent rester le jeu complet, identique aux balises HTML de la page,
+ * sinon Google voit deux jeux hreflang contradictoires et les ignore.
  *
- * `emises` restreint les URLs *listées* (budget d'exploration) sans toucher aux
- * alternates : celles-ci doivent rester le jeu complet, identique aux balises HTML de la
- * page, sinon Google voit deux jeux hreflang contradictoires et les ignore.
+ * Pas de `lastModified` : une date « maintenant » à chaque génération est fausse
+ * pour toutes les pages, et Google cesse de faire confiance aux lastmod d'un site
+ * qui les invente.
  */
 function withAlternates(
   path: string,
   extra: Omit<MetadataRoute.Sitemap[number], 'url' | 'alternates'>,
-  emises: string[] = LOCALES
+  emises: string[] = LOCALES_LISTEES
 ): MetadataRoute.Sitemap {
   return emises.map((locale) => ({
     url: pathFor(locale, path),
-    lastModified: new Date(),
     alternates: {
       languages: Object.fromEntries(LOCALES.map((l) => [HREFLANG_BY_LOCALE[l], pathFor(l, path)])),
     },
@@ -108,146 +89,83 @@ function withAlternates(
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Fetch live data to filter our static lists against what actually exists
-  let dbCategorySlugs = new Set<string>();
-  let dbCityNames = new Set<string>();
-  let dbCityCategoryPairs: { city: string; category_slug: string; dish_count: number }[] = [];
-  let dbRestaurants: Awaited<ReturnType<typeof fetchRestaurantsWithDishes>> = [];
-  let dbRestaurantsCarte: Awaited<ReturnType<typeof fetchRestaurantsWithMenu>> = [];
-  try {
-    const [categories, cities, pairs, restos, restosCarte] = await Promise.all([
-      fetchCategories(),
-      fetchCities(),
-      fetchCityCategoryPairs(),
-      fetchRestaurantsWithDishes(),
-      fetchRestaurantsWithMenu(MIN_PLATS_CARTE),
-    ]);
-    dbCategorySlugs = new Set(categories.map((c) => c.slug));
-    dbCityNames = new Set(cities);
-    dbCityCategoryPairs = pairs;
-    dbRestaurants = restos;
-    dbRestaurantsCarte = restosCarte;
-  } catch (e) {
-    console.error('sitemap: failed to fetch data', e);
-  }
-
-  // Only include URLs whose category/city actually exists in the DB.
-  // This prevents 404s from being indexed.
-  const validCategories = TOP_CATEGORY_SLUGS.filter((slug) => dbCategorySlugs.has(slug));
-  const validCities = TOP_CITY_NAMES.filter((name) => dbCityNames.has(name));
-
   const urls: MetadataRoute.Sitemap = [
-    // Homepage (priority 1)
     ...withAlternates('', { changeFrequency: 'daily', priority: 1 }),
     // Landing restaurateur — seule page indexable de la zone /pro (le reste est
     // noindex). Hors [locale] (FR only) → entrée simple, sans hreflang.
-    {
-      url: `${BASE}/pro`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
+    { url: `${BASE}/pro`, changeFrequency: 'monthly', priority: 0.6 },
   ];
 
-  // 1. Hierarchy parents (continental umbrellas + drinks) — broadest landing
-  // pages, aggregate many dishes. Highest category priority.
-  for (const slug of HIERARCHY_PARENT_SLUGS) {
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
+  try {
+    urls.push(...(await (isBuild ? withTimeout(contentUrls(), BUILD_TIMEOUT_MS) : contentUrls())));
+  } catch (e) {
+    // Au build, on publie au moins l'accueil (un build ne doit pas casser parce que la
+    // base a hoqueté) ; il sera régénéré à la prochaine échéance. En production, on
+    // relance l'erreur : l'ISR continue de servir le sitemap précédent, complet, au
+    // lieu de le remplacer une heure durant par une version amputée.
+    if (!isBuild) throw e;
+    console.error('sitemap: données indisponibles au build', e);
+  }
+  return urls;
+}
+
+/**
+ * Toutes les pages de contenu indexables. Une URL n'est listée que si la route la
+ * rend ET l'indexe (lib/indexable) : avant, 555 URLs listées ou liées répondaient
+ * « noindex », et les villes venaient d'une liste figée croisée avec une liste de
+ * villes tronquée à 1 000 restaurants.
+ */
+async function contentUrls(): Promise<MetadataRoute.Sitemap> {
+  const urls: MetadataRoute.Sitemap = [];
+  const [index, restos, restosCarte] = await Promise.all([
+    fetchCategoryIndex(),
+    fetchRestaurantsWithDishes(),
+    fetchRestaurantsWithMenu(MIN_PLATS_CARTE),
+  ]);
+
+  // 1. Villes : assez de plats notés, ou villes du pilote « cartes relevées » (leur
+  //    page liste les fiches restaurant).
+  for (const { slug, n } of indexableCities(index)) {
     urls.push(
-      ...withAlternates(`/c/${slug}`, {
+      ...withAlternates(`/${slug}`, {
         changeFrequency: 'daily',
-        priority: 0.9,
+        priority: Math.min(0.9, 0.6 + Math.min(n, 30) * 0.01),
       })
     );
   }
 
-  // 2. Top category-only pages : /c/<slug>
-  for (const slug of validCategories) {
-    urls.push(
-      ...withAlternates(`/c/${slug}`, {
-        changeFrequency: 'daily',
-        priority: 0.8,
-      })
-    );
-  }
-
-  // 2bis. Secondary categories (all other categories in DB) at priority 0.4.
-  // Keeps the crawl budget for top categories but still surfaces niche
-  // categories to Google for discovery.
-  const topSet = new Set(validCategories);
-  const hierarchySet = new Set(HIERARCHY_PARENT_SLUGS);
-  for (const slug of dbCategorySlugs) {
-    if (topSet.has(slug) || hierarchySet.has(slug)) continue;
+  // 2. Catégories (/c/<cat>) et paires ville × catégorie (/<ville>/<cat>), mêmes
+  //    seuils que les pages. Les parents de hiérarchie (asian, drinks…) agrègent
+  //    leurs descendants : comptés comme la page les affiche.
+  for (const { slug, n: total } of indexableCategories(index)) {
     urls.push(
       ...withAlternates(`/c/${slug}`, {
         changeFrequency: 'weekly',
-        priority: 0.4,
+        priority: Math.min(0.8, 0.5 + Math.min(total, 30) * 0.01),
       })
     );
-  }
-
-  // 2. Top city-only pages : /<city-slug>
-  for (const city of validCities) {
-    urls.push(
-      ...withAlternates(`/${citySlug(city)}`, {
-        changeFrequency: 'daily',
-        priority: PRIORITY_CITIES.has(city) ? 0.9 : 0.7,
-      })
-    );
-  }
-
-  // 3. City × category combinations : /<city-slug>/<cat>
-  // Driven by the DB: every (city, category) pair that actually has at least
-  // one moderated review gets indexed. Avoids bloating the sitemap with empty
-  // pages that Google would ignore (or worse, mark as soft-404).
-  // Dedup is implicit since fetchCityCategoryPairs returns distinct rows.
-  for (const pair of dbCityCategoryPairs) {
-    const cs = citySlug(pair.city);
-    if (!cs) continue;
-    // Boost priority when there are multiple dishes — these pages tend to
-    // rank better and deserve more crawl budget.
-    const isPriorityCity = PRIORITY_CITIES.has(pair.city);
-    const priority = isPriorityCity
-      ? Math.min(0.9, 0.7 + Math.min(pair.dish_count, 5) * 0.04)
-      : Math.min(0.7, 0.5 + Math.min(pair.dish_count, 5) * 0.04);
-    urls.push(
-      ...withAlternates(`/${cs}/${pair.category_slug}`, {
-        changeFrequency: 'daily',
-        priority,
-      })
-    );
-  }
-
-  // 3bis. Hierarchy umbrella × top city — these aggregate pages don't have
-  // direct DB rows (they expand at request time via expandCategorySlug), so
-  // we still emit them statically for the priority cities only.
-  for (const slug of HIERARCHY_PARENT_SLUGS) {
-    for (const city of validCities) {
-      if (!PRIORITY_CITIES.has(city)) continue;
+    for (const [villeSlug, { n }] of index.categories.get(slug)?.byCity ?? []) {
+      if (n < MIN_DISHES_FOR_INDEX) continue;
       urls.push(
-        ...withAlternates(`/${citySlug(city)}/${slug}`, {
-          changeFrequency: 'daily',
-          priority: 0.8,
+        ...withAlternates(`/${villeSlug}/${slug}`, {
+          changeFrequency: 'weekly',
+          priority: Math.min(0.8, 0.5 + Math.min(n, 20) * 0.015),
         })
       );
     }
   }
 
-  // 4. Restaurant pages : /<city-slug>/r/<restaurant-slug>
-  // Driven by the DB : tout restaurant qui a au moins 1 plat noté (review
-  // modérée) est listé. Capture les recherches brandées type "{nom} {ville}
-  // avis" / "{nom} menu" qu'on ne couvrait pas avant.
-  //
-  // Dedup : si plusieurs restos d'une même ville produisent le même slug
-  // (rare mais possible — ex. 2 "Le Bistrot" à Lyon), on garde celui avec le
-  // plus de plats notés. Les autres ne sont pas listés pour éviter les URLs
-  // dupliquées (ils restent fetchables via la query mais Google ne les voit
-  // pas via sitemap → pas d'index, pas de signal négatif).
+  // 3. Fiches restaurant : /<ville>/r/<restaurant>
+  // Tout restaurant qui a au moins 1 plat noté (avis modéré). Capture les recherches
+  // brandées « {nom} {ville} avis » — les seules requêtes, avec la marque, qui
+  // apportent déjà des clics. Doublon de slug dans une ville : on garde celui qui a
+  // le plus de plats notés (l'autre reste joignable, mais pas annoncé).
   const restaurantPathByCity = new Map<string, Map<string, { slug: string; dishCount: number }>>();
-  for (const r of dbRestaurants) {
+  for (const r of restos) {
     const cSlug = citySlug(r.city);
-    if (!cSlug) continue;
     const rSlug = restaurantSlug(r.name);
-    if (!rSlug) continue;
+    if (!cSlug || !rSlug) continue;
     const cityMap = restaurantPathByCity.get(cSlug) || new Map();
     const existing = cityMap.get(rSlug);
     if (!existing || r.dish_count > existing.dishCount) {
@@ -257,40 +175,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   for (const [cSlug, cityMap] of restaurantPathByCity) {
     for (const { slug: rSlug, dishCount } of cityMap.values()) {
-      // Priority graduée par nombre de plats : plus un resto a de plats notés,
-      // plus la page est riche en contenu → plus elle mérite de crawl budget.
-      const priority = Math.min(0.7, 0.4 + Math.min(dishCount, 6) * 0.05);
       urls.push(
         ...withAlternates(`/${cSlug}/r/${rSlug}`, {
           changeFrequency: 'weekly',
-          priority,
+          priority: Math.min(0.7, 0.4 + Math.min(dishCount, 6) * 0.05),
         })
       );
     }
   }
 
-  // 4bis. Fiches « carte relevée » (19/09) : restaurants SANS avis dont la carte a été
-  // relevée sur leur propre site. Elles valent d'être indexées (plats, prix, balisage
-  // MenuItem), mais elles n'ont aucune note : priorité basse, et même périmètre que la
-  // route (`lib/menuOnly` : Lyon d'abord, MIN_PLATS_CARTE plats minimum) — un sitemap
+  // 3bis. Fiches « carte relevée » : restaurants SANS avis dont la carte a été relevée
+  // sur leur propre site. Même périmètre que la route (`lib/menuOnly`) — un sitemap
   // qui annoncerait une page que la route refuse de rendre fabriquerait des 404.
   const dejaListe = new Set<string>();
   for (const [cSlug, cityMap] of restaurantPathByCity) {
     for (const { slug } of cityMap.values()) dejaListe.add(`${cSlug}/${slug}`);
   }
-  for (const r of dbRestaurantsCarte) {
+  for (const r of restosCarte) {
     if (!estVilleCarte(r.city)) continue;
     const cSlug = citySlug(r.city);
     const rSlug = restaurantSlug(r.name);
     if (!cSlug || !rSlug || dejaListe.has(`${cSlug}/${rSlug}`)) continue;
     dejaListe.add(`${cSlug}/${rSlug}`);
-    urls.push(
-      ...withAlternates(
-        `/${cSlug}/r/${rSlug}`,
-        { changeFrequency: 'monthly', priority: 0.3 },
-        LOCALES_CARTE
-      )
-    );
+    urls.push(...withAlternates(`/${cSlug}/r/${rSlug}`, { changeFrequency: 'monthly', priority: 0.3 }));
   }
 
   return urls;

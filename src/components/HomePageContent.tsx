@@ -1,11 +1,13 @@
+import { Suspense } from 'react';
 import { headers } from 'next/headers';
 import dynamic from 'next/dynamic';
 import { getTranslations } from 'next-intl/server';
-import { fetchDishes, fetchCategories, fetchRecentReviews } from '@/lib/supabase';
+import { fetchCategories, fetchRecentReviews, type DishRow } from '@/lib/supabase';
 import { localizedCategory } from '@/lib/categoryLabels';
 import { displayMode, orderDishes } from '@/lib/ranking';
 import { jsonLdHtml } from '@/lib/jsonLd';
 import { citySlug, cityFromSlug, restaurantSlug } from '@/lib/slug';
+import { shownDishes } from '@/lib/indexable';
 import { buildFilterPath, buildFilterUrl, buildBestCategoryFragment, buildTopDishesTitle } from '@/lib/seoMetadata';
 import Nav from './Nav';
 import Hero from './Hero';
@@ -75,26 +77,31 @@ export default async function HomePageContent({
   const siteTagline = tMeta('siteTagline');
   const appDescription = tMeta('appDescription');
 
-  let dishes: Awaited<ReturnType<typeof fetchDishes>> = [];
-  let categories: Awaited<ReturnType<typeof fetchCategories>> = [];
-  let recentReviews: Awaited<ReturnType<typeof fetchRecentReviews>> = [];
   const isHome = !category && !city;
-  try {
-    [dishes, categories, recentReviews] = await Promise.all([
-      fetchDishes(category, 100),
-      fetchCategories(),
-      fetchRecentReviews(12),
-    ]);
-  } catch (e) {
-    console.error('SSR fetch error:', e);
-  }
-
-  // Filter by city server-side (case-insensitive substring match for safety)
-  if (city) {
-    dishes = dishes.filter((d) =>
-      d.restaurant_city?.toLowerCase().includes(city.toLowerCase())
-    );
-  }
+  // Plats : MÊME appel que la règle d'indexation (lib/indexable → shownDishes), donc
+  // la page affiche exactement ce que le noindex et le sitemap ont compté.
+  // Pages ville / catégorie : une erreur remonte (réponse 500, Google repasse) au
+  // lieu d'une page vide servie en 200 — c'est ce qui produisait des noindex et
+  // des « soft 404 » passagers dans la Search Console. La home, indexée quoi qu'il
+  // arrive, s'affiche sans plats plutôt que de tomber.
+  const dishesPromise: Promise<DishRow[]> = isHome
+    ? shownDishes().catch((e) => {
+        console.error('SSR fetch error (dishes):', e);
+        return [];
+      })
+    : shownDishes(category, city);
+  const [fetchedDishes, categories, recentReviews] = await Promise.all([
+    dishesPromise,
+    fetchCategories().catch((e) => {
+      console.error('SSR fetch error (categories):', e);
+      return [] as Awaited<ReturnType<typeof fetchCategories>>;
+    }),
+    fetchRecentReviews(12).catch((e) => {
+      console.error('SSR fetch error (recent reviews):', e);
+      return [] as Awaited<ReturnType<typeof fetchRecentReviews>>;
+    }),
+  ]);
+  let dishes = fetchedDishes;
 
   // Classement seulement quand le volume d'avis le justifie ; sinon les plats
   // fraîchement notés, sans rang (cf. lib/ranking.ts).
@@ -457,12 +464,16 @@ export default async function HomePageContent({
         )}
         {/* Affiche aussi sur la home (pas de filtre) pour le maillage SEO :
             top categories + top cities visibles en un coup d'oeil. */}
-        <RelatedFilters
-          locale={locale}
-          city={city}
-          category={category}
-          allCities={allCities}
-        />
+        {/* Suspense : le premier calcul de l'index (un appel par catégorie) ne
+            retarde pas le reste de la page. */}
+        <Suspense fallback={null}>
+          <RelatedFilters
+            locale={locale}
+            city={city}
+            category={category}
+            allCities={allCities}
+          />
+        </Suspense>
         <WhySection />
         {/* FAQ accordéon — uniquement sur la home pour ne pas dupliquer le
             JSON-LD FAQPage avec celui de WhySection sur les pages filtrées

@@ -1,9 +1,10 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
-import { fetchCities, fetchAllCategorySlugs, fetchDishes } from '@/lib/supabase';
+import { fetchCities, fetchAllCategorySlugs } from '@/lib/supabase';
 import { buildSeoMetadata } from '@/lib/seoMetadata';
 import { hasChildren } from '@/lib/categoryHierarchy';
+import { isIndexableWith, shownDishes } from '@/lib/indexable';
 import HomePageContent from '@/components/HomePageContent';
 
 export const revalidate = 3600;
@@ -13,31 +14,23 @@ type Props = {
   searchParams: Promise<{ q?: string; page?: string }>;
 };
 
-/** Minimum dishes needed for a category page to warrant indexing. Prevents
- *  Google from picking up near-empty umbrellas (e.g. /c/north-american when
- *  there's a single poutine in DB). */
-const MIN_DISHES_FOR_INDEX = 3;
-
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { locale, category } = await params;
   const sp = await searchParams;
   // Accept either a real DB slug OR a hierarchy-only virtual parent
   // (e.g. european, drinks, middle-eastern) — those don't exist in the DB
   // but aggregate real children via expandCategorySlug.
-  const all = await fetchAllCategorySlugs().catch(() => new Set<string>());
+  // Pas de `.catch` : une liste vide par erreur changeait une catégorie valable en
+  // 404 / noindex. Une erreur répond 500, Google repasse.
+  const all = await fetchAllCategorySlugs();
   if (!all.has(category) && !hasChildren(category)) return { robots: { index: false, follow: false } };
 
-  // Thin-content guard: if the DB can't provide at least MIN_DISHES_FOR_INDEX
-  // dishes for this category, tell Google not to index it (but keep follow
-  // so internal linking flows through).
-  const dishes = await fetchDishes(category, MIN_DISHES_FOR_INDEX).catch(() => []);
-  if (dishes.length < MIN_DISHES_FOR_INDEX) {
-    return {
-      ...(await buildSeoMetadata({ locale, category, hasSearchQuery: !!sp.q })),
-      robots: { index: false, follow: true },
-    };
-  }
-  return buildSeoMetadata({ locale, category, hasSearchQuery: !!sp.q });
+  // Page trop maigre (moins de MIN_DISHES_FOR_INDEX plats affichés) : noindex, mais
+  // follow pour que le maillage interne passe. Règle partagée avec le sitemap.
+  const dishes = await shownDishes(category);
+  const seo = await buildSeoMetadata({ locale, category, hasSearchQuery: !!sp.q, dishes });
+  if (!isIndexableWith(dishes, category)) return { ...seo, robots: { index: false, follow: true } };
+  return seo;
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -45,10 +38,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   const sp = await searchParams;
 
-  const [allCategorySlugs, allCities] = await Promise.all([
-    fetchAllCategorySlugs().catch(() => new Set<string>()),
-    fetchCities().catch(() => [] as string[]),
-  ]);
+  const [allCategorySlugs, allCities] = await Promise.all([fetchAllCategorySlugs(), fetchCities()]);
   if (!allCategorySlugs.has(category) && !hasChildren(category)) notFound();
 
   return (

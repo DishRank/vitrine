@@ -15,6 +15,7 @@
  *     page serait démentie par ce que le visiteur voit.
  * Même page pour tout le monde, robots compris : pas de contenu dédié aux crawlers.
  */
+import { Suspense } from 'react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { headers } from 'next/headers';
 import Nav from '@/components/Nav';
@@ -301,7 +302,9 @@ export default async function MenuOnlyPage({
           <p className="sr-only">{tMeta('siteTagline')}</p>
         </section>
 
-        <RelatedFilters locale={locale} city={cityName} allCities={allCities} />
+        <Suspense fallback={null}>
+          <RelatedFilters locale={locale} city={cityName} allCities={allCities} />
+        </Suspense>
       </main>
 
       <Footer />

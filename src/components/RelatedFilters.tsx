@@ -1,6 +1,12 @@
 import { getTranslations } from 'next-intl/server';
 import { localizedCategory } from '@/lib/categoryLabels';
 import { citySlug } from '@/lib/slug';
+import {
+  MIN_DISHES_FOR_INDEX,
+  fetchCategoryIndex,
+  indexableCategories,
+  indexableCities,
+} from '@/lib/indexable';
 import RelatedFilterLink from './RelatedFilterLink';
 
 /**
@@ -22,15 +28,8 @@ import RelatedFilterLink from './RelatedFilterLink';
  *      → top categories + top cities to seed the crawl
  */
 
-const TOP_CATEGORIES = [
-  'burger', 'pizza', 'sushi', 'pasta', 'ramen', 'kebab', 'tacos',
-  'salad', 'steak', 'curry', 'dessert', 'crepes',
-];
-
-const TOP_CITIES = [
-  'Lyon', 'Paris', 'Marseille', 'Toulouse', 'Bordeaux',
-  'Lille', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier',
-];
+/** Liens par colonne. */
+const MAX_LINKS = 8;
 
 type Props = {
   locale: string;
@@ -38,16 +37,41 @@ type Props = {
   city?: string;
   /** Category slug (e.g. "burger") */
   category?: string;
-  /** All known city names (for filtering by what actually exists) */
+  /** All known city names (gardé pour les appelants ; les villes liées viennent de l'index). */
   allCities: string[];
 };
 
-export default async function RelatedFilters({ locale, city, category, allCities }: Props) {
+/**
+ * Les liens ne visent que des pages INDEXABLES (lib/indexable), les plus fournies
+ * d'abord. Avant : 12 catégories et 10 villes figées — /lyon/kebab, /c/ramen ou
+ * /marseille, vides ou en noindex, recevaient le maillage, et les villes qui ont des
+ * plats notés (Rodez, Clermont-Ferrand…) n'étaient jamais liées.
+ */
+export default async function RelatedFilters({ locale, city, category }: Props) {
   const t = await getTranslations({ locale, namespace: 'related' });
   const localePrefix = locale === 'fr' ? '' : `/${locale}`;
 
-  // Build the two link buckets based on the current context
-  const topCities = TOP_CITIES.filter((c) => allCities.includes(c));
+  let index: Awaited<ReturnType<typeof fetchCategoryIndex>>;
+  try {
+    index = await fetchCategoryIndex();
+  } catch {
+    // Le maillage est un bonus : sans données, la page s'affiche sans ce bloc.
+    return null;
+  }
+
+  const cities = indexableCities(index);
+  const cityLink = (c: { slug: string; city: string }, cat?: string) => ({
+    href: `${localePrefix}/${c.slug}${cat ? `/${cat}` : ''}`,
+    label: c.city,
+  });
+  const categoryLink = (slug: string, inCity?: string) => ({
+    href: inCity ? `${localePrefix}/${citySlug(inCity)}/${slug}` : `${localePrefix}/c/${slug}`,
+    label: localizedCategory(slug, locale),
+  });
+  const capitalized = (slug: string) => {
+    const label = localizedCategory(slug, locale);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
 
   let leftTitle = '';
   let leftLinks: Array<{ href: string; label: string }> = [];
@@ -55,69 +79,51 @@ export default async function RelatedFilters({ locale, city, category, allCities
   let rightLinks: Array<{ href: string; label: string }> = [];
 
   if (city && category) {
-    // /lyon/burger → other categories in Lyon + same category in other cities
+    // /lyon/burger → autres catégories à Lyon + la même catégorie ailleurs
     leftTitle = t('moreInCity', { city });
-    leftLinks = TOP_CATEGORIES.filter((c) => c !== category)
-      .slice(0, 8)
-      .map((slug) => ({
-        href: `${localePrefix}/${citySlug(city)}/${slug}`,
-        label: localizedCategory(slug, locale),
-      }));
-    const catLabel = localizedCategory(category, locale);
-    const catLabelCap = catLabel.charAt(0).toUpperCase() + catLabel.slice(1);
-    rightTitle = t('sameInOtherCities', { category: catLabelCap });
-    rightLinks = topCities
-      .filter((c) => c !== city)
-      .slice(0, 8)
-      .map((c) => ({
-        href: `${localePrefix}/${citySlug(c)}/${category}`,
-        label: c,
-      }));
+    leftLinks = indexableCategories(index, city)
+      .filter((c) => c.slug !== category)
+      .slice(0, MAX_LINKS)
+      .map((c) => categoryLink(c.slug, city));
+    rightTitle = t('sameInOtherCities', { category: capitalized(category) });
+    const byCity = index.categories.get(category)?.byCity;
+    rightLinks = cities
+      .filter((c) => c.slug !== citySlug(city) && (byCity?.get(c.slug)?.n ?? 0) >= MIN_DISHES_FOR_INDEX)
+      .slice(0, MAX_LINKS)
+      .map((c) => cityLink(c, category));
   } else if (city) {
-    // /lyon → top categories in Lyon + other top cities
+    // /lyon → catégories de Lyon + autres villes
     leftTitle = t('topInCity', { city });
-    leftLinks = TOP_CATEGORIES.slice(0, 8).map((slug) => ({
-      href: `${localePrefix}/${citySlug(city)}/${slug}`,
-      label: localizedCategory(slug, locale),
-    }));
+    leftLinks = indexableCategories(index, city)
+      .slice(0, MAX_LINKS)
+      .map((c) => categoryLink(c.slug, city));
     rightTitle = t('otherCities');
-    rightLinks = topCities
-      .filter((c) => c !== city)
-      .slice(0, 8)
-      .map((c) => ({
-        href: `${localePrefix}/${citySlug(c)}`,
-        label: c,
-      }));
+    rightLinks = cities
+      .filter((c) => c.slug !== citySlug(city))
+      .slice(0, MAX_LINKS)
+      .map((c) => cityLink(c));
   } else if (category) {
-    // /c/burger → other categories (gauche) + top cities for that category (droite)
-    // On met les categories a gauche pour etre coherent avec la homepage
-    // (categories a gauche, villes a droite).
+    // /c/burger → autres catégories (gauche) + villes pour cette catégorie (droite),
+    // comme la homepage (catégories à gauche, villes à droite).
     leftTitle = t('otherCategories');
-    leftLinks = TOP_CATEGORIES.filter((c) => c !== category)
-      .slice(0, 8)
-      .map((slug) => ({
-        href: `${localePrefix}/c/${slug}`,
-        label: localizedCategory(slug, locale),
-      }));
-    const catLabel = localizedCategory(category, locale);
-    const catLabelCap = catLabel.charAt(0).toUpperCase() + catLabel.slice(1);
-    rightTitle = t('categoryByCity', { category: catLabelCap });
-    rightLinks = topCities.slice(0, 8).map((c) => ({
-      href: `${localePrefix}/${citySlug(c)}/${category}`,
-      label: c,
-    }));
+    leftLinks = indexableCategories(index)
+      .filter((c) => c.slug !== category)
+      .slice(0, MAX_LINKS)
+      .map((c) => categoryLink(c.slug));
+    rightTitle = t('categoryByCity', { category: capitalized(category) });
+    const byCity = index.categories.get(category)?.byCity;
+    rightLinks = cities
+      .filter((c) => (byCity?.get(c.slug)?.n ?? 0) >= MIN_DISHES_FOR_INDEX)
+      .slice(0, MAX_LINKS)
+      .map((c) => cityLink(c, category));
   } else {
-    // Homepage → top categories + top cities
+    // Homepage → catégories + villes pour amorcer l'exploration
     leftTitle = t('exploreByCategory');
-    leftLinks = TOP_CATEGORIES.slice(0, 8).map((slug) => ({
-      href: `${localePrefix}/c/${slug}`,
-      label: localizedCategory(slug, locale),
-    }));
+    leftLinks = indexableCategories(index)
+      .slice(0, MAX_LINKS)
+      .map((c) => categoryLink(c.slug));
     rightTitle = t('exploreByCity');
-    rightLinks = topCities.slice(0, 8).map((c) => ({
-      href: `${localePrefix}/${citySlug(c)}`,
-      label: c,
-    }));
+    rightLinks = cities.slice(0, MAX_LINKS).map((c) => cityLink(c));
   }
 
   if (leftLinks.length === 0 && rightLinks.length === 0) return null;

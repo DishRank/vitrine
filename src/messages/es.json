@@ -8,6 +8,10 @@
     "descWithCategory": "Top {category} 2026: clasificado por opiniones de la comunidad. Direcciones, precios, fotos y valoraciones para encontrar {bestCategory} cerca de ti.",
     "descWithCity": "Mejores platos de {city} en 2026: hamburguesa, sushi, pizza y más. Ranking por plato con fotos, valoraciones y opiniones.",
     "descWithCityCategory": "{bestCategory} de {city} en 2026: Top 10 por opiniones de la comunidad, con direcciones, precios, fotos y valoraciones.",
+    "titleWithCityCategoryFew": "{bestCategory} en {city} 2026 — {count, plural, one {# plato valorado} other {# platos valorados}} | DishRank",
+    "descCityCategoryDishes": "{bestCategory} en {city}: {dishes}. {count, plural, one {# plato valorado} other {# platos valorados}} por la comunidad, con fotos, precios y opiniones.",
+    "descCategoryDishes": "{bestCategory}: {dishes}. {count, plural, one {# plato valorado} other {# platos valorados}} por la comunidad, con fotos, precios y opiniones.",
+    "descCityDishes": "Dónde comer en {city}: {dishes}. {count, plural, one {# plato valorado} other {# platos valorados}} por la comunidad, con fotos, precios y opiniones.",
     "siteTagline": "Valora los platos, no los restaurantes.",
     "appDescription": "Valora los platos, no los restaurantes. Encuentra la mejor hamburguesa, sushi, pizza de tu ciudad con las opiniones de la comunidad DishRank. Crea un grupo con tus amigos, votad el sitio de encuentro, DishRank propone la dirección justo en medio de todos."
   },

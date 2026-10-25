@@ -30,7 +30,13 @@ export function citySlug(name: string): string {
  * Returns the original city name (preserving accents/case) or null if no match.
  */
 export function cityFromSlug(slug: string, knownCities: string[]): string | null {
-  const normalized = slug.toLowerCase();
+  // Normalisé comme les slugs eux-mêmes : « /saint-étienne/burger » (accent tapé ou
+  // encodé) désigne la même ville que « /saint-etienne/burger ».
+  let raw = slug;
+  try {
+    raw = decodeURIComponent(slug);
+  } catch {}
+  const normalized = citySlug(raw);
   const matches = knownCities.filter((city) => citySlug(city) === normalized);
   if (matches.length === 0) return null;
   // `restaurants.city` n'est pas normalisé en base : à côté de « Lyon » (4 219 lignes en

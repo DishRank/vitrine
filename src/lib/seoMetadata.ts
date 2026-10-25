@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { localizedCategory } from './categoryLabels';
 import { theBestOf, isNationality, grammarFor } from './categoryGrammar';
 import { citySlug } from './slug';
+import type { DishRow } from './supabase';
+import { displayMode, orderDishes } from './ranking';
 
 const OG_LOCALE_MAP: Record<string, string> = {
   fr: 'fr_FR',
@@ -66,12 +68,20 @@ export async function buildSeoMetadata({
   category,
   city,
   hasSearchQuery = false,
+  dishes,
 }: {
   locale: string;
   category?: string; // raw slug, e.g. "burger"
   city?: string; // original DB name, e.g. "Saint-Étienne"
   /** True if a `?q=` text search is active — triggers noindex to avoid duplicate content */
   hasSearchQuery?: boolean;
+  /**
+   * Plats que la page affiche (lib/indexable `shownDishes`). Fournis, ils remplacent
+   * la description générique par les vrais plats et le vrai nombre — une description
+   * unique par page au lieu de la même phrase sur des centaines d'URLs — et
+   * retirent « Top 10 » d'un titre quand la page en montre moins.
+   */
+  dishes?: DishRow[];
 }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: 'meta' });
 
@@ -97,6 +107,23 @@ export async function buildSeoMetadata({
   } else if (city) {
     title = t('titleWithCity', { city: cityLabel });
     description = t('descWithCity', { city: cityLabel });
+  }
+
+  if (dishes && dishes.length > 0 && (city || category)) {
+    const count = dishes.length;
+    const describe = (list: string) =>
+      category && city
+        ? t('descCityCategoryDishes', { city: cityLabel, bestCategory, dishes: list, count })
+        : category
+          ? t('descCategoryDishes', { bestCategory, dishes: list, count })
+          : t('descCityDishes', { city: cityLabel, dishes: list, count });
+    // Autant de plats que la description en tient sous la troncature de Google
+    // (~155 caractères), le premier raccourci au besoin — la phrase de fin (« … avec
+    // photos, prix et avis ») reste visible dans le résultat de recherche.
+    description = fitDescription(dishes, describe);
+    if (category && city && count < 10) {
+      title = t('titleWithCityCategoryFew', { category: categoryLabel, city: cityLabel, bestCategory, count });
+    }
   }
 
   return {
@@ -135,6 +162,32 @@ export async function buildSeoMetadata({
       },
     },
   };
+}
+
+/** Longueur au-delà de laquelle Google tronque une description (~920 px). */
+const DESCRIPTION_MAX = 155;
+
+/**
+ * « … : Burger Signature (Big Fernand), Quenelle (Café Comptoir). 12 plats notés… »
+ * — les premiers plats dans l'ordre où la page les affiche, 3 au plus, autant que la
+ * description en tient sous DESCRIPTION_MAX ; s'il n'en tient même pas un, le premier
+ * est raccourci.
+ */
+function fitDescription(dishes: DishRow[], describe: (list: string) => string): string {
+  const shown = orderDishes(dishes, displayMode(dishes, 3)).slice(0, 3);
+  const items = shown.map((d) => (d.restaurant_name ? `${d.dish_name} (${d.restaurant_name})` : d.dish_name));
+  for (let n = items.length; n >= 1; n--) {
+    const text = describe(items.slice(0, n).join(', '));
+    if (text.length <= DESCRIPTION_MAX) return text;
+  }
+  // Trop long même seul : le plat sans son restaurant, puis coupé à un mot.
+  const name = shown[0].dish_name;
+  const bare = describe(name);
+  if (bare.length <= DESCRIPTION_MAX) return bare;
+  const room = Math.max(12, name.length - (bare.length - DESCRIPTION_MAX) - 1);
+  const cut = name.slice(0, room);
+  const atWord = cut.lastIndexOf(' ') > 8 ? cut.slice(0, cut.lastIndexOf(' ')) : cut;
+  return describe(`${atWord.trimEnd()}…`);
 }
 
 /**
