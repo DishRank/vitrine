@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { expandCategorySlug } from './categoryHierarchy';
-import { restaurantSlug } from './slug';
+import { citySlug, restaurantSlug } from './slug';
 
 // Server-only: lazy init to avoid build-time errors
 let _supabase: SupabaseClient | null = null;
@@ -94,21 +94,48 @@ export interface RecentReviewRow {
 // ── Simple server-side cache to avoid hammering Supabase ──
 
 interface CacheEntry<T> {
-  data: T;
+  data: Promise<T>;
   expires: number;
 }
 
 const cache = new Map<string, CacheEntry<unknown>>();
 
+/**
+ * Cache mémoire par instance. On garde la PROMESSE : des appels simultanés pour la
+ * même clé (une page, ses métadonnées et son bloc de liens) partagent une seule
+ * requête au lieu d'en lancer une chacun. Un échec est retiré du cache.
+ */
 function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
   const entry = cache.get(key) as CacheEntry<T> | undefined;
-  if (entry && Date.now() < entry.expires) {
-    return Promise.resolve(entry.data);
-  }
-  return fn().then((data) => {
-    cache.set(key, { data, expires: Date.now() + ttlMs });
-    return data;
+  if (entry && Date.now() < entry.expires) return entry.data;
+  const data = fn();
+  cache.set(key, { data, expires: Date.now() + ttlMs });
+  data.catch(() => {
+    if (cache.get(key)?.data === data) cache.delete(key);
   });
+  return data;
+}
+
+/**
+ * Toutes les lignes d'une requête, par pages de 1 000 (plafond PostgREST), en
+ * pagination par clé (`id` croissant) : un ajout pendant le parcours ne fait ni
+ * sauter ni doubler de ligne, et on s'arrête sur une page vide plutôt que sur une
+ * page « incomplète » (un `max-rows` plus bas que 1 000 tronquerait sinon en silence).
+ */
+async function selectAllById<T extends { id: string }>(
+  build: (afterId: string | null) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  let after: string | null = null;
+  for (;;) {
+    const { data, error } = await build(after);
+    if (error) throw error;
+    const page = data || [];
+    if (page.length === 0) break;
+    out.push(...page);
+    after = page[page.length - 1].id;
+  }
+  return out;
 }
 
 // ── Data fetching (cached, server-side) ──
@@ -117,53 +144,22 @@ const FIVE_MIN = 5 * 60 * 1000;
 const THIRTY_MIN = 30 * 60 * 1000;
 
 /**
- * Fetch top dishes. When the slug has children in `categoryHierarchy`, fires
- * one RPC per descendant slug in parallel, then merges + dedupes + re-sorts.
- *
- * `get_feed_dishes` takes the array param `p_category_slugs text[]` on BOTH
- * prod and dev now (the scalar `p_category_slug` signature is gone) — each
- * fan-out call passes a 1-element array. Could be collapsed into a single
- * `p_category_slugs: expandCategorySlug(slug)` call ; kept as a fan-out for now
- * to preserve the existing merge/dedupe/re-sort semantics.
+ * Plats les mieux notés (avec photo), d'une catégorie ou de toutes. Une catégorie
+ * parente (asian, french, drinks…) est développée en ses descendants dans UN seul
+ * appel : `get_feed_dishes` prend un tableau de slugs et renvoie chaque plat une
+ * fois. Avant, un appel par descendant (75 pour `european`), chacun en
+ * `.catch(() => [])` : sous charge, des comptes partiels passaient pour de vrais
+ * et faisaient basculer des pages en noindex.
  */
-export async function fetchDishes(categorySlug?: string, limit = 10): Promise<DishRow[]> {
-  const slugs = categorySlug ? expandCategorySlug(categorySlug) : [undefined];
-  if (slugs.length === 1) {
-    return fetchDishesForSlug(slugs[0], limit);
-  }
-  const cacheKey = `dishes:agg:${categorySlug}:${limit}`;
-  return cached(cacheKey, FIVE_MIN, async () => {
-    const perSlugLimit = Math.max(limit, 30);
-    const results = await Promise.all(
-      slugs.map((s) => fetchDishesForSlug(s, perSlugLimit).catch(() => [] as DishRow[])),
-    );
-    const seen = new Set<string>();
-    const merged: DishRow[] = [];
-    for (const list of results) {
-      for (const d of list) {
-        const key = `${d.restaurant_id}::${d.dish_name.toLowerCase()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        merged.push(d);
-      }
-    }
-    merged.sort((a, b) => {
-      const byRating = Number(b.avg_rating) - Number(a.avg_rating);
-      if (byRating !== 0) return byRating;
-      return Number(b.review_count) - Number(a.review_count);
-    });
-    return merged.slice(0, limit);
-  });
-}
-
-function fetchDishesForSlug(categorySlug: string | undefined, limit: number): Promise<DishRow[]> {
+export function fetchDishes(categorySlug?: string, limit = 10): Promise<DishRow[]> {
+  const slugs = categorySlug ? expandCategorySlug(categorySlug) : null;
   const cacheKey = `dishes:${categorySlug || 'all'}:${limit}`;
   return cached(cacheKey, FIVE_MIN, async () => {
     const { data, error } = await getSupabase().rpc('get_feed_dishes', {
       user_lat: null,
       user_lng: null,
       radius_km: 50,
-      p_category_slugs: categorySlug ? [categorySlug] : null,
+      p_category_slugs: slugs,
       p_sort: 'rating',
       p_limit: limit,
     });
@@ -172,26 +168,39 @@ function fetchDishesForSlug(categorySlug: string | undefined, limit: number): Pr
   });
 }
 
+/**
+ * Catégories qui ont au moins un avis modéré — par la colonne historique
+ * `reviews.category_id` OU par la table de liaison `review_categories` (avis
+ * multi-catégories). Paginé : au-delà de 1 000 avis, PostgREST tronquait en silence.
+ */
 export function fetchCategories(): Promise<CategoryRow[]> {
   return cached('categories', THIRTY_MIN, async () => {
     const supabase = getSupabase();
-    const [catsResult, reviewsResult] = await Promise.all([
+    const [catsResult, reviews] = await Promise.all([
       supabase
         .from('dish_categories')
         .select('id, slug, icon')
         .order('created_at', { ascending: true }),
-      supabase
-        .from('reviews')
-        .select('category_id')
-        .not('category_id', 'is', null)
-        .not('pending_moderation', 'is', true),
+      selectAllById<{ id: string; category_id: string | null; review_categories: { category_id: string }[] | null }>(
+        (after) => {
+          let q = supabase
+            .from('reviews')
+            .select('id, category_id, review_categories(category_id)')
+            .not('pending_moderation', 'is', true)
+            .order('id')
+            .limit(1000);
+          if (after) q = q.gt('id', after);
+          return q;
+        },
+      ),
     ]);
     if (catsResult.error) throw catsResult.error;
-    if (reviewsResult.error) throw reviewsResult.error;
 
-    const usedIds = new Set(
-      (reviewsResult.data || []).map((r) => r.category_id as string)
-    );
+    const usedIds = new Set<string>();
+    for (const r of reviews) {
+      if (r.category_id) usedIds.add(r.category_id);
+      for (const j of r.review_categories || []) usedIds.add(j.category_id);
+    }
     return ((catsResult.data || []) as CategoryRow[]).filter((c) => usedIds.has(c.id));
   });
 }
@@ -225,22 +234,13 @@ export function fetchAllCategorySlugs(): Promise<Set<string>> {
 export function fetchCities(): Promise<string[]> {
   return cached('cities:all', THIRTY_MIN, async () => {
     const supabase = getSupabase();
+    const rows = await selectAllById<{ id: string; city: string | null }>((after) => {
+      let q = supabase.from('restaurants').select('id, city').not('city', 'is', null).order('id').limit(1000);
+      if (after) q = q.gt('id', after);
+      return q;
+    });
     const set = new Set<string>();
-    const PAGE = 1000;
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('city')
-        .not('city', 'is', null)
-        .order('id')
-        .range(from, from + PAGE - 1);
-      if (error) throw error;
-      const page = (data || []) as Array<{ city: string | null }>;
-      for (const row of page) {
-        if (row.city) set.add(row.city);
-      }
-      if (page.length < PAGE) break;
-    }
+    for (const row of rows) if (row.city) set.add(row.city);
     return [...set].sort((a, b) => a.localeCompare(b));
   });
 }
@@ -312,6 +312,20 @@ export interface RestaurantRow {
 }
 
 /**
+ * Deux restaurants d'une ville au même slug (« Le Bistrot ») : on retient celui que le
+ * sitemap annonce — le plus de plats notés, sinon celui qui a une carte publiée, sinon
+ * un restaurant ouvert —, pour que l'URL listée mène à la même fiche.
+ */
+async function pickTwin(hits: { id: string; closed_at: string | null }[]): Promise<string> {
+  const withDishes = new Map((await fetchRestaurantsWithDishes()).map((r) => [r.id, r.dish_count]));
+  const best = [...hits].sort((a, b) => (withDishes.get(b.id) ?? 0) - (withDishes.get(a.id) ?? 0))[0];
+  if ((withDishes.get(best.id) ?? 0) > 0) return best.id;
+  const withMenu = new Set((await fetchRestaurantsWithMenu()).map((r) => r.id));
+  const open = hits.filter((h) => !h.closed_at);
+  return (open.find((h) => withMenu.has(h.id)) ?? open[0] ?? hits[0]).id;
+}
+
+/**
  * Find a restaurant by its URL slug within a given city. Uses the same
  * `restaurantSlug()` function used at sitemap generation time so a URL
  * roundtrip is guaranteed lossless.
@@ -331,26 +345,26 @@ export function fetchRestaurantBySlug(
 
     // Le slug n'existe pas en base : il se recalcule depuis le nom, donc on balaie la
     // ville. PostgREST plafonne une réponse à 1 000 lignes — et Lyon en compte 4 219 :
-    // sans pagination, tout restaurant au-delà du millième était « introuvable », soit
-    // un 404 sur la majorité des fiches. On pagine sur deux colonnes (léger), puis on
-    // charge la ligne complète par id.
-    let id: string | null = null;
-    const PAGE = 1000;
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
+    // on pagine sur trois colonnes (léger), puis on charge la ligne complète par id.
+    //
+    // Toutes les graphies de la ville qui donnent le même slug (« Saint-Étienne » /
+    // « Saint-Etienne », « LYON », espace final…) : c'est ainsi que le sitemap les
+    // regroupe, sinon il annonçait des fiches que la route ne retrouvait pas (404).
+    const target = citySlug(cityName);
+    const variants = (await fetchCities()).filter((c) => citySlug(c) === target);
+    if (variants.length === 0) variants.push(cityName);
+    const rows = await selectAllById<{ id: string; name: string | null; closed_at: string | null }>((after) => {
+      let q = supabase
         .from('restaurants')
-        .select('id, name')
-        .ilike('city', cityName)
-        .range(from, from + PAGE - 1);
-      if (error) throw error;
-      const page = (data || []) as { id: string; name: string }[];
-      const hit = page.find((r) => restaurantSlug(r.name) === restoSlug);
-      if (hit) {
-        id = hit.id;
-        break;
-      }
-      if (page.length < PAGE) break;
-    }
+        .select('id, name, closed_at')
+        .in('city', variants)
+        .order('id')
+        .limit(1000);
+      if (after) q = q.gt('id', after);
+      return q;
+    });
+    const hits = rows.filter((r) => r.name && restaurantSlug(r.name) === restoSlug);
+    const id = hits.length <= 1 ? (hits[0]?.id ?? null) : await pickTwin(hits);
     if (!id) return null;
 
     // Colonnes confirmées sur `restaurants` (+ cuisines/phone/opening_intervals
@@ -494,18 +508,21 @@ export function fetchRestaurantsWithMenu(minItems = 10): Promise<RestaurantSitem
 export function fetchRestaurantsWithDishes(): Promise<RestaurantSitemapRow[]> {
   return cached('restaurants:with-dishes', THIRTY_MIN, async () => {
     const supabase = getSupabase();
-    const reviewsRes = await supabase
-      .from('reviews')
-      .select('restaurant_id, dish_name')
-      .not('pending_moderation', 'is', true);
-    if (reviewsRes.error) throw reviewsRes.error;
+    // Paginé : au-delà de 1 000 avis, PostgREST tronquait en silence.
+    const reviews = await selectAllById<{ id: string; restaurant_id: string; dish_name: string }>((after) => {
+      let q = supabase
+        .from('reviews')
+        .select('id, restaurant_id, dish_name')
+        .not('pending_moderation', 'is', true)
+        .order('id')
+        .limit(1000);
+      if (after) q = q.gt('id', after);
+      return q;
+    });
 
     // Compter les plats DISTINCTS par resto (un plat = même nom normalisé)
     const dishesByResto = new Map<string, Set<string>>();
-    for (const rv of (reviewsRes.data || []) as Array<{
-      restaurant_id: string;
-      dish_name: string;
-    }>) {
+    for (const rv of reviews) {
       const key = (rv.dish_name || '').toLowerCase().trim();
       if (!key) continue;
       const set = dishesByResto.get(rv.restaurant_id) || new Set<string>();

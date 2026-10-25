@@ -17,8 +17,8 @@ type Props = {
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { locale, city } = await params;
   const sp = await searchParams;
-  // Sans `.catch` : une liste de villes vide par erreur donnerait un 404 (gardé une
-  // heure par l'ISR) sur une page valable. Une erreur répond 500, Google repasse.
+  // Sans `.catch` : une liste de villes vide par erreur donnerait un 404 sur une page
+  // valable. Une erreur répond 500, Google repasse.
   const allCities = await fetchCities();
   const cityName = cityFromSlug(city, allCities);
   if (!cityName) return { robots: { index: false, follow: false } };
@@ -35,8 +35,8 @@ export default async function CityPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   const sp = await searchParams;
 
-  // Sans `.catch` : une liste de villes vide par erreur donnerait un 404 (gardé une
-  // heure par l'ISR) sur une page valable. Une erreur répond 500, Google repasse.
+  // Sans `.catch` : une liste de villes vide par erreur donnerait un 404 sur une page
+  // valable. Une erreur répond 500, Google repasse.
   const allCities = await fetchCities();
 
   const cityName = cityFromSlug(city, allCities);

@@ -111,16 +111,18 @@ export async function buildSeoMetadata({
 
   if (dishes && dishes.length > 0 && (city || category)) {
     const count = dishes.length;
-    const list = dishList(dishes);
-    if (category && city) {
-      if (count < 10) {
-        title = t('titleWithCityCategoryFew', { category: categoryLabel, city: cityLabel, bestCategory, count });
-      }
-      description = t('descCityCategoryDishes', { city: cityLabel, bestCategory, dishes: list, count });
-    } else if (category) {
-      description = t('descCategoryDishes', { bestCategory, dishes: list, count });
-    } else {
-      description = t('descCityDishes', { city: cityLabel, dishes: list, count });
+    const describe = (list: string) =>
+      category && city
+        ? t('descCityCategoryDishes', { city: cityLabel, bestCategory, dishes: list, count })
+        : category
+          ? t('descCategoryDishes', { bestCategory, dishes: list, count })
+          : t('descCityDishes', { city: cityLabel, dishes: list, count });
+    // Autant de plats que la description en tient sous la troncature de Google
+    // (~155 caractères), le premier raccourci au besoin — la phrase de fin (« … avec
+    // photos, prix et avis ») reste visible dans le résultat de recherche.
+    description = fitDescription(dishes, describe);
+    if (category && city && count < 10) {
+      title = t('titleWithCityCategoryFew', { category: categoryLabel, city: cityLabel, bestCategory, count });
     }
   }
 
@@ -162,23 +164,30 @@ export async function buildSeoMetadata({
   };
 }
 
+/** Longueur au-delà de laquelle Google tronque une description (~920 px). */
+const DESCRIPTION_MAX = 155;
+
 /**
- * « Burger Signature (Big Fernand), Quenelle (Café Comptoir) » — les premiers plats
- * dans l'ordre où la page les affiche, assez pour ~90 caractères (la description
- * reste sous la troncature de Google, ~155).
+ * « … : Burger Signature (Big Fernand), Quenelle (Café Comptoir). 12 plats notés… »
+ * — les premiers plats dans l'ordre où la page les affiche, 3 au plus, autant que la
+ * description en tient sous DESCRIPTION_MAX ; s'il n'en tient même pas un, le premier
+ * est raccourci.
  */
-function dishList(dishes: DishRow[]): string {
-  const ordered = orderDishes(dishes, displayMode(dishes, 3));
-  const parts: string[] = [];
-  let len = 0;
-  for (const d of ordered) {
-    const item = d.restaurant_name ? `${d.dish_name} (${d.restaurant_name})` : d.dish_name;
-    if (parts.length > 0 && len + item.length > 90) break;
-    parts.push(item);
-    len += item.length + 2;
-    if (parts.length === 3) break;
+function fitDescription(dishes: DishRow[], describe: (list: string) => string): string {
+  const shown = orderDishes(dishes, displayMode(dishes, 3)).slice(0, 3);
+  const items = shown.map((d) => (d.restaurant_name ? `${d.dish_name} (${d.restaurant_name})` : d.dish_name));
+  for (let n = items.length; n >= 1; n--) {
+    const text = describe(items.slice(0, n).join(', '));
+    if (text.length <= DESCRIPTION_MAX) return text;
   }
-  return parts.join(', ');
+  // Trop long même seul : le plat sans son restaurant, puis coupé à un mot.
+  const name = shown[0].dish_name;
+  const bare = describe(name);
+  if (bare.length <= DESCRIPTION_MAX) return bare;
+  const room = Math.max(12, name.length - (bare.length - DESCRIPTION_MAX) - 1);
+  const cut = name.slice(0, room);
+  const atWord = cut.lastIndexOf(' ') > 8 ? cut.slice(0, cut.lastIndexOf(' ')) : cut;
+  return describe(`${atWord.trimEnd()}…`);
 }
 
 /**

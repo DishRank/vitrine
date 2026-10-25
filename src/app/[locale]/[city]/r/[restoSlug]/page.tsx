@@ -1,19 +1,15 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { fetchMenuTree } from '@/lib/menu';
-import { MIN_PLATS_CARTE, compterPlats, estVilleCarte } from '@/lib/menuOnly';
+import { compterPlats } from '@/lib/menuOnly';
+import { resolveRestaurantPage } from '@/lib/restaurantPage';
 import MenuOnlyPage from './MenuOnlyPage';
 import { headers } from 'next/headers';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import dynamic from 'next/dynamic';
-import {
-  fetchCities,
-  fetchRestaurantBySlug,
-  fetchDishesForRestaurant,
-  fetchReviewsForRestaurant,
-} from '@/lib/supabase';
+import { fetchReviewsForRestaurant } from '@/lib/supabase';
 import { displayMode, orderDishes } from '@/lib/ranking';
-import { cityFromSlug, citySlug, restaurantSlug } from '@/lib/slug';
+import { citySlug } from '@/lib/slug';
 import { jsonLdHtml } from '@/lib/jsonLd';
 import Nav from '@/components/Nav';
 import DishGrid from '@/components/DishGrid';
@@ -26,7 +22,8 @@ const LegalSheet = dynamic(() => import('@/components/LegalSheet'));
 const CookieConsent = dynamic(() => import('@/components/CookieConsent'));
 const BetaModal = dynamic(() => import('@/components/BetaModal'));
 
-// ISR : 1h pour matcher les autres routes filtrées
+// Sans effet tant que le layout racine lit `headers()` (nonce CSP) : la route est
+// rendue à chaque requête ; les données passent par les caches de lib/supabase.
 export const revalidate = 3600;
 
 type Props = {
@@ -141,18 +138,11 @@ function buildRestaurantFaq(
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, city, restoSlug } = await params;
 
-  // Sans `.catch` : une liste de villes vide par erreur donnerait un 404 (gardé une
-  // heure par l'ISR) sur une page valable. Une erreur répond 500, Google repasse.
-  const allCities = await fetchCities();
-  const cityName = cityFromSlug(city, allCities);
-  if (!cityName) return { robots: { index: false, follow: false } };
-
-  // Pas de `.catch` sur ce qui décide de l'indexation : une erreur passagère de la base
-  // se transformait en noindex (ou en fiche « carte » vide), mis en cache une heure par
-  // l'ISR — Search Console listait des fiches notées en « exclue par noindex ». Une
-  // erreur répond maintenant 500 et Google repasse.
-  const restaurant = await fetchRestaurantBySlug(cityName, restoSlug);
-  if (!restaurant) return { robots: { index: false, follow: false } };
+  // Même résolution que le layout (garde 404) et la page — cf. lib/restaurantPage.
+  // Pas de `.catch` : une erreur passagère de la base se transformait en noindex.
+  const data = await resolveRestaurantPage(city, restoSlug);
+  if (!data) return { robots: { index: false, follow: false } };
+  const { cityName, restaurant } = data;
 
   // Titre / description SEO — leveragent le nom + la ville pour matcher les
   // recherches brandées type "{nom} {ville} avis" / "{nom} menu".
@@ -176,12 +166,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // prix — sinon le visiteur arrive déçu et Google voit un titre démenti par la page.
   let title = titleByLocale[locale] || titleByLocale.fr;
   let description = descByLocale[locale] || descByLocale.fr;
-  const aDesPlatsNotes = (await fetchDishesForRestaurant(restaurant.id)).length > 0;
-  if (!aDesPlatsNotes) {
-    const nbPlats = compterPlats(await fetchMenuTree(restaurant.id));
-    if (!estVilleCarte(cityName) || nbPlats < MIN_PLATS_CARTE) {
-      return { robots: { index: false, follow: false } };
-    }
+  if (data.kind === 'carte') {
+    const nbPlats = compterPlats(data.menus);
     const carteTitre: Record<string, string> = {
       fr: `Carte et prix de ${restaurant.name} à ${cityName} | DishRank`,
       en: `${restaurant.name} in ${cityName} — menu and prices | DishRank`,
@@ -242,30 +228,15 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   const sp = await searchParams;
 
-  // Sans `.catch` : une liste de villes vide par erreur donnerait un 404 (gardé une
-  // heure par l'ISR) sur une page valable. Une erreur répond 500, Google repasse.
-  const allCities = await fetchCities();
+  // Résolue (et gardée en 404) par le layout, avant le <Suspense> de loading.tsx.
+  const data = await resolveRestaurantPage(city, restoSlug);
+  if (!data) notFound();
+  const { allCities, cityName, restaurant } = data;
 
-  const cityName = cityFromSlug(city, allCities);
-  if (!cityName) notFound();
-
-  const restaurant = await fetchRestaurantBySlug(cityName, restoSlug);
-  if (!restaurant) notFound();
-
-  // Tous les plats notés du resto (stats, moyenne, JSON-LD) ; la grille
-  // n'affiche que ceux qui ont une photo.
-  const dishes = await fetchDishesForRestaurant(restaurant.id);
-  const gridMode = displayMode(dishes, 3);
-  const gridDishes = orderDishes(dishes.filter((d) => d.cover_photo_url), gridMode);
-
-  // Aucun plat noté : la fiche vaut quand même d'exister SI sa carte est publiée
-  // (relevée sur le site du restaurant, mig. 186-191). Elle affiche alors la carte
-  // et ses prix, sans la moindre note — c'est la page « carte relevée » (19/09).
-  // Périmètre du pilote et seuil de plats : `lib/menuOnly` (partagé avec le sitemap).
-  if (dishes.length === 0) {
-    if (!estVilleCarte(cityName)) notFound();
-    const menus = await fetchMenuTree(restaurant.id);
-    if (compterPlats(menus) < MIN_PLATS_CARTE) notFound();
+  // Aucun plat noté : fiche « carte relevée » (carte et prix relevés sur le site du
+  // restaurant, mig. 186-191), sans la moindre note (19/09).
+  if (data.kind === 'carte') {
+    const menus = data.menus;
     return (
       <MenuOnlyPage
         locale={locale}
@@ -285,6 +256,12 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
       />
     );
   }
+
+  // Tous les plats notés du resto (stats, moyenne, JSON-LD) ; la grille
+  // n'affiche que ceux qui ont une photo.
+  const dishes = data.dishes;
+  const gridMode = displayMode(dishes, 3);
+  const gridDishes = orderDishes(dishes.filter((d) => d.cover_photo_url), gridMode);
 
   // Avis récents avec commentaire (tous plats confondus) → Review[] du JSON-LD.
   const reviews = await fetchReviewsForRestaurant(restaurant.id).catch(() => []);
@@ -570,11 +547,13 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
         </section>
 
         {/* Maillage interne — vers d'autres restos / catégories du même secteur */}
-        <RelatedFilters
-          locale={locale}
-          city={cityName}
-          allCities={allCities}
-        />
+        <Suspense fallback={null}>
+          <RelatedFilters
+            locale={locale}
+            city={cityName}
+            allCities={allCities}
+          />
+        </Suspense>
       </main>
 
       <Footer />

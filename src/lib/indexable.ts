@@ -15,16 +15,21 @@
 import { fetchCategories, fetchDishes, type DishRow } from './supabase';
 import { citySlug } from './slug';
 import { VILLES_CARTE, estVilleCarte } from './menuOnly';
+import { allParentSlugs } from './categoryHierarchy';
 
 /** Sous ce nombre de plats affichés, la page est trop maigre pour être indexée. */
 export const MIN_DISHES_FOR_INDEX = 3;
 
-/**
- * Plats chargés par une page ville / catégorie (HomePageContent). Au-delà de ce
- * volume par catégorie, une page ville ne voit que le haut du classement national :
- * à remplacer par une RPC filtrée par ville quand une catégorie dépassera 100 plats.
- */
+/** Plats affichés au plus par une page ville / catégorie (HomePageContent). */
 export const SHOWN_DISHES_LIMIT = 100;
+
+/**
+ * Plats parcourus pour trouver ceux d'une ville. Filtrer le top 100 NATIONAL par
+ * ville (avant) vidait les pages des villes moins bien notées dès que la base
+ * dépassait 100 plats — elle en compte 99 au 25/10/2026. À remplacer par une RPC
+ * filtrée par ville quand la base approchera ce volume.
+ */
+const SCAN_LIMIT = 1000;
 
 /** Même ville, quelle que soit la graphie en base (« Lyon », « LYON », « Saint-Étienne »). */
 export function sameCity(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -32,14 +37,19 @@ export function sameCity(a: string | null | undefined, b: string | null | undefi
   return citySlug(a) === citySlug(b);
 }
 
+/** Tous les plats (avec photo) d'une catégorie, ou de la ville, avant le plafond d'affichage. */
+async function allDishes(category?: string, city?: string): Promise<DishRow[]> {
+  const dishes = await fetchDishes(category, SCAN_LIMIT);
+  return city ? dishes.filter((d) => sameCity(d.restaurant_city, city)) : dishes;
+}
+
 /**
  * Les plats qu'une page ville / catégorie affiche. Lève en cas d'erreur réseau :
- * une erreur passagère ne doit pas se déguiser en « page vide » (noindex mis en cache
- * une heure par l'ISR) ; la page répond 500 et Google repasse plus tard.
+ * une erreur passagère ne doit pas se déguiser en « page vide » (noindex) ; rendue
+ * dans la page, elle répond 500 et Google repasse.
  */
 export async function shownDishes(category?: string, city?: string): Promise<DishRow[]> {
-  const dishes = await fetchDishes(category, SHOWN_DISHES_LIMIT);
-  return city ? dishes.filter((d) => sameCity(d.restaurant_city, city)) : dishes;
+  return (await allDishes(category, city)).slice(0, SHOWN_DISHES_LIMIT);
 }
 
 /**
@@ -59,7 +69,7 @@ export function isIndexableWith(dishes: DishRow[], category?: string, city?: str
  */
 export async function dishCountByCity(category?: string): Promise<Map<string, { city: string; n: number }>> {
   const byCity = new Map<string, { city: string; n: number }>();
-  for (const d of await shownDishes(category)) {
+  for (const d of await allDishes(category)) {
     if (!d.restaurant_city) continue;
     const key = citySlug(d.restaurant_city);
     if (!key) continue;
@@ -98,30 +108,56 @@ export interface CategoryIndex {
 }
 
 const INDEX_TTL_MS = 30 * 60 * 1000;
-let indexCache: { at: number; value: Promise<CategoryIndex> } | null = null;
+let indexCache: { at: number; value: Promise<CategoryIndex>; settled?: CategoryIndex } | null = null;
 
 /**
  * Comptes de plats affichés pour toutes les catégories ayant des avis (+ parents de
- * hiérarchie), calculés une fois et gardés 30 min : le sitemap et chaque bloc de
- * liens internes s'en servent sans relancer ~70 RPC chacun. Une erreur n'est pas
- * gardée en cache.
+ * hiérarchie) : un appel par catégorie, gardé 30 min. Périmé, l'index précédent
+ * reste servi pendant qu'un nouveau se calcule (aucune page n'attend le recalcul) ;
+ * une erreur n'est pas gardée.
  */
 export function fetchCategoryIndex(): Promise<CategoryIndex> {
-  if (indexCache && Date.now() - indexCache.at < INDEX_TTL_MS) return indexCache.value;
+  const now = Date.now();
+  if (indexCache && now - indexCache.at < INDEX_TTL_MS) return indexCache.value;
+  const previous = indexCache?.settled;
   const value = buildCategoryIndex();
-  indexCache = { at: Date.now(), value };
-  value.catch(() => {
-    if (indexCache?.value === value) indexCache = null;
-  });
-  return value;
+  const entry: { at: number; value: Promise<CategoryIndex>; settled?: CategoryIndex } = { at: now, value };
+  indexCache = entry;
+  value.then(
+    (v) => {
+      entry.settled = v;
+    },
+    () => {
+      // Échec : on garde l'index précédent (s'il existe) et on retente dans une minute.
+      if (indexCache !== entry) return;
+      indexCache = previous
+        ? { at: Date.now() - INDEX_TTL_MS + 60_000, value: Promise.resolve(previous), settled: previous }
+        : null;
+    },
+  );
+  return previous ? Promise.resolve(previous) : value;
 }
 
 async function buildCategoryIndex(): Promise<CategoryIndex> {
   const [categories, cities] = await Promise.all([fetchCategories(), dishCountByCity()]);
-  const slugs = [...new Set([...categories.map((c) => c.slug), ...HIERARCHY_PARENT_SLUGS])];
-  const entries = await mapLimit(slugs, 6, async (slug) => {
-    const [dishes, byCity] = await Promise.all([shownDishes(slug), dishCountByCity(slug)]);
-    return [slug, { total: dishes.length, byCity }] as const;
+  const slugs = [
+    ...new Set([...categories.map((c) => c.slug), ...HIERARCHY_PARENT_SLUGS, ...allParentSlugs()]),
+  ];
+  const entries = await mapLimit(slugs, 4, async (slug) => {
+    const dishes = await allDishes(slug);
+    const byCity = new Map<string, { city: string; n: number }>();
+    for (const d of dishes) {
+      if (!d.restaurant_city) continue;
+      const key = citySlug(d.restaurant_city);
+      if (!key) continue;
+      const cur = byCity.get(key);
+      if (!cur) byCity.set(key, { city: d.restaurant_city, n: 1 });
+      else {
+        cur.n += 1;
+        if (isMixedCase(d.restaurant_city) && !isMixedCase(cur.city)) cur.city = d.restaurant_city;
+      }
+    }
+    return [slug, { total: Math.min(dishes.length, SHOWN_DISHES_LIMIT), byCity }] as const;
   });
   return { categories: new Map(entries), cities };
 }

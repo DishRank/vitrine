@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
 import { fetchCities, fetchAllCategorySlugs } from '@/lib/supabase';
 import { buildSeoMetadata } from '@/lib/seoMetadata';
@@ -21,8 +21,7 @@ function categoryPath(locale: string, category: string): string {
 
 async function resolveParams(city: string, category: string) {
   // Pas de `.catch` : une liste vide par erreur ferait conclure « ville inconnue » et
-  // déclencherait une redirection PERMANENTE (308, gardée par Google et les
-  // navigateurs) d'une page valable. Une erreur répond 500, Google repasse.
+  // redirigerait une page valable. Une erreur répond 500, Google repasse.
   const [allCities, allCategorySlugs] = await Promise.all([fetchCities(), fetchAllCategorySlugs()]);
   const cityName = cityFromSlug(city, allCities);
   const validCategory = (allCategorySlugs.has(category) || hasChildren(category)) ? category : null;
@@ -33,9 +32,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const { locale, city, category } = await params;
   const sp = await searchParams;
   const { cityName, validCategory } = await resolveParams(city, category);
-  // Même redirection que la page (cf. plus bas), dès les métadonnées : la réponse
-  // part en 308 avant tout rendu.
-  if (!cityName && validCategory) permanentRedirect(categoryPath(locale, validCategory));
+  // Même redirection que la page (cf. plus bas).
+  if (!cityName && validCategory) redirect(categoryPath(locale, validCategory));
   if (!cityName || !validCategory) return { robots: { index: false, follow: false } };
 
   // Plats de CETTE ville affichés par la page (avant : le top 50 national filtré par
@@ -61,7 +59,10 @@ export default async function CityCategoryPage({ params, searchParams }: Props) 
   // Ville inconnue mais catégorie valable : les anciennes URL (?categorie=…&ville=Rouen,
   // redirigées par le proxy vers /rouen/<cat>) et les villes sans restaurant mènent à la
   // page catégorie plutôt qu'à un 404 — 1 227 URL en « Introuvable » dans Search Console.
-  if (!cityName && validCategory) permanentRedirect(categoryPath(locale, validCategory));
+  // Redirection TEMPORAIRE (307) : la ville peut avoir des restaurants demain, et une
+  // 308 resterait gravée dans les navigateurs et chez Google. Rendue avant tout
+  // <Suspense> (pas de loading.tsx ici) : c'est un vrai en-tête HTTP.
+  if (!cityName && validCategory) redirect(categoryPath(locale, validCategory));
   if (!cityName || !validCategory) notFound();
 
   return (

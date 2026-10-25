@@ -20,7 +20,9 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   // Accept either a real DB slug OR a hierarchy-only virtual parent
   // (e.g. european, drinks, middle-eastern) — those don't exist in the DB
   // but aggregate real children via expandCategorySlug.
-  const all = await fetchAllCategorySlugs().catch(() => new Set<string>());
+  // Pas de `.catch` : une liste vide par erreur changeait une catégorie valable en
+  // 404 / noindex. Une erreur répond 500, Google repasse.
+  const all = await fetchAllCategorySlugs();
   if (!all.has(category) && !hasChildren(category)) return { robots: { index: false, follow: false } };
 
   // Page trop maigre (moins de MIN_DISHES_FOR_INDEX plats affichés) : noindex, mais
@@ -36,10 +38,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   const sp = await searchParams;
 
-  const [allCategorySlugs, allCities] = await Promise.all([
-    fetchAllCategorySlugs().catch(() => new Set<string>()),
-    fetchCities().catch(() => [] as string[]),
-  ]);
+  const [allCategorySlugs, allCities] = await Promise.all([fetchAllCategorySlugs(), fetchCities()]);
   if (!allCategorySlugs.has(category) && !hasChildren(category)) notFound();
 
   return (

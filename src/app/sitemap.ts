@@ -10,12 +10,28 @@ import {
 } from '@/lib/indexable';
 
 /**
- * Régénéré en arrière-plan toutes les 6 h (ISR) au lieu d'à chaque requête.
+ * Régénéré en arrière-plan toutes les heures (ISR) au lieu d'à chaque requête.
  * En `force-dynamic`, le sitemap mettait ~22 s à répondre (1,7 Mo, une vingtaine de
  * requêtes à la base à froid) : Search Console ne l'avait plus relu depuis le
- * 14/05/2026. Servi depuis le cache, il répond immédiatement.
+ * 14/05/2026. Servi depuis le cache, il répond immédiatement. Une heure plutôt que
+ * six : une fiche qui perd son dernier avis répond 404 tout de suite, le sitemap ne
+ * doit pas l'annoncer une demi-journée de plus.
  */
-export const revalidate = 21600;
+export const revalidate = 3600;
+
+/**
+ * Au build, la génération ne doit pas approcher `staticPageGenerationTimeout` (60 s) :
+ * au-delà de 40 s on publie l'accueil seul, régénéré une heure plus tard.
+ */
+const BUILD_TIMEOUT_MS = 40_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`sitemap: plus de ${ms / 1000} s`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
 
 const BASE = 'https://dishrank.fr';
 const LOCALES = ['fr', 'en', 'es', 'de', 'it'];
@@ -80,14 +96,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/pro`, changeFrequency: 'monthly', priority: 0.6 },
   ];
 
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
   try {
-    urls.push(...(await contentUrls()));
+    urls.push(...(await (isBuild ? withTimeout(contentUrls(), BUILD_TIMEOUT_MS) : contentUrls())));
   } catch (e) {
     // Au build, on publie au moins l'accueil (un build ne doit pas casser parce que la
     // base a hoqueté) ; il sera régénéré à la prochaine échéance. En production, on
     // relance l'erreur : l'ISR continue de servir le sitemap précédent, complet, au
-    // lieu de le remplacer six heures durant par une version amputée.
-    if (process.env.NEXT_PHASE !== 'phase-production-build') throw e;
+    // lieu de le remplacer une heure durant par une version amputée.
+    if (!isBuild) throw e;
     console.error('sitemap: données indisponibles au build', e);
   }
   return urls;
