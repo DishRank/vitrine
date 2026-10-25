@@ -6,6 +6,7 @@ import { localizedCategory } from '@/lib/categoryLabels';
 import { displayMode, orderDishes } from '@/lib/ranking';
 import { jsonLdHtml } from '@/lib/jsonLd';
 import { citySlug, cityFromSlug, restaurantSlug } from '@/lib/slug';
+import { SHOWN_DISHES_LIMIT, sameCity } from '@/lib/indexable';
 import { buildFilterPath, buildFilterUrl, buildBestCategoryFragment, buildTopDishesTitle } from '@/lib/seoMetadata';
 import Nav from './Nav';
 import Hero from './Hero';
@@ -81,7 +82,7 @@ export default async function HomePageContent({
   const isHome = !category && !city;
   try {
     [dishes, categories, recentReviews] = await Promise.all([
-      fetchDishes(category, 100),
+      fetchDishes(category, SHOWN_DISHES_LIMIT),
       fetchCategories(),
       fetchRecentReviews(12),
     ]);
@@ -89,11 +90,11 @@ export default async function HomePageContent({
     console.error('SSR fetch error:', e);
   }
 
-  // Filter by city server-side (case-insensitive substring match for safety)
+  // Plats de la ville seulement. Même comparaison que la règle d'indexation
+  // (lib/indexable) : la page affiche exactement ce que le noindex et le sitemap
+  // ont compté. (Avant : sous-chaîne — « Paris » attrapait « Cormeilles-en-Parisis ».)
   if (city) {
-    dishes = dishes.filter((d) =>
-      d.restaurant_city?.toLowerCase().includes(city.toLowerCase())
-    );
+    dishes = dishes.filter((d) => sameCity(d.restaurant_city, city));
   }
 
   // Classement seulement quand le volume d'avis le justifie ; sinon les plats

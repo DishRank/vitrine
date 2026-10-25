@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { localizedCategory } from './categoryLabels';
 import { theBestOf, isNationality, grammarFor } from './categoryGrammar';
 import { citySlug } from './slug';
+import type { DishRow } from './supabase';
+import { displayMode, orderDishes } from './ranking';
 
 const OG_LOCALE_MAP: Record<string, string> = {
   fr: 'fr_FR',
@@ -66,12 +68,20 @@ export async function buildSeoMetadata({
   category,
   city,
   hasSearchQuery = false,
+  dishes,
 }: {
   locale: string;
   category?: string; // raw slug, e.g. "burger"
   city?: string; // original DB name, e.g. "Saint-Étienne"
   /** True if a `?q=` text search is active — triggers noindex to avoid duplicate content */
   hasSearchQuery?: boolean;
+  /**
+   * Plats que la page affiche (lib/indexable `shownDishes`). Fournis, ils remplacent
+   * la description générique par les vrais plats et le vrai nombre — une description
+   * unique par page au lieu de la même phrase sur des centaines d'URLs — et
+   * retirent « Top 10 » d'un titre quand la page en montre moins.
+   */
+  dishes?: DishRow[];
 }): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: 'meta' });
 
@@ -97,6 +107,21 @@ export async function buildSeoMetadata({
   } else if (city) {
     title = t('titleWithCity', { city: cityLabel });
     description = t('descWithCity', { city: cityLabel });
+  }
+
+  if (dishes && dishes.length > 0 && (city || category)) {
+    const count = dishes.length;
+    const list = dishList(dishes);
+    if (category && city) {
+      if (count < 10) {
+        title = t('titleWithCityCategoryFew', { category: categoryLabel, city: cityLabel, bestCategory, count });
+      }
+      description = t('descCityCategoryDishes', { city: cityLabel, bestCategory, dishes: list, count });
+    } else if (category) {
+      description = t('descCategoryDishes', { bestCategory, dishes: list, count });
+    } else {
+      description = t('descCityDishes', { city: cityLabel, dishes: list, count });
+    }
   }
 
   return {
@@ -135,6 +160,25 @@ export async function buildSeoMetadata({
       },
     },
   };
+}
+
+/**
+ * « Burger Signature (Big Fernand), Quenelle (Café Comptoir) » — les premiers plats
+ * dans l'ordre où la page les affiche, assez pour ~90 caractères (la description
+ * reste sous la troncature de Google, ~155).
+ */
+function dishList(dishes: DishRow[]): string {
+  const ordered = orderDishes(dishes, displayMode(dishes, 3));
+  const parts: string[] = [];
+  let len = 0;
+  for (const d of ordered) {
+    const item = d.restaurant_name ? `${d.dish_name} (${d.restaurant_name})` : d.dish_name;
+    if (parts.length > 0 && len + item.length > 90) break;
+    parts.push(item);
+    len += item.length + 2;
+    if (parts.length === 3) break;
+  }
+  return parts.join(', ');
 }
 
 /**

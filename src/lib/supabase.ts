@@ -216,85 +216,30 @@ export function fetchAllCategorySlugs(): Promise<Set<string>> {
 }
 
 /**
- * All (city, category-slug) pairs that have at least one moderated review,
- * with the dish count per pair. Drives the sitemap so every page that
- * actually has content is referenced for indexing.
- *
- * Uses both the junction `review_categories` (multi-category reviews) and
- * the legacy `reviews.category_id` so a review without junction rows still
- * surfaces under its primary category. A review tagged with N categories
- * generates N sitemap entries — wanted, since each /<city>/<cat> page
- * legitimately renders that dish.
+ * Toutes les villes de `restaurants`. Paginé : PostgREST plafonne une réponse à
+ * 1 000 lignes et la table en compte ~4 900. Sans pagination (avant le 25/10),
+ * seules les villes des 1 000 premières lignes existaient pour le site — 48 sur 152 :
+ * /bordeaux, /bordeaux/r/osteria-palatino (une des rares pages qui recevait des
+ * clics) répondaient 404 ou noindex selon l'ordre renvoyé par la base.
  */
-export interface CityCategoryPair {
-  city: string;
-  category_slug: string;
-  dish_count: number;
-}
-export function fetchCityCategoryPairs(): Promise<CityCategoryPair[]> {
-  return cached('city-category-pairs', THIRTY_MIN, async () => {
-    const supabase = getSupabase();
-    // Single query, joins reviews → restaurants (city) and falls back from the
-    // junction to the legacy column when the junction has no row for a review.
-    const { data, error } = await supabase.rpc('get_city_category_pairs');
-    if (!error && data) return (data || []) as CityCategoryPair[];
-    // Fallback: assemble client-side if the RPC doesn't exist yet.
-    const [reviewsRes, junctionRes, restosRes, catsRes] = await Promise.all([
-      supabase
-        .from('reviews')
-        .select('id, restaurant_id, category_id')
-        .not('pending_moderation', 'is', true),
-      supabase.from('review_categories').select('review_id, category_id'),
-      supabase.from('restaurants').select('id, city').not('city', 'is', null),
-      supabase.from('dish_categories').select('id, slug'),
-    ]);
-    if (reviewsRes.error) throw reviewsRes.error;
-    if (restosRes.error) throw restosRes.error;
-    if (catsRes.error) throw catsRes.error;
-
-    const cityById = new Map<string, string>();
-    for (const r of (restosRes.data || []) as Array<{ id: string; city: string | null }>) {
-      if (r.city) cityById.set(r.id, r.city);
-    }
-    const slugById = new Map<string, string>();
-    for (const c of (catsRes.data || []) as Array<{ id: string; slug: string }>) {
-      slugById.set(c.id, c.slug);
-    }
-    const junctionByReview = new Map<string, Set<string>>();
-    for (const j of (junctionRes.data || []) as Array<{ review_id: string; category_id: string }>) {
-      const set = junctionByReview.get(j.review_id) || new Set<string>();
-      set.add(j.category_id);
-      junctionByReview.set(j.review_id, set);
-    }
-
-    const counts = new Map<string, { city: string; category_slug: string; n: number }>();
-    for (const rv of (reviewsRes.data || []) as Array<{ id: string; restaurant_id: string; category_id: string | null }>) {
-      const city = cityById.get(rv.restaurant_id);
-      if (!city) continue;
-      const catIds = junctionByReview.get(rv.id) || (rv.category_id ? new Set([rv.category_id]) : new Set<string>());
-      for (const cid of catIds) {
-        const slug = slugById.get(cid);
-        if (!slug) continue;
-        const key = `${city}::${slug}`;
-        const cur = counts.get(key);
-        if (cur) cur.n += 1;
-        else counts.set(key, { city, category_slug: slug, n: 1 });
-      }
-    }
-    return [...counts.values()].map((v) => ({ city: v.city, category_slug: v.category_slug, dish_count: v.n }));
-  });
-}
-
 export function fetchCities(): Promise<string[]> {
   return cached('cities:all', THIRTY_MIN, async () => {
-    const { data, error } = await getSupabase()
-      .from('restaurants')
-      .select('city')
-      .not('city', 'is', null);
-    if (error) throw error;
+    const supabase = getSupabase();
     const set = new Set<string>();
-    for (const row of (data || []) as Array<{ city: string | null }>) {
-      if (row.city) set.add(row.city);
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('city')
+        .not('city', 'is', null)
+        .order('id')
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const page = (data || []) as Array<{ city: string | null }>;
+      for (const row of page) {
+        if (row.city) set.add(row.city);
+      }
+      if (page.length < PAGE) break;
     }
     return [...set].sort((a, b) => a.localeCompare(b));
   });

@@ -141,14 +141,17 @@ function buildRestaurantFaq(
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, city, restoSlug } = await params;
 
-  let allCities: string[] = [];
-  try {
-    allCities = await fetchCities();
-  } catch {}
+  // Sans `.catch` : une liste de villes vide par erreur donnerait un 404 (gardé une
+  // heure par l'ISR) sur une page valable. Une erreur répond 500, Google repasse.
+  const allCities = await fetchCities();
   const cityName = cityFromSlug(city, allCities);
   if (!cityName) return { robots: { index: false, follow: false } };
 
-  const restaurant = await fetchRestaurantBySlug(cityName, restoSlug).catch(() => null);
+  // Pas de `.catch` sur ce qui décide de l'indexation : une erreur passagère de la base
+  // se transformait en noindex (ou en fiche « carte » vide), mis en cache une heure par
+  // l'ISR — Search Console listait des fiches notées en « exclue par noindex ». Une
+  // erreur répond maintenant 500 et Google repasse.
+  const restaurant = await fetchRestaurantBySlug(cityName, restoSlug);
   if (!restaurant) return { robots: { index: false, follow: false } };
 
   // Titre / description SEO — leveragent le nom + la ville pour matcher les
@@ -173,9 +176,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // prix — sinon le visiteur arrive déçu et Google voit un titre démenti par la page.
   let title = titleByLocale[locale] || titleByLocale.fr;
   let description = descByLocale[locale] || descByLocale.fr;
-  const aDesPlatsNotes = (await fetchDishesForRestaurant(restaurant.id).catch(() => [])).length > 0;
+  const aDesPlatsNotes = (await fetchDishesForRestaurant(restaurant.id)).length > 0;
   if (!aDesPlatsNotes) {
-    const nbPlats = compterPlats(await fetchMenuTree(restaurant.id).catch(() => []));
+    const nbPlats = compterPlats(await fetchMenuTree(restaurant.id));
     if (!estVilleCarte(cityName) || nbPlats < MIN_PLATS_CARTE) {
       return { robots: { index: false, follow: false } };
     }
@@ -239,10 +242,9 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
   setRequestLocale(locale);
   const sp = await searchParams;
 
-  let allCities: string[] = [];
-  try {
-    allCities = await fetchCities();
-  } catch {}
+  // Sans `.catch` : une liste de villes vide par erreur donnerait un 404 (gardé une
+  // heure par l'ISR) sur une page valable. Une erreur répond 500, Google repasse.
+  const allCities = await fetchCities();
 
   const cityName = cityFromSlug(city, allCities);
   if (!cityName) notFound();
@@ -252,7 +254,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
 
   // Tous les plats notés du resto (stats, moyenne, JSON-LD) ; la grille
   // n'affiche que ceux qui ont une photo.
-  const dishes = await fetchDishesForRestaurant(restaurant.id).catch(() => []);
+  const dishes = await fetchDishesForRestaurant(restaurant.id);
   const gridMode = displayMode(dishes, 3);
   const gridDishes = orderDishes(dishes.filter((d) => d.cover_photo_url), gridMode);
 
@@ -262,7 +264,7 @@ export default async function RestaurantPage({ params, searchParams }: Props) {
   // Périmètre du pilote et seuil de plats : `lib/menuOnly` (partagé avec le sitemap).
   if (dishes.length === 0) {
     if (!estVilleCarte(cityName)) notFound();
-    const menus = await fetchMenuTree(restaurant.id).catch(() => []);
+    const menus = await fetchMenuTree(restaurant.id);
     if (compterPlats(menus) < MIN_PLATS_CARTE) notFound();
     return (
       <MenuOnlyPage

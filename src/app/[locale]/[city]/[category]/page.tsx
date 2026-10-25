@@ -1,11 +1,12 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
-import { fetchCities, fetchAllCategorySlugs, fetchDishes } from '@/lib/supabase';
+import { fetchCities, fetchAllCategorySlugs } from '@/lib/supabase';
 import { buildSeoMetadata } from '@/lib/seoMetadata';
 import { hasChildren } from '@/lib/categoryHierarchy';
 import { cityFromSlug } from '@/lib/slug';
 import HomePageContent from '@/components/HomePageContent';
+import { isIndexableWith, shownDishes } from '@/lib/indexable';
 
 export const revalidate = 3600;
 
@@ -14,13 +15,15 @@ type Props = {
   searchParams: Promise<{ q?: string; page?: string }>;
 };
 
-const MIN_DISHES_FOR_INDEX = 3;
+function categoryPath(locale: string, category: string): string {
+  return `${locale === 'fr' ? '' : `/${locale}`}/c/${category}`;
+}
 
 async function resolveParams(city: string, category: string) {
-  const [allCities, allCategorySlugs] = await Promise.all([
-    fetchCities().catch(() => [] as string[]),
-    fetchAllCategorySlugs().catch(() => new Set<string>()),
-  ]);
+  // Pas de `.catch` : une liste vide par erreur ferait conclure « ville inconnue » et
+  // déclencherait une redirection PERMANENTE (308, gardée par Google et les
+  // navigateurs) d'une page valable. Une erreur répond 500, Google repasse.
+  const [allCities, allCategorySlugs] = await Promise.all([fetchCities(), fetchAllCategorySlugs()]);
   const cityName = cityFromSlug(city, allCities);
   const validCategory = (allCategorySlugs.has(category) || hasChildren(category)) ? category : null;
   return { cityName, validCategory, allCities };
@@ -30,21 +33,23 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const { locale, city, category } = await params;
   const sp = await searchParams;
   const { cityName, validCategory } = await resolveParams(city, category);
+  // Même redirection que la page (cf. plus bas), dès les métadonnées : la réponse
+  // part en 308 avant tout rendu.
+  if (!cityName && validCategory) permanentRedirect(categoryPath(locale, validCategory));
   if (!cityName || !validCategory) return { robots: { index: false, follow: false } };
 
-  // Thin-content guard: city + category combo needs enough dishes to warrant
-  // indexing. For /lyon/drinks this would be drinks dishes in Lyon specifically.
-  const dishes = await fetchDishes(validCategory, 50).catch(() => []);
-  const cityDishCount = dishes.filter((d) =>
-    d.restaurant_city?.toLowerCase().includes(cityName.toLowerCase()),
-  ).length;
-  if (cityDishCount < MIN_DISHES_FOR_INDEX) {
-    return {
-      ...(await buildSeoMetadata({ locale, city: cityName, category: validCategory, hasSearchQuery: !!sp.q })),
-      robots: { index: false, follow: true },
-    };
-  }
-  return buildSeoMetadata({ locale, city: cityName, category: validCategory, hasSearchQuery: !!sp.q });
+  // Plats de CETTE ville affichés par la page (avant : le top 50 national filtré par
+  // sous-chaîne, qui comptait faux). Règle partagée avec le sitemap.
+  const dishes = await shownDishes(validCategory, cityName);
+  const seo = await buildSeoMetadata({
+    locale,
+    city: cityName,
+    category: validCategory,
+    hasSearchQuery: !!sp.q,
+    dishes,
+  });
+  if (!isIndexableWith(dishes, validCategory, cityName)) return { ...seo, robots: { index: false, follow: true } };
+  return seo;
 }
 
 export default async function CityCategoryPage({ params, searchParams }: Props) {
@@ -53,6 +58,10 @@ export default async function CityCategoryPage({ params, searchParams }: Props) 
   const sp = await searchParams;
 
   const { cityName, validCategory, allCities } = await resolveParams(city, category);
+  // Ville inconnue mais catégorie valable : les anciennes URL (?categorie=…&ville=Rouen,
+  // redirigées par le proxy vers /rouen/<cat>) et les villes sans restaurant mènent à la
+  // page catégorie plutôt qu'à un 404 — 1 227 URL en « Introuvable » dans Search Console.
+  if (!cityName && validCategory) permanentRedirect(categoryPath(locale, validCategory));
   if (!cityName || !validCategory) notFound();
 
   return (
