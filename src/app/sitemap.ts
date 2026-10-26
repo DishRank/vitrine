@@ -94,6 +94,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Landing restaurateur — seule page indexable de la zone /pro (le reste est
     // noindex). Hors [locale] (FR only) → entrée simple, sans hreflang.
     { url: `${BASE}/pro`, changeFrequency: 'monthly', priority: 0.6 },
+    // Étude de prix (FR uniquement, chiffres figés) — cf. src/app/[locale]/prix-lyon.
+    { url: `${BASE}/prix-lyon`, changeFrequency: 'monthly', priority: 0.7 },
   ];
 
   const isBuild = process.env.NEXT_PHASE === 'phase-production-build';

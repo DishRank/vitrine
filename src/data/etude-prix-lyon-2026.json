@@ -1,0 +1,342 @@
+{
+ "meta": {
+  "releve_du": "2026-09-11",
+  "releve_au": "2026-09-17",
+  "publie_le": "2026-10-27",
+  "etablissements_avec_prix": 589,
+  "etablissements_ouverts": 3235,
+  "restaurants_avec_prix": 558,
+  "restaurants_ouverts": 2400,
+  "plats_avec_prix": 18150,
+  "restos_etude": 237,
+  "prix_etude": 446,
+  "lignes_etude": 545,
+  "doublons_retires": 8
+ },
+ "dishes": [
+  {
+   "slug": "quenelle",
+   "label": "Quenelle",
+   "lyonnais": true,
+   "n": 27,
+   "median": 20.0,
+   "p10": 15.6,
+   "p25": 17.9,
+   "p75": 21.0,
+   "p90": 23.7,
+   "inside_p10_p90": 21,
+   "excluded": {
+    "hors périmètre (code postal)": 8,
+    "commerce, pas un restaurant": 14,
+    "variante non comparable": 1
+   }
+  },
+  {
+   "slug": "andouillette",
+   "label": "Andouillette",
+   "lyonnais": true,
+   "n": 30,
+   "median": 19.0,
+   "p10": 15.9,
+   "p25": 17.5,
+   "p75": 21.4,
+   "p90": 24.1,
+   "inside_p10_p90": 24,
+   "excluded": {
+    "prix hors portion servie à table": 1,
+    "hors périmètre (code postal)": 15,
+    "variante non comparable": 3,
+    "commerce, pas un restaurant": 2
+   }
+  },
+  {
+   "slug": "tartare-de-boeuf",
+   "label": "Tartare de bœuf",
+   "lyonnais": false,
+   "n": 42,
+   "median": 18.5,
+   "p10": 15.0,
+   "p25": 16.9,
+   "p75": 20.0,
+   "p90": 23.9,
+   "inside_p10_p90": 34,
+   "excluded": {
+    "hors périmètre (code postal)": 35,
+    "variante non comparable": 2
+   }
+  },
+  {
+   "slug": "burger",
+   "label": "Burger",
+   "lyonnais": false,
+   "n": 64,
+   "median": 16.65,
+   "p10": 12.9,
+   "p25": 14.5,
+   "p75": 18.5,
+   "p90": 20.0,
+   "inside_p10_p90": 51,
+   "excluded": {
+    "hors périmètre (code postal)": 95,
+    "prix hors portion servie à table": 14,
+    "variante non comparable": 21
+   }
+  },
+  {
+   "slug": "salade-lyonnaise",
+   "label": "Salade lyonnaise",
+   "lyonnais": true,
+   "n": 34,
+   "median": 14.85,
+   "p10": 11.2,
+   "p25": 12.9,
+   "p75": 15.8,
+   "p90": 19.2,
+   "inside_p10_p90": 26,
+   "excluded": {
+    "hors périmètre (code postal)": 11,
+    "variante non comparable": 1
+   }
+  },
+  {
+   "slug": "pizza-margherita",
+   "label": "Pizza margherita",
+   "lyonnais": false,
+   "n": 28,
+   "median": 12.25,
+   "p10": 9.3,
+   "p25": 10.8,
+   "p75": 13.1,
+   "p90": 14.3,
+   "inside_p10_p90": 22,
+   "excluded": {
+    "hors périmètre (code postal)": 21,
+    "variante non comparable": 2,
+    "prix hors portion servie à table": 1
+   }
+  },
+  {
+   "slug": "cafe-gourmand",
+   "label": "Café gourmand",
+   "lyonnais": false,
+   "n": 48,
+   "median": 8.5,
+   "p10": 6.4,
+   "p25": 7.5,
+   "p75": 10.0,
+   "p90": 10.0,
+   "inside_p10_p90": 39,
+   "excluded": {
+    "hors périmètre (code postal)": 25,
+    "variante non comparable": 3
+   }
+  },
+  {
+   "slug": "tarte-aux-pralines",
+   "label": "Tarte aux pralines",
+   "lyonnais": true,
+   "n": 12,
+   "median": 8.0,
+   "p10": 5.2,
+   "p25": 6.9,
+   "p75": 8.1,
+   "p90": 8.5,
+   "inside_p10_p90": 9,
+   "excluded": {
+    "hors périmètre (code postal)": 4,
+    "prix hors portion servie à table": 1,
+    "variante non comparable": 1,
+    "commerce, pas un restaurant": 1
+   }
+  },
+  {
+   "slug": "creme-brulee",
+   "label": "Crème brûlée",
+   "lyonnais": false,
+   "n": 45,
+   "median": 7.0,
+   "p10": 6.0,
+   "p25": 6.5,
+   "p75": 8.5,
+   "p90": 9.7,
+   "inside_p10_p90": 37,
+   "excluded": {
+    "hors périmètre (code postal)": 29,
+    "variante non comparable": 3,
+    "prix hors portion servie à table": 1
+   }
+  },
+  {
+   "slug": "tiramisu",
+   "label": "Tiramisu",
+   "lyonnais": false,
+   "n": 96,
+   "median": 6.1,
+   "p10": 3.5,
+   "p25": 4.5,
+   "p75": 7.5,
+   "p90": 8.2,
+   "inside_p10_p90": 79,
+   "excluded": {
+    "hors périmètre (code postal)": 44,
+    "variante non comparable": 1,
+    "prix hors portion servie à table": 2
+   }
+  },
+  {
+   "slug": "cervelle-de-canut",
+   "label": "Cervelle de canut",
+   "lyonnais": true,
+   "n": 20,
+   "median": 6.0,
+   "p10": 4.5,
+   "p25": 5.8,
+   "p75": 7.0,
+   "p90": 8.3,
+   "inside_p10_p90": 16,
+   "excluded": {
+    "variante non comparable": 6,
+    "hors périmètre (code postal)": 2,
+    "prix hors portion servie à table": 1
+   }
+  }
+ ],
+ "repas": {
+  "sum_medians": 34.0,
+  "sum_avec_salade": 42.85,
+  "lines": [
+   [
+    "Cervelle de canut",
+    6.0
+   ],
+   [
+    "Quenelle",
+    20.0
+   ],
+   [
+    "Tarte aux pralines",
+    8.0
+   ]
+  ]
+ },
+ "ecarts": {
+  "quenelle-burger": [
+   1.35,
+   4.3
+  ],
+  "quenelle-tartare de boeuf": [
+   -0.6,
+   2.05
+  ],
+  "andouillette-tartare de boeuf": [
+   -0.75,
+   2.0
+  ],
+  "andouillette-burger": [
+   1.35,
+   4.05
+  ]
+ },
+ "arrondissements": [
+  {
+   "label": "Lyon 1er",
+   "index": 106,
+   "lo": 94,
+   "hi": 116,
+   "restos": 16,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.31
+  },
+  {
+   "label": "Lyon 2e",
+   "index": 102,
+   "lo": 94,
+   "hi": 110,
+   "restos": 37,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.32
+  },
+  {
+   "label": "Lyon 3e",
+   "index": 98,
+   "lo": 94,
+   "hi": 107,
+   "restos": 40,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.33
+  },
+  {
+   "label": "Lyon 4e",
+   "index": 116,
+   "lo": 95,
+   "hi": 129,
+   "restos": 8,
+   "small": true,
+   "verdict": "dans la marge",
+   "snack_share": 0.5
+  },
+  {
+   "label": "Lyon 5e",
+   "index": 107,
+   "lo": 98,
+   "hi": 111,
+   "restos": 23,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.17
+  },
+  {
+   "label": "Lyon 6e",
+   "index": 106,
+   "lo": 101,
+   "hi": 113,
+   "restos": 40,
+   "small": false,
+   "verdict": "plus cher",
+   "snack_share": 0.42
+  },
+  {
+   "label": "Lyon 7e",
+   "index": 100,
+   "lo": 86,
+   "hi": 106,
+   "restos": 27,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.52
+  },
+  {
+   "label": "Lyon 8e",
+   "index": 73,
+   "lo": 57,
+   "hi": 88,
+   "restos": 12,
+   "small": true,
+   "verdict": "moins cher",
+   "snack_share": 0.83
+  },
+  {
+   "label": "Lyon 9e",
+   "index": 90,
+   "lo": 64,
+   "hi": 98,
+   "restos": 15,
+   "small": false,
+   "verdict": "moins cher",
+   "snack_share": 0.47
+  },
+  {
+   "label": "Villeurbanne",
+   "index": 87,
+   "lo": 74,
+   "hi": 100,
+   "restos": 19,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.58
+  }
+ ]
+}
