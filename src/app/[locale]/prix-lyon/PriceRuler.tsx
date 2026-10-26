@@ -18,7 +18,7 @@ const TICKS = [0, 5, 10, 15, 20, 25];
 
 /**
  * Règle des prix : une ligne par plat sur un même axe en euros. La bande couvre
- * 9 restaurants sur 10 (10e → 90e centile), la partie foncée la moitié centrale,
+ * 8 établissements sur 10 (10e → 90e centile), la partie foncée la moitié centrale,
  * le point le prix médian. Rendu serveur, sans JS : le détail s'affiche au survol
  * ou au focus clavier, et toutes les valeurs sont aussi dans le tableau de la méthode.
  */
@@ -26,7 +26,7 @@ export default function PriceRuler({ dishes }: { dishes: DishStat[] }) {
   return (
     <figure className="m-0">
       <figcaption className="sr-only">
-        Prix médian et fourchette de prix de {dishes.length} plats dans les restaurants de Lyon et Villeurbanne.
+        Prix médian et fourchettes de prix de {dishes.length} plats dans les établissements de Lyon et Villeurbanne.
       </figcaption>
 
       {/* Axe partagé, aligné sur la colonne des règles */}
@@ -47,7 +47,7 @@ export default function PriceRuler({ dishes }: { dishes: DishStat[] }) {
           <li
             key={d.slug}
             tabIndex={0}
-            aria-label={`${d.label} : ${euros(d.median)} en prix médian, 9 restaurants sur 10 entre ${euros(d.p10)} et ${euros(d.p90)}, ${d.n} restaurants.`}
+            aria-label={`${d.label} : ${euros(d.median)} en prix médian, 8 établissements sur 10 entre ${euros(d.p10)} et ${euros(d.p90)}, ${d.n} établissements.`}
             className="group relative grid grid-cols-[1fr_auto] sm:grid-cols-[11rem_1fr_5.5rem] items-center gap-x-4 gap-y-2 py-3 border-b border-[var(--border2)] outline-none focus-visible:bg-[var(--surface-var)]"
           >
             <div className="min-w-0">
@@ -91,7 +91,7 @@ export default function PriceRuler({ dishes }: { dishes: DishStat[] }) {
             </p>
 
             <p className="m-0 col-span-2 sm:col-start-2 sm:col-span-2 order-4 text-xs text-[var(--text2)] tabular-nums">
-              {d.n} restaurants. 9 sur 10 entre {euros(d.p10)} et {euros(d.p90)}.
+              {d.n} établissements. 8 sur 10 entre {euros(d.p10)} et {euros(d.p90)}.
             </p>
 
             {/* Détail au survol / focus (enrichit, ne remplace pas le tableau) */}
@@ -102,10 +102,10 @@ export default function PriceRuler({ dishes }: { dishes: DishStat[] }) {
               <p className="m-0 font-semibold text-[var(--text)]">{d.label}</p>
               <p className="m-0">Prix médian : {euros(d.median)}</p>
               <p className="m-0">
-                Moitié des restaurants : {euros(d.p25)} à {euros(d.p75)}
+                La moitié : {euros(d.p25)} à {euros(d.p75)}
               </p>
               <p className="m-0">
-                9 sur 10 : {euros(d.p10)} à {euros(d.p90)}
+                8 sur 10 : {euros(d.p10)} à {euros(d.p90)}
               </p>
             </div>
           </li>
@@ -123,7 +123,7 @@ export default function PriceRuler({ dishes }: { dishes: DishStat[] }) {
             style={{ background: 'color-mix(in srgb, var(--primary) 55%, transparent)' }}
             aria-hidden="true"
           />
-          La moitié des restaurants
+          La moitié des établissements
         </span>
         <span className="inline-flex items-center gap-2">
           <span
@@ -131,7 +131,7 @@ export default function PriceRuler({ dishes }: { dishes: DishStat[] }) {
             style={{ background: 'color-mix(in srgb, var(--primary) 26%, transparent)' }}
             aria-hidden="true"
           />
-          9 restaurants sur 10
+          8 établissements sur 10
         </span>
       </div>
     </figure>

@@ -4,10 +4,10 @@ export function euros(x: number): string {
   return `${s} €`;
 }
 
-/** Écart à l'indice 100 : +8 %, −28 %, « dans la moyenne » à ±1. */
+/** Écart à l'indice 100 : +8 %, −28 %, 0 % à ±1. */
 export function ecart(index: number): string {
   const d = index - 100;
-  if (Math.abs(d) <= 1) return 'dans la moyenne';
+  if (Math.abs(d) <= 1) return '0\u00a0%';
   return `${d > 0 ? '+' : '−'}${Math.abs(d)} %`;
 }
 

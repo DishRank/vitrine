@@ -3,417 +3,211 @@
   "releve_du": "2026-09-11",
   "releve_au": "2026-09-17",
   "publie_le": "2026-10-27",
-  "restos_avec_prix": 793,
-  "restos_etude": 252,
-  "prix_etude": 596,
-  "plats_avec_prix": 23926,
-  "restos_ouverts": 3387
+  "etablissements_avec_prix": 589,
+  "etablissements_ouverts": 3235,
+  "restaurants_avec_prix": 558,
+  "restaurants_ouverts": 2400,
+  "plats_avec_prix": 18150,
+  "restos_etude": 237,
+  "prix_etude": 446,
+  "lignes_etude": 545,
+  "doublons_retires": 8
  },
  "dishes": [
   {
    "slug": "quenelle",
    "label": "Quenelle",
    "lyonnais": true,
-   "n": 28,
+   "n": 27,
    "median": 20.0,
-   "p10": 15.7,
+   "p10": 15.6,
    "p25": 17.9,
    "p75": 21.0,
-   "p90": 23.6,
-   "min": 14.0,
-   "max": 29.0,
-   "cheapest": [
-    {
-     "resto": "Café du 7e art",
-     "arr": "Lyon 7e",
-     "price": 14.0,
-     "item": "Quenelle de brochet",
-     "href": "/lyon/r/cafe-du-7e-art"
-    },
-    {
-     "resto": "Chez grand père",
-     "arr": "Lyon 5e",
-     "price": 14.9,
-     "item": "Pike quenelle with lobster sauce",
-     "href": "/lyon/r/chez-grand-pere"
-    },
-    {
-     "resto": "Le Petit Glouton",
-     "arr": "Lyon 5e",
-     "price": 14.9,
-     "item": "Quenelle de brochet",
-     "href": "/lyon/r/le-petit-glouton"
-    }
-   ]
+   "p90": 23.7,
+   "inside_p10_p90": 21,
+   "excluded": {
+    "hors périmètre (code postal)": 8,
+    "commerce, pas un restaurant": 14,
+    "variante non comparable": 1
+   }
   },
   {
    "slug": "andouillette",
    "label": "Andouillette",
    "lyonnais": true,
-   "n": 32,
-   "median": 19.45,
-   "p10": 16.0,
+   "n": 30,
+   "median": 19.0,
+   "p10": 15.9,
    "p25": 17.5,
-   "p75": 21.5,
-   "p90": 23.9,
-   "min": 12.0,
-   "max": 27.9,
-   "cheapest": [
-    {
-     "resto": "Grand café du commerce",
-     "arr": "Lyon 9e",
-     "price": 12.0,
-     "item": "Andouillette sauce moutarde",
-     "href": "/lyon/r/grand-cafe-du-commerce"
-    },
-    {
-     "resto": "Café du 7e art",
-     "arr": "Lyon 7e",
-     "price": 14.0,
-     "item": "Andouillette",
-     "href": "/lyon/r/cafe-du-7e-art"
-    },
-    {
-     "resto": "Le Petit Glouton",
-     "arr": "Lyon 5e",
-     "price": 14.9,
-     "item": "Andouillette Lyonnaise sauce moutarde",
-     "href": "/lyon/r/le-petit-glouton"
-    }
-   ]
+   "p75": 21.4,
+   "p90": 24.1,
+   "inside_p10_p90": 24,
+   "excluded": {
+    "prix hors portion servie à table": 1,
+    "hors périmètre (code postal)": 15,
+    "variante non comparable": 3,
+    "commerce, pas un restaurant": 2
+   }
   },
   {
    "slug": "tartare-de-boeuf",
    "label": "Tartare de bœuf",
    "lyonnais": false,
-   "n": 45,
+   "n": 42,
    "median": 18.5,
    "p10": 15.0,
    "p25": 16.9,
-   "p75": 21.0,
-   "p90": 24.0,
-   "min": 12.0,
-   "max": 39.0,
-   "cheapest": [
-    {
-     "resto": "Grand café du commerce",
-     "arr": "Lyon 9e",
-     "price": 12.0,
-     "item": "Tartare de bœuf charolais",
-     "href": "/lyon/r/grand-cafe-du-commerce"
-    },
-    {
-     "resto": "Orizzo Lyon",
-     "arr": "Lyon 2e",
-     "price": 12.0,
-     "item": "Tartare de bœuf - chili oil",
-     "href": "/lyon/r/orizzo-lyon"
-    },
-    {
-     "resto": "Bro’s - The Brew Brothers",
-     "arr": "Lyon 6e",
-     "price": 13.5,
-     "item": "Tartare de bœuf Charolais tomate",
-     "href": "/lyon/r/bros-the-brew-brothers"
-    }
-   ]
+   "p75": 20.0,
+   "p90": 23.9,
+   "inside_p10_p90": 34,
+   "excluded": {
+    "hors périmètre (code postal)": 35,
+    "variante non comparable": 2
+   }
   },
   {
    "slug": "burger",
    "label": "Burger",
    "lyonnais": false,
-   "n": 76,
-   "median": 16.4,
+   "n": 64,
+   "median": 16.65,
    "p10": 12.9,
    "p25": 14.5,
-   "p75": 18.0,
+   "p75": 18.5,
    "p90": 20.0,
-   "min": 7.9,
-   "max": 25.0,
-   "cheapest": [
-    {
-     "resto": "Les Tontons Burgers des Burgers qui flinguent Vaise",
-     "arr": "Lyon 9e",
-     "price": 7.9,
-     "item": "Burger Tonton BBQ",
-     "href": "/lyon/r/les-tontons-burgers-des-burgers-qui-flinguent-vaise"
-    },
-    {
-     "resto": "Tacosland",
-     "arr": "Lyon 5e",
-     "price": 9.0,
-     "item": "Maxi Burger",
-     "href": "/lyon/r/tacosland"
-    },
-    {
-     "resto": "Food'Lab",
-     "arr": "Lyon 3e",
-     "price": 9.9,
-     "item": "Chicken Burger",
-     "href": "/lyon/r/foodlab"
-    }
-   ]
+   "inside_p10_p90": 51,
+   "excluded": {
+    "hors périmètre (code postal)": 95,
+    "prix hors portion servie à table": 14,
+    "variante non comparable": 21
+   }
   },
   {
    "slug": "salade-lyonnaise",
    "label": "Salade lyonnaise",
    "lyonnais": true,
-   "n": 36,
+   "n": 34,
    "median": 14.85,
-   "p10": 10.5,
+   "p10": 11.2,
    "p25": 12.9,
-   "p75": 15.6,
-   "p90": 18.9,
-   "min": 7.5,
-   "max": 23.0,
-   "cheapest": [
-    {
-     "resto": "Les Délices de la Villette",
-     "arr": "Lyon 3e",
-     "price": 7.5,
-     "item": "Salade lyonnaise",
-     "href": "/lyon/r/les-delices-de-la-villette"
-    },
-    {
-     "resto": "Le Bistrot d'Abel",
-     "arr": "Lyon 2e",
-     "price": 9.0,
-     "item": "Salade Lyonnaise",
-     "href": "/lyon/r/le-bistrot-dabel"
-    },
-    {
-     "resto": "Grand café du commerce",
-     "arr": "Lyon 9e",
-     "price": 9.5,
-     "item": "Salade lyonnaise",
-     "href": "/lyon/r/grand-cafe-du-commerce"
-    }
-   ]
+   "p75": 15.8,
+   "p90": 19.2,
+   "inside_p10_p90": 26,
+   "excluded": {
+    "hors périmètre (code postal)": 11,
+    "variante non comparable": 1
+   }
   },
   {
    "slug": "pizza-margherita",
    "label": "Pizza margherita",
    "lyonnais": false,
-   "n": 29,
-   "median": 12.0,
-   "p10": 9.4,
-   "p25": 10.9,
-   "p75": 13.0,
-   "p90": 14.2,
-   "min": 6.0,
-   "max": 15.5,
-   "cheapest": [
-    {
-     "resto": "Tacos Time",
-     "arr": "Lyon 8e",
-     "price": 6.0,
-     "item": "Margherita",
-     "href": "/lyon/r/tacos-time"
-    },
-    {
-     "resto": "Pizza Crostino",
-     "arr": "Lyon 6e",
-     "price": 9.0,
-     "item": "Margherita 🍅",
-     "href": "/lyon/r/pizza-crostino"
-    },
-    {
-     "resto": "Sapore",
-     "arr": "Lyon 3e",
-     "price": 9.0,
-     "item": "Margherita",
-     "href": "/lyon/r/sapore"
-    }
-   ]
+   "n": 28,
+   "median": 12.25,
+   "p10": 9.3,
+   "p25": 10.8,
+   "p75": 13.1,
+   "p90": 14.3,
+   "inside_p10_p90": 22,
+   "excluded": {
+    "hors périmètre (code postal)": 21,
+    "variante non comparable": 2,
+    "prix hors portion servie à table": 1
+   }
   },
   {
    "slug": "cafe-gourmand",
    "label": "Café gourmand",
    "lyonnais": false,
-   "n": 50,
+   "n": 48,
    "median": 8.5,
-   "p10": 6.5,
+   "p10": 6.4,
    "p25": 7.5,
    "p75": 10.0,
    "p90": 10.0,
-   "min": 5.6,
-   "max": 12.0,
-   "cheapest": [
-    {
-     "resto": "La Cabane",
-     "arr": "Lyon 2e",
-     "price": 5.6,
-     "item": "Café gourmand",
-     "href": "/lyon/r/la-cabane"
-    },
-    {
-     "resto": "Chang Thaï",
-     "arr": "Lyon 7e",
-     "price": 5.9,
-     "item": "Café gourmand",
-     "href": "/lyon/r/chang-thai"
-    },
-    {
-     "resto": "Nók Nók",
-     "arr": "Lyon 3e",
-     "price": 5.9,
-     "item": "Café gourmand",
-     "href": "/lyon/r/nok-nok"
-    }
-   ]
+   "inside_p10_p90": 39,
+   "excluded": {
+    "hors périmètre (code postal)": 25,
+    "variante non comparable": 3
+   }
   },
   {
    "slug": "tarte-aux-pralines",
    "label": "Tarte aux pralines",
    "lyonnais": true,
-   "n": 13,
+   "n": 12,
    "median": 8.0,
-   "p10": 5.3,
-   "p25": 6.5,
-   "p75": 8.0,
+   "p10": 5.2,
+   "p25": 6.9,
+   "p75": 8.1,
    "p90": 8.5,
-   "min": 4.2,
-   "max": 9.5,
-   "cheapest": [
-    {
-     "resto": "Mill Factory",
-     "arr": "Lyon 5e",
-     "price": 4.2,
-     "item": "Tarte praline",
-     "href": "/lyon/r/mill-factory"
-    },
-    {
-     "resto": "Le Coq Gourmand",
-     "arr": "Lyon 1er",
-     "price": 5.0,
-     "item": "Tarte aux pralines",
-     "href": "/lyon/r/le-coq-gourmand"
-    },
-    {
-     "resto": "Bocuse Original Comptoir",
-     "arr": "Lyon 9e",
-     "price": 6.5,
-     "item": "Tartelette pralines",
-     "href": "/lyon/r/bocuse-original-comptoir"
-    }
-   ]
+   "inside_p10_p90": 9,
+   "excluded": {
+    "hors périmètre (code postal)": 4,
+    "prix hors portion servie à table": 1,
+    "variante non comparable": 1,
+    "commerce, pas un restaurant": 1
+   }
   },
   {
    "slug": "creme-brulee",
    "label": "Crème brûlée",
    "lyonnais": false,
-   "n": 46,
+   "n": 45,
    "median": 7.0,
    "p10": 6.0,
    "p25": 6.5,
    "p75": 8.5,
    "p90": 9.7,
-   "min": 4.2,
-   "max": 12.0,
-   "cheapest": [
-    {
-     "resto": "La Cabane",
-     "arr": "Lyon 2e",
-     "price": 4.2,
-     "item": "Crème Brûlée",
-     "href": "/lyon/r/la-cabane"
-    },
-    {
-     "resto": "Café du 7e art",
-     "arr": "Lyon 7e",
-     "price": 5.5,
-     "item": "Crème Brûlée",
-     "href": "/lyon/r/cafe-du-7e-art"
-    },
-    {
-     "resto": "Sapore",
-     "arr": "Lyon 3e",
-     "price": 5.5,
-     "item": "Crème brûlée",
-     "href": "/lyon/r/sapore"
-    }
-   ]
-  },
-  {
-   "slug": "cervelle-de-canut",
-   "label": "Cervelle de canut",
-   "lyonnais": true,
-   "n": 22,
-   "median": 6.5,
-   "p10": 4.5,
-   "p25": 6.0,
-   "p75": 7.2,
-   "p90": 8.0,
-   "min": 3.5,
-   "max": 15.9,
-   "cheapest": [
-    {
-     "resto": "Restaurant DamA Lyon",
-     "arr": "Lyon 6e",
-     "price": 3.5,
-     "item": "Cervelle de canut",
-     "href": "/lyon/r/restaurant-dama-lyon"
-    },
-    {
-     "resto": "Bouchon Bât d'Argent",
-     "arr": "Lyon 1er",
-     "price": 4.0,
-     "item": "Cervelle de Canut",
-     "href": "/lyon/r/bouchon-bat-dargent"
-    },
-    {
-     "resto": "La Chimère",
-     "arr": "Lyon 5e",
-     "price": 4.5,
-     "item": "Cervelle de canut",
-     "href": "/lyon/r/la-chimere"
-    }
-   ]
+   "inside_p10_p90": 37,
+   "excluded": {
+    "hors périmètre (code postal)": 29,
+    "variante non comparable": 3,
+    "prix hors portion servie à table": 1
+   }
   },
   {
    "slug": "tiramisu",
    "label": "Tiramisu",
    "lyonnais": false,
-   "n": 97,
-   "median": 6.2,
+   "n": 96,
+   "median": 6.1,
    "p10": 3.5,
    "p25": 4.5,
    "p75": 7.5,
    "p90": 8.2,
-   "min": 3.0,
-   "max": 13.0,
-   "cheapest": [
-    {
-     "resto": "Burgerium",
-     "arr": "Villeurbanne",
-     "price": 3.0,
-     "item": "Tiramisu maison (Oréo / Spéculos )",
-     "href": "/lyon/r/burgerium"
-    },
-    {
-     "resto": "Le King",
-     "arr": "Lyon 8e",
-     "price": 3.0,
-     "item": "Tiramisu spéculos",
-     "href": "/lyon/r/le-king"
-    },
-    {
-     "resto": "PlanPizza Cusset",
-     "arr": "Villeurbanne",
-     "price": 3.0,
-     "item": "Tiramisu Daim",
-     "href": "/villeurbanne/r/planpizza-cusset"
-    }
-   ]
+   "inside_p10_p90": 79,
+   "excluded": {
+    "hors périmètre (code postal)": 44,
+    "variante non comparable": 1,
+    "prix hors portion servie à table": 2
+   }
+  },
+  {
+   "slug": "cervelle-de-canut",
+   "label": "Cervelle de canut",
+   "lyonnais": true,
+   "n": 20,
+   "median": 6.0,
+   "p10": 4.5,
+   "p25": 5.8,
+   "p75": 7.0,
+   "p90": 8.3,
+   "inside_p10_p90": 16,
+   "excluded": {
+    "variante non comparable": 6,
+    "hors périmètre (code postal)": 2,
+    "prix hors portion servie à table": 1
+   }
   }
  ],
  "repas": {
-  "sum_medians": 34.5,
+  "sum_medians": 34.0,
   "sum_avec_salade": 42.85,
   "lines": [
    [
     "Cervelle de canut",
-    6.5
+    6.0
    ],
    [
     "Quenelle",
@@ -423,210 +217,126 @@
     "Tarte aux pralines",
     8.0
    ]
+  ]
+ },
+ "ecarts": {
+  "quenelle-burger": [
+   1.35,
+   4.3
   ],
-  "restos": [
-   {
-    "resto": "Le bouchon des artistes",
-    "arr": "Lyon 3e",
-    "href": "/lyon/r/le-bouchon-des-artistes",
-    "total": 34.0,
-    "lines": [
-     [
-      "Cervelle de canut",
-      5.0
-     ],
-     [
-      "Quenelle",
-      21.0
-     ],
-     [
-      "Tarte aux pralines",
-      8.0
-     ]
-    ]
-   },
-   {
-    "resto": "Aux Trois Maries",
-    "arr": "Lyon 5e",
-    "href": "/lyon/r/aux-trois-maries",
-    "total": 35.5,
-    "lines": [
-     [
-      "Cervelle de canut",
-      7.0
-     ],
-     [
-      "Quenelle",
-      20.0
-     ],
-     [
-      "Tarte aux pralines",
-      8.5
-     ]
-    ]
-   },
-   {
-    "resto": "Au Petit Bouchon",
-    "arr": "Lyon 1er",
-    "href": "/lyon/r/au-petit-bouchon",
-    "total": 36.5,
-    "lines": [
-     [
-      "Cervelle de canut",
-      6.0
-     ],
-     [
-      "Andouillette",
-      21.0
-     ],
-     [
-      "Tarte aux pralines",
-      9.5
-     ]
-    ]
-   },
-   {
-    "resto": "Les Lyonnais",
-    "arr": "Lyon 5e",
-    "href": "/lyon/r/les-lyonnais",
-    "total": 39.2,
-    "lines": [
-     [
-      "Cervelle de canut",
-      7.2
-     ],
-     [
-      "Quenelle",
-      24.0
-     ],
-     [
-      "Tarte aux pralines",
-      8.0
-     ]
-    ]
-   },
-   {
-    "resto": "Chez Mamie",
-    "arr": "Lyon 5e",
-    "href": "/lyon/r/chez-mamie",
-    "total": 41.8,
-    "lines": [
-     [
-      "Cervelle de canut",
-      15.9
-     ],
-     [
-      "Andouillette",
-      18.9
-     ],
-     [
-      "Tarte aux pralines",
-      7.0
-     ]
-    ]
-   },
-   {
-    "resto": "Les Fines Gueules",
-    "arr": "Lyon 5e",
-    "href": "/lyon/r/les-fines-gueules",
-    "total": 45.5,
-    "lines": [
-     [
-      "Salade lyonnaise",
-      15.0
-     ],
-     [
-      "Quenelle",
-      22.0
-     ],
-     [
-      "Tarte aux pralines",
-      8.5
-     ]
-    ]
-   }
+  "quenelle-tartare de boeuf": [
+   -0.6,
+   2.05
+  ],
+  "andouillette-tartare de boeuf": [
+   -0.75,
+   2.0
+  ],
+  "andouillette-burger": [
+   1.35,
+   4.05
   ]
  },
  "arrondissements": [
   {
    "label": "Lyon 1er",
-   "index": 105,
-   "lo": 96,
-   "hi": 115,
-   "restos": 18,
-   "small": false
+   "index": 106,
+   "lo": 94,
+   "hi": 116,
+   "restos": 16,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.31
   },
   {
    "label": "Lyon 2e",
-   "index": 104,
+   "index": 102,
    "lo": 94,
-   "hi": 111,
-   "restos": 40,
-   "small": false
+   "hi": 110,
+   "restos": 37,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.32
   },
   {
    "label": "Lyon 3e",
    "index": 98,
    "lo": 94,
    "hi": 107,
-   "restos": 42,
-   "small": false
+   "restos": 40,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.33
   },
   {
    "label": "Lyon 4e",
-   "index": 108,
+   "index": 116,
    "lo": 95,
-   "hi": 125,
-   "restos": 9,
-   "small": true
+   "hi": 129,
+   "restos": 8,
+   "small": true,
+   "verdict": "dans la marge",
+   "snack_share": 0.5
   },
   {
    "label": "Lyon 5e",
-   "index": 105,
-   "lo": 99,
-   "hi": 113,
-   "restos": 24,
-   "small": false
+   "index": 107,
+   "lo": 98,
+   "hi": 111,
+   "restos": 23,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.17
   },
   {
    "label": "Lyon 6e",
-   "index": 104,
-   "lo": 100,
-   "hi": 112,
-   "restos": 41,
-   "small": false
+   "index": 106,
+   "lo": 101,
+   "hi": 113,
+   "restos": 40,
+   "small": false,
+   "verdict": "plus cher",
+   "snack_share": 0.42
   },
   {
    "label": "Lyon 7e",
-   "index": 103,
-   "lo": 95,
-   "hi": 108,
-   "restos": 29,
-   "small": false
+   "index": 100,
+   "lo": 86,
+   "hi": 106,
+   "restos": 27,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.52
   },
   {
    "label": "Lyon 8e",
-   "index": 72,
-   "lo": 56,
+   "index": 73,
+   "lo": 57,
    "hi": 88,
    "restos": 12,
-   "small": true
+   "small": true,
+   "verdict": "moins cher",
+   "snack_share": 0.83
   },
   {
    "label": "Lyon 9e",
-   "index": 93,
-   "lo": 71,
-   "hi": 99,
-   "restos": 16,
-   "small": false
+   "index": 90,
+   "lo": 64,
+   "hi": 98,
+   "restos": 15,
+   "small": false,
+   "verdict": "moins cher",
+   "snack_share": 0.47
   },
   {
    "label": "Villeurbanne",
    "index": 87,
    "lo": 74,
    "hi": 100,
-   "restos": 21,
-   "small": false
+   "restos": 19,
+   "small": false,
+   "verdict": "dans la marge",
+   "snack_share": 0.58
   }
  ]
 }

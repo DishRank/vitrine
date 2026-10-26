@@ -10,7 +10,7 @@ const TICKS = [60, 80, 100, 120];
  * Indice de prix par arrondissement (100 = prix médian lyonnais pour les mêmes
  * plats). Le point est l'indice, le trait sa marge d'incertitude à 90 %
  * (rééchantillonnage par restaurant). Les arrondissements avec moins de
- * 15 restaurants sont signalés en texte, pas seulement par la couleur.
+ * 15 établissements sont signalés en texte, pas seulement par la couleur.
  */
 export default function ArrondissementChart({ rows }: { rows: ArrStat[] }) {
   return (
@@ -36,13 +36,13 @@ export default function ArrondissementChart({ rows }: { rows: ArrStat[] }) {
           <li
             key={r.label}
             tabIndex={0}
-            aria-label={`${r.label} : indice ${r.index}, ${ecart(r.index)}, marge de ${r.lo} à ${r.hi}, ${r.restos} restaurants${r.small ? ', peu de restaurants' : ''}.`}
+            aria-label={`${r.label} : indice ${r.index}, ${ecart(r.index)}, marge de ${r.lo} à ${r.hi}, ${r.restos} établissements${r.small ? ', peu de données' : ''}.`}
             className="group relative grid grid-cols-[1fr_auto] sm:grid-cols-[9rem_1fr_7.5rem] items-center gap-x-4 gap-y-1 py-2.5 border-b border-[var(--border2)] outline-none focus-visible:bg-[var(--surface-var)]"
           >
             <div className="min-w-0">
               <p className="m-0 font-semibold text-[var(--text)] leading-tight">{r.label}</p>
               <p className="m-0 text-xs text-[var(--text2)]">
-                {r.restos} restaurants{r.small ? ', peu de données' : ''}
+                {r.restos} établissements{r.small ? ', peu de données' : ''}
               </p>
             </div>
 
@@ -101,7 +101,7 @@ export default function ArrondissementChart({ rows }: { rows: ArrStat[] }) {
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="inline-block w-3 h-3 rounded-full bg-[var(--text3)]" aria-hidden="true" />
-          Moins de 15 restaurants
+          Moins de 15 établissements
         </span>
       </div>
     </figure>
