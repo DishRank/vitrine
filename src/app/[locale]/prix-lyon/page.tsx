@@ -91,6 +91,13 @@ export default async function PrixLyonPage({ params }: Props) {
     datePublished: meta.publie_le,
     inLanguage: 'fr',
     distribution: [{ '@type': 'DataDownload', encodingFormat: 'text/csv', contentUrl: `${SITE}${CSV}` }],
+    // Conditions maison, pas Creative Commons : le CSV reprend des libellés de
+    // cartes qui ne nous appartiennent pas tous.
+    license: {
+      '@type': 'CreativeWork',
+      name: 'Reprise libre avec mention de la source',
+      url: `${SITE}${PATH}#reutilisation`,
+    },
   };
 
   const h2 = { fontSize: 'clamp(1.9rem, 4.5vw, 2.75rem)' };
@@ -303,7 +310,7 @@ export default async function PrixLyonPage({ params }: Props) {
                 </a>{' '}
                 : un prix par établissement et par plat, avec l&apos;arrondissement et le libellé de la carte.
               </p>
-              <p className="m-0">
+              <p id="reutilisation" className="m-0 scroll-mt-28">
                 Reprise libre avec la mention « Source : DishRank, cartes relevées en septembre 2026 ».
               </p>
               <p className="m-0">
