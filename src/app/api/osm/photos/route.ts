@@ -42,7 +42,7 @@ const MAX_HTML_BYTES = 1_500_000;
 // restaurants gets a photo"). Posing as a normal browser is fair use here :
 // we're fetching a single <head> per venue, no aggressive crawling.
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
-const WIKIDATA_UA = 'DishRank/1.0 (contact: hello@dishrank.fr)';
+const WIKIDATA_UA = 'DishRank/1.0 (contact: contact@dishrank.fr)';
 
 /**
  * Strip address-like noise from a `city` value before sending it to

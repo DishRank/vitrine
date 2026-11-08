@@ -29,7 +29,7 @@ const OVERPASS_MIRRORS = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
-const USER_AGENT = 'DishRank/1.0 (contact: hello@dishrank.fr)';
+const USER_AGENT = 'DishRank/1.0 (contact: contact@dishrank.fr)';
 const CACHE_TTL_DAYS = 30;
 const OVERPASS_TIMEOUT_MS = 12000;
 const DIET_KEYS = ['vegetarian', 'vegan', 'gluten_free', 'halal', 'kosher', 'dairy_free', 'pescatarian'] as const;
