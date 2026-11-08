@@ -64,7 +64,11 @@ export default defineConfig({
       NEXT_PUBLIC_SITE_URL: `http://localhost:${PORT}`,
       // Valeur de test, propre à ce serveur local (signe le cookie d'invité).
       GUEST_COOKIE_SECRET: 'e2e-local-only-guest-cookie-secret',
-      // Turnstile, Stripe, SMTP, Upstash : non définis → désactivés, comme
+      // Turnstile du menu : clés de TEST publiques de Cloudflare (toujours
+      // valides). Le parcours complet est joué : widget, jeton, siteverify.
+      NEXT_PUBLIC_TURNSTILE_MENU_SITE_KEY: '1x00000000000000000000AA',
+      TURNSTILE_MENU_SECRET_KEY: '1x0000000000000000000000000000000AA',
+      // Turnstile pro, Stripe, SMTP, Upstash : non définis → désactivés, comme
       // prévu par le code pour un déploiement sans ces services.
     },
   },

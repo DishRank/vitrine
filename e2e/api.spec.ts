@@ -151,6 +151,16 @@ test('/api/menu/rate : entrées invalides refusées', async ({ request }) => {
   expect(notJson.status()).toBeLessThan(500);
 });
 
+test('/api/menu/rate : requête valide sans jeton anti-robot → 403', async ({ request }) => {
+  // Turnstile du menu actif sur le serveur de test (clés de test Cloudflare,
+  // playwright.config.ts) : la requête s'arrête avant toute lecture en base.
+  const res = await request.post('/api/menu/rate', {
+    data: { restaurantId: UUID, menuItemId: UUID, stars: 5 },
+  });
+  expect(res.status()).toBe(403);
+  expect((await res.json()).reason).toBe('verify');
+});
+
 test('/api/auth/confirm-email : lien sans jeton refusé', async ({ request }) => {
   expect((await request.get('/api/auth/confirm-email')).status()).toBe(400);
 });
