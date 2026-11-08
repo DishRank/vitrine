@@ -19,7 +19,9 @@ export default async function ProWorkspaceLayout({ children }: { children: React
       .select('id, name, photo_url, subscription_tier, address, city, subscription_expires_at')
       .eq('owner_id', user.id)
       .order('name'),
-    supabase.from('profiles').select('email_digest_opt_out').eq('id', user.id).maybeSingle(),
+    // Champs privés du compte : RPC get_my_account (mig. 212), la colonne
+    // n'est plus lisible directement sur `profiles` (lot 4, mig. 215).
+    supabase.rpc('get_my_account').maybeSingle(),
   ]);
   const restaurants = (data ?? []) as ShellResto[];
   const digestOptOut = !!(profileRes.data as { email_digest_opt_out?: boolean } | null)?.email_digest_opt_out;

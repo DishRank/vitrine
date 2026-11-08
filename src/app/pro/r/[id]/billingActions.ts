@@ -33,7 +33,9 @@ export async function createCheckoutSession(restaurantId: string): Promise<Billi
   if (!stripeEnabled()) return { error: 'coming_soon' };
   const { supabase, user } = ctx;
 
-  const { data } = await supabase
+  // Service role : `stripe_customer_id` n'est plus lisible par une session
+  // utilisateur (lot 4, mig. 215). La propriété vient d'être vérifiée.
+  const { data } = await getServiceClient()
     .from('restaurants')
     .select('subscription_tier, subscription_expires_at, subscription_source, stripe_customer_id')
     .eq('id', restaurantId)
@@ -92,7 +94,8 @@ export async function createPortalSession(restaurantId: string): Promise<Billing
   if (!stripeEnabled()) return { error: 'coming_soon' };
   const { supabase } = ctx;
 
-  const { data } = await supabase
+  // Service role : cf. createCheckoutSession (lot 4, mig. 215).
+  const { data } = await getServiceClient()
     .from('restaurants')
     .select('stripe_customer_id')
     .eq('id', restaurantId)

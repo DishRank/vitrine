@@ -38,15 +38,15 @@ export interface OwnedRestaurant {
   logo_url: string | null;
   subscription_source: string | null;
   subscription_status: string | null;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
 }
 
 const LISTING_COLS =
   'id, name, city, address, photo_url, place_type, owner_id, subscription_tier, subscription_expires_at, ' +
   'description, accepts_groups, group_offer, phone, website, menu_url, instagram, reservation_url, ' +
   'price_level, cuisines, opening_hours_raw, osm_id, auto_thank_enabled, thank_template, menu_theme, menu_languages, logo_url, ' +
-  'subscription_source, subscription_status, stripe_customer_id, stripe_subscription_id';
+  'subscription_source, subscription_status';
+// Identifiants Stripe : illisibles par une session utilisateur depuis le lot 4
+// (mig. 215). La facturation les lit en service role, après assertOwner.
 
 /** Identité minimale suffisante pour /pro (filtres owner_id + affichage). */
 export interface ProUser {

@@ -22,7 +22,9 @@ interface Establishment {
 export default async function AccountPage() {
   const { supabase, user } = await requireUser();
   const [{ data: profile }, { data: restos }] = await Promise.all([
-    supabase.from('profiles').select('email_digest_opt_out').eq('id', user.id).maybeSingle(),
+    // Champs privés du compte : RPC get_my_account (mig. 212). La colonne
+    // n'est plus lisible directement sur `profiles` (lot 4, mig. 215).
+    supabase.rpc('get_my_account').maybeSingle(),
     supabase
       .from('restaurants')
       .select('id, name, city, subscription_tier')
