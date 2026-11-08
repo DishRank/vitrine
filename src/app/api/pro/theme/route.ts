@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   if (!body?.theme) return NextResponse.json({ error: 'theme requis' }, { status: 400 });
 
   const ctx = await assertOwner(id);
-  if (!ctx) return NextResponse.json({ error: "Tu n'es pas le propriétaire de cet établissement." }, { status: 403 });
+  if (!ctx) return NextResponse.json({ error: "Vous n'êtes pas le propriétaire de cet établissement." }, { status: 403 });
   const { supabase, user } = ctx;
 
   // Pas de validation d'URL ici : depuis la mig.124 le thème ne transporte plus

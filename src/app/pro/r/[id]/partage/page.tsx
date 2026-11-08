@@ -134,6 +134,7 @@ export default async function PartagePage({ params }: { params: Promise<{ id: st
         <div className="mt-4 flex items-center gap-2">
           <input
             readOnly
+            aria-label="Lien de votre menu"
             value={menuLink}
             className="w-full truncate rounded-xl border border-[var(--border2)] bg-[var(--bg)] px-4 py-3 text-[15px] text-[var(--text)] outline-none"
           />

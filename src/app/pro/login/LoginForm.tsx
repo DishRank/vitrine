@@ -38,10 +38,10 @@ export default function LoginForm({
 
       {/* Bascule du mode de connexion */}
       <div className="mb-4 flex gap-1 rounded-xl border border-[var(--border2)] bg-[var(--bg)] p-1">
-        <button type="button" onClick={() => setMode('password')} className={tabCls(mode === 'password')}>
+        <button type="button" onClick={() => setMode('password')} aria-pressed={mode === 'password'} className={tabCls(mode === 'password')}>
           Mot de passe
         </button>
-        <button type="button" onClick={() => setMode('magic')} className={tabCls(mode === 'magic')}>
+        <button type="button" onClick={() => setMode('magic')} aria-pressed={mode === 'magic'} className={tabCls(mode === 'magic')}>
           Lien magique
         </button>
       </div>

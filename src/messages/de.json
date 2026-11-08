@@ -65,6 +65,8 @@
   },
   "showcase": {
     "label": "DishRank in Aktion",
+    "prev": "Vorherige Folie",
+    "next": "Nächste Folie",
     "slides": [
       { "title": "Entdecke die besten Gerichte", "desc": "Durchsuche den Feed, filtere nach Kategorie, entdecke die am besten bewerteten Gerichte in deiner Nähe." },
       { "title": "Jedes Gericht im Detail", "desc": "Foto, Durchschnittsbewertung, Preis, Community-Reviews. Alles was du brauchst." },
@@ -232,7 +234,21 @@
     "app": "App",
     "social": "Mit Freunden",
     "why": "Regeln",
-    "new": "Neu"
+    "new": "Neu",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen",
+    "mainNav": "Hauptnavigation",
+    "home": "DishRank — Startseite",
+    "menuNav": "Navigationsmenü"
+  },
+  "socialProof": {
+    "rated": "hat bewertet",
+    "anonymous": "Anonym",
+    "now": "gerade eben",
+    "minutes": "{n} Min.",
+    "hours": "{n} Std.",
+    "days": "{n} T.",
+    "weeks": "{n} Wo."
   },
   "related": {
     "moreInCity": "Weitere Gerichte in {city}",

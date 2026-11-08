@@ -65,6 +65,8 @@
   },
   "showcase": {
     "label": "DishRank in action",
+    "prev": "Previous slide",
+    "next": "Next slide",
     "slides": [
       { "title": "Explore the best dishes", "desc": "Browse the feed, filter by category, discover the top-rated dishes near you." },
       { "title": "Every dish in detail", "desc": "Photo, average rating, price, community reviews. Everything you need to choose." },
@@ -232,7 +234,21 @@
     "app": "App",
     "social": "With friends",
     "why": "Our rules",
-    "new": "New"
+    "new": "New",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "mainNav": "Main navigation",
+    "home": "DishRank — home",
+    "menuNav": "Navigation menu"
+  },
+  "socialProof": {
+    "rated": "rated",
+    "anonymous": "Anonymous",
+    "now": "just now",
+    "minutes": "{n} min",
+    "hours": "{n} h",
+    "days": "{n} d",
+    "weeks": "{n} wk"
   },
   "related": {
     "moreInCity": "More dishes in {city}",

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { routing } from './i18n/routing';
 import { citySlug } from './lib/slug';
+import { safeNextPath } from './lib/pro/safeNext';
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -178,10 +179,19 @@ const PRO_PUBLIC_PATHS = new Set(['/pro', '/pro/login', '/pro/signup', '/pro/res
 const PRO_PUBLIC_TOKEN_PATH = /^\/pro\/allergenes\/[A-Za-z0-9_-]{32}$/;
 const isProPublic = (pathname: string) =>
   PRO_PUBLIC_PATHS.has(pathname) || PRO_PUBLIC_TOKEN_PATH.test(pathname);
+// Saisie du code de double authentification : exige une session (celle qui
+// attend son code), donc hors des pages publiques.
+const PRO_MFA_PATH = '/pro/mfa';
+// Pages qui restent accessibles à une session en attente du code : elles ne
+// lisent pas de données avec la session (cf. handleProZone).
+const PRO_OPEN_WHILE_MFA_PENDING = new Set(['/pro', '/pro/callback', '/pro/reset']);
 
 // CSP /pro : la base stricte + Turnstile (iframe + télémétrie) quand le
 // captcha est configuré (NEXT_PUBLIC_* inliné au build, comme SUPABASE_CONNECT).
 const TURNSTILE_ENABLED = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+// Widget Turnstile distinct pour la notation sans compte du menu web
+// (src/lib/turnstile.ts) : sa clé publique suffit à ouvrir la CSP.
+const MENU_TURNSTILE_ENABLED = !!process.env.NEXT_PUBLIC_TURNSTILE_MENU_SITE_KEY;
 const buildProCsp = (nonce: string, isDev: boolean) =>
   buildCsp(
     nonce,
@@ -208,6 +218,7 @@ async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   let authenticated = false;
+  let mfaPending = false;
 
   if (url && key) {
     const supabase = createServerClient(url, key, {
@@ -235,6 +246,13 @@ async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
     // le mécanisme cookies @supabase/ssr (getClaims passe par getSession).
     const { data } = await supabase.auth.getClaims();
     authenticated = !!data?.claims;
+    // Double authentification (mig. 211) : session `aal1` d'un compte qui a un
+    // appareil inscrit → la base refuse toutes ses requêtes ; on l'envoie
+    // saisir son code. Le calcul lit la session des cookies, sans réseau.
+    if (authenticated && data?.claims?.aal !== 'aal2') {
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      mfaPending = aal?.nextLevel === 'aal2' && aal?.currentLevel !== 'aal2';
+    }
   }
 
   const finalize = (r: NextResponse) => {
@@ -267,6 +285,26 @@ async function handleProZone(req: NextRequest, nonce: string, isDev: boolean) {
     const nextTarget = `${pathname}${req.nextUrl.search}`;
     loginUrl.search = pathname === '/pro' ? '' : `?next=${encodeURIComponent(nextTarget)}`;
     return redirectPreservingSession(loginUrl);
+  }
+
+  // Session en attente du code : la base refuse ses requêtes (mig. 211), y
+  // compris celles des pages publiques qui lisent la session cookie (lien
+  // allergènes). Tout mène donc à /pro/mfa en gardant la destination, sauf ce
+  // qui ne touche pas aux données (PRO_OPEN_WHILE_MFA_PENDING).
+  if (mfaPending && pathname !== PRO_MFA_PATH && !PRO_OPEN_WHILE_MFA_PENDING.has(pathname)) {
+    const mfaUrl = req.nextUrl.clone();
+    mfaUrl.pathname = PRO_MFA_PATH;
+    const isAuthPage = pathname === '/pro/login' || pathname === '/pro/signup';
+    mfaUrl.search = isAuthPage
+      ? ''
+      : `?next=${encodeURIComponent(`${pathname}${req.nextUrl.search}`)}`;
+    return redirectPreservingSession(mfaUrl);
+  }
+  // Rien à vérifier (code déjà saisi, retour arrière) : on file à la
+  // destination prévue (chemin interne uniquement, cf. safeNextPath).
+  if (authenticated && !mfaPending && pathname === PRO_MFA_PATH) {
+    const next = safeNextPath(req.nextUrl.searchParams.get('next'));
+    return redirectPreservingSession(new URL(next, req.url));
   }
 
   // Déjà connecté sur login/signup → direction le dashboard (/pro/espace,
@@ -367,7 +405,19 @@ export default async function proxy(req: NextRequest) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-nonce', nonce);
     const response = NextResponse.next({ request: { headers: requestHeaders } });
-    response.headers.set('Content-Security-Policy', csp);
+    // Menu web : la notation sans compte passe par Turnstile (iframe + appels
+    // vers challenges.cloudflare.com) dès que ses clés sont posées. Sans cette
+    // ouverture, aucun jeton ne serait émis et toute note serait refusée.
+    const isMenu = pathname.startsWith('/menu/') || pathname.startsWith('/restaurant/');
+    response.headers.set(
+      'Content-Security-Policy',
+      isMenu && MENU_TURNSTILE_ENABLED
+        ? buildCsp(nonce, isDev, {
+            frameSrc: "'self' https://challenges.cloudflare.com",
+            extraConnect: 'https://challenges.cloudflare.com',
+          })
+        : csp
+    );
     return response;
   }
 

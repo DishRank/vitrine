@@ -160,7 +160,7 @@ export default function Nav() {
   return (
     <>
       <nav
-        aria-label="Main navigation"
+        aria-label={t('mainNav')}
         className="fixed top-0 left-0 right-0 z-50 transition-shadow duration-300"
         // Fond plein (plus d'effet verre dépoli) ; le filet n'apparaît qu'au scroll.
         style={{
@@ -173,7 +173,7 @@ export default function Nav() {
               currentColor → violet en light mode, blanc en dark mode. */}
           <a
             href="/"
-            aria-label="DishRank — accueil"
+            aria-label={t('home')}
             className="flex items-center gap-2.5 font-extrabold text-lg shrink-0 text-[var(--primary)] dark:text-white"
           >
             <AnimatedLogo size={28} />
@@ -222,7 +222,7 @@ export default function Nav() {
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              aria-label="Ouvrir le menu"
+              aria-label={t('openMenu')}
               aria-expanded={drawerOpen}
               aria-controls="mobile-drawer"
               className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg cursor-pointer hover:bg-[var(--surface)] transition-colors"
@@ -261,7 +261,7 @@ export default function Nav() {
         id="mobile-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label="Menu de navigation"
+        aria-label={t('menuNav')}
         style={{
           transform: drawerOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1)',
@@ -282,7 +282,7 @@ export default function Nav() {
           <button
             type="button"
             onClick={() => setDrawerOpen(false)}
-            aria-label="Fermer le menu"
+            aria-label={t('closeMenu')}
             className="inline-flex items-center justify-center w-10 h-10 rounded-lg cursor-pointer hover:bg-[var(--surface)] transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

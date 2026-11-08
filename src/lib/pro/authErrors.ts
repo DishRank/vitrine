@@ -10,16 +10,16 @@
 
 const FR: Record<string, string> = {
   signupFailed:
-    "L'inscription a échoué (email de confirmation impossible à envoyer). Réessaie dans quelques minutes.",
-  emailAlreadyRegistered: 'Un compte existe déjà avec cet email. Connecte-toi ou réinitialise ton mot de passe.',
-  emailNotConfirmed: "Ton email n'est pas encore confirmé — vérifie ta boîte mail (et les spams).",
+    "L'inscription a échoué (email de confirmation impossible à envoyer). Réessayez dans quelques minutes.",
+  emailAlreadyRegistered: 'Un compte existe déjà avec cet email. Connectez-vous ou réinitialisez votre mot de passe.',
+  emailNotConfirmed: "Votre email n'est pas encore confirmé — vérifiez votre boîte mail (et les spams).",
   invalidCredentials: 'Email ou mot de passe incorrect.',
-  tooManyAttempts: 'Trop de tentatives. Patiente une minute puis réessaie.',
+  tooManyAttempts: 'Trop de tentatives. Patientez une minute puis réessayez.',
   weakPassword: 'Mot de passe trop faible (8 caractères min., minuscule, majuscule, chiffre et symbole).',
   emailInvalid: 'Adresse email invalide.',
-  serverUnavailable: 'Serveur injoignable. Vérifie ta connexion et réessaie.',
-  captchaFailed: 'La vérification anti-robot a échoué. Recharge la page et réessaie.',
-  genericError: "Une erreur est survenue. Réessaie, ou contacte-nous si ça persiste.",
+  serverUnavailable: 'Serveur injoignable. Vérifiez votre connexion et réessayez.',
+  captchaFailed: 'La vérification anti-robot a échoué. Rechargez la page et réessayez.',
+  genericError: "Une erreur est survenue. Réessayez, ou contactez-nous si ça persiste.",
 };
 
 export function mapAuthErrorFr(error: unknown): string {

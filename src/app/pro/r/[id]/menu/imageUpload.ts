@@ -53,7 +53,7 @@ export async function uploadWebpBlobs(full: Blob, thumb: Blob | null): Promise<U
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Session expirée — reconnecte-toi.' };
+  if (!user) return { ok: false, error: 'Session expirée — reconnectez-vous.' };
 
   const uniqueId = `${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
   const base = `${user.id}/${uniqueId}`;
@@ -64,7 +64,7 @@ export async function uploadWebpBlobs(full: Blob, thumb: Blob | null): Promise<U
       ? supabase.storage.from('dish-photos').upload(`${base}_thumb.webp`, thumb, { contentType: 'image/webp', upsert: true }).catch(() => {})
       : Promise.resolve(),
   ]);
-  if (fullRes.error) return { ok: false, error: "L'envoi a échoué. Réessaie." };
+  if (fullRes.error) return { ok: false, error: "L'envoi a échoué. Réessayez." };
 
   const { data } = supabase.storage.from('dish-photos').getPublicUrl(`${base}.webp`);
   return { ok: true, url: `${data.publicUrl}?v=${Date.now()}` };

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   if (!id) return NextResponse.json({ error: 'id requis' }, { status: 400 });
 
   const ctx = await assertOwner(id);
-  if (!ctx) return NextResponse.json({ error: "Tu n'es pas le propriétaire de cet établissement." }, { status: 403 });
+  if (!ctx) return NextResponse.json({ error: "Vous n'êtes pas le propriétaire de cet établissement." }, { status: 403 });
   const { supabase, user } = ctx;
 
   const priceRaw = body?.price_level;

@@ -3,6 +3,7 @@
  *
  * Deux backends :
  *  • Upstash Redis (REST) si UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+ *    (ou KV_REST_API_URL + KV_REST_API_TOKEN, noms de l'intégration Vercel)
  *    sont posées — PARTAGÉ entre instances, c'est la seule protection réelle
  *    en multi-instance Vercel (lot 1.7 du plan espace-pro-web).
  *  • Fallback in-memory sinon (best-effort par instance, comme le limiteur du
@@ -21,8 +22,11 @@ interface LimitResult {
 const memory = new Map<string, { count: number; reset: number }>();
 
 async function upstash(commands: (string | number)[][]): Promise<unknown[] | null> {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  // L'intégration Upstash de Vercel (Marketplace) crée KV_REST_API_URL /
+  // KV_REST_API_TOKEN, pas les noms UPSTASH_* : sans ce repli, le projet en
+  // prod (qui n'a que KV_*) tombait sur la Map en mémoire, par instance.
+  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
   if (!url || !token) return null;
   try {
     const res = await fetch(`${url}/pipeline`, {
@@ -69,6 +73,34 @@ export async function rateLimit(key: string, max: number, windowMs: number): Pro
   }
   if (memory.size > 10_000) {
     for (const [k, v] of memory) if (now > v.reset) memory.delete(k);
+  }
+  return { ok: true, retryAfter: 0 };
+}
+
+/**
+ * Lecture SANS incrément d'un compteur tenu par `rateLimit`, pour les limites
+ * « sur échec » : on ne compte que les ratés (appel à `rateLimit` au moment de
+ * l'échec), mais on refuse TOUTE tentative une fois `max` ratés atteints. Sans
+ * ça, le limiteur ne masquerait que les ratés et laisserait voir les succès —
+ * exactement ce qu'une énumération cherche. Même fail-open que `rateLimit`.
+ */
+export async function peekLimit(key: string, max: number): Promise<LimitResult> {
+  const results = await upstash([
+    ['GET', key],
+    ['PTTL', key],
+  ]);
+
+  if (results) {
+    const count = Number((results[0] as { result?: unknown })?.result ?? 0);
+    const ttl = Number((results[1] as { result?: unknown })?.result ?? 0);
+    if (count >= max) return { ok: false, retryAfter: Math.max(1, Math.ceil(ttl / 1000)) };
+    return { ok: true, retryAfter: 0 };
+  }
+
+  const now = Date.now();
+  const entry = memory.get(key);
+  if (entry && now < entry.reset && entry.count >= max) {
+    return { ok: false, retryAfter: Math.ceil((entry.reset - now) / 1000) };
   }
   return { ok: true, retryAfter: 0 };
 }

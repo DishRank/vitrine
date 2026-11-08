@@ -29,7 +29,7 @@ interface BillingRow {
 
 export async function createCheckoutSession(restaurantId: string): Promise<BillingResult> {
   const ctx = await assertOwner(restaurantId);
-  if (!ctx) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!ctx) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
   if (!stripeEnabled()) return { error: 'coming_soon' };
   const { supabase, user } = ctx;
 
@@ -88,7 +88,7 @@ export async function createCheckoutSession(restaurantId: string): Promise<Billi
 
 export async function createPortalSession(restaurantId: string): Promise<BillingResult> {
   const ctx = await assertOwner(restaurantId);
-  if (!ctx) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!ctx) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
   if (!stripeEnabled()) return { error: 'coming_soon' };
   const { supabase } = ctx;
 

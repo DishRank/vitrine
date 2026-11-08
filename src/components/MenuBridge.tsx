@@ -66,6 +66,13 @@ import { MENU_FONTS } from '@/app/pro/r/[id]/menu/themeConstants';
 // posées sur <html> pour que var(--font-*) résolve sur cette route autonome.
 import { MENU_FONT_VARS } from '@/app/pro/r/[id]/menu/menuFonts';
 import MenuLiveSync from './MenuLiveSync';
+import { menuTurnstileSiteKey } from '@/lib/turnstile';
+
+/** Widget anti-robot de la notation invitée (absent = Turnstile non configuré). */
+interface MenuTurnstile {
+  siteKey: string;
+  nonce?: string;
+}
 
 interface VenueInfo {
   name: string;
@@ -353,6 +360,7 @@ function ItemRow({
   theme,
   restaurantId,
   menuSource,
+  turnstile,
 }: {
   item: MenuItem;
   locale: MenuLocale;
@@ -364,6 +372,7 @@ function ItemRow({
    *  On le redit dans la feuille de notation : on peut noter sans jamais avoir
    *  lu la bande en tête de carte, et c'est là qu'on s'engage. */
   menuSource?: MenuTree['source'];
+  turnstile?: MenuTurnstile;
 }) {
   const ui = MENU_UI[locale];
   // « Noter ce plat » → deep-link app avec resto + plat pré-remplis. NOM
@@ -483,9 +492,14 @@ function ItemRow({
                 : ui.rateAnonHint,
             already: ui.rateAlready,
             error: ui.rateError,
+            tooMany: ui.rateTooMany,
+            verify: ui.rateVerify,
+            commentTooMany: ui.rateCommentTooMany,
             openApp: ui.openApp,
           }}
           appHref={rateHref}
+          turnstileSiteKey={turnstile?.siteKey}
+          nonce={turnstile?.nonce}
         />
       </div>
 
@@ -620,6 +634,7 @@ function SectionBlock({
   theme,
   restaurantId,
   menuSource,
+  turnstile,
   depth = 0,
 }: {
   section: MenuSection;
@@ -627,6 +642,7 @@ function SectionBlock({
   itemById: Map<string, MenuItem>;
   restaurantId: string;
   menuSource?: MenuTree['source'];
+  turnstile?: MenuTurnstile;
   ratings: Record<string, DishRating>;
   theme: ResolvedMenuTheme;
   depth?: number;
@@ -697,6 +713,7 @@ function SectionBlock({
             theme={theme}
             restaurantId={restaurantId}
             menuSource={menuSource}
+            turnstile={turnstile}
           />
         ))}
       </div>
@@ -710,6 +727,7 @@ function SectionBlock({
           theme={theme}
           restaurantId={restaurantId}
           menuSource={menuSource}
+          turnstile={turnstile}
           depth={1}
         />
       ))}
@@ -728,6 +746,7 @@ function FormulasBlock({
   theme,
   restaurantId,
   menuSource,
+  turnstile,
 }: {
   formulas: MenuItem[];
   title: string;
@@ -737,6 +756,7 @@ function FormulasBlock({
   theme: ResolvedMenuTheme;
   restaurantId: string;
   menuSource?: MenuTree['source'];
+  turnstile?: MenuTurnstile;
 }) {
   if (formulas.length === 0) return null;
   return (
@@ -775,6 +795,7 @@ function FormulasBlock({
             theme={theme}
             restaurantId={restaurantId}
             menuSource={menuSource}
+            turnstile={turnstile}
           />
         ))}
       </div>
@@ -898,6 +919,12 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
   // CSP nonce injected by proxy.ts — applied to the inline script below so it's
   // allowed by the strict CSP. Same pattern as /join.
   const nonce = hdrs.get('x-nonce') || undefined;
+  // Anti-robot de la notation invitée : la clé n'est transmise que si le
+  // serveur vérifie aussi les jetons (paire complète, cf. lib/turnstile).
+  const turnstileSiteKey = menuTurnstileSiteKey();
+  const turnstile: MenuTurnstile | undefined = turnstileSiteKey
+    ? { siteKey: turnstileSiteKey, nonce }
+    : undefined;
 
   const itemById = new Map<string, MenuItem>();
   for (const m of menus)
@@ -1260,6 +1287,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                     theme={theme}
                     restaurantId={id}
                     menuSource={menu.source}
+                    turnstile={turnstile}
                   />
                   {menu.sections.map((section) => (
                     <SectionBlock
@@ -1271,6 +1299,7 @@ export default async function MenuBridge({ id, src, allowAppRedirect, lang }: Me
                       theme={theme}
                       restaurantId={id}
                       menuSource={menu.source}
+                      turnstile={turnstile}
                     />
                   ))}
                 </div>

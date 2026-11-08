@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedContext } from '@/lib/verifyAuth';
 import { getCorsHeaders } from '@/lib/cors';
 import { getSupabaseServiceClientFor } from '@/lib/supabase';
+import { googleGateRefusal, googleQuotaGate } from '@/lib/googleQuota';
 
 export async function OPTIONS(request: Request) {
   return new NextResponse(null, { headers: getCorsHeaders(request) });
@@ -29,24 +30,10 @@ export async function POST(request: Request) {
   // against the Text Search Essentials (IDs Only) SKU which has 10 000
   // free calls/month. We cap at 9 000 to keep some margin. Refused
   // request → 429, client falls back to its own cached/empty result.
+  // Compteur en panne → 503 (échec fermé, cf. lib/googleQuota).
   const supabase = getSupabaseServiceClientFor(auth.supabaseUrl, auth.serviceRoleKey);
-  const { data: gate, error: gateErr } = await supabase.rpc('try_log_google_api_call', {
-    p_endpoint: 'find_place',
-    p_user_id: auth.userId,
-  });
-  if (gateErr) {
-    console.warn('[find-place] gate rpc failed, allowing through:', gateErr.message);
-  } else if (Array.isArray(gate) && gate[0] && gate[0].allowed === false) {
-    return NextResponse.json(
-      {
-        error: 'monthly_cap_reached',
-        category: gate[0].category,
-        current_count: gate[0].current_count,
-        monthly_cap: gate[0].monthly_cap,
-      },
-      { status: 429, headers: cors }
-    );
-  }
+  const gate = await googleQuotaGate(supabase, 'find_place', auth.userId, 'find-place');
+  if (!gate.ok) return googleGateRefusal(gate, cors);
 
   const params = new URLSearchParams({
     input,

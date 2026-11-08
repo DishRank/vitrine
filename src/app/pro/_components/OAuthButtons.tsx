@@ -19,7 +19,7 @@ export default function OAuthButtons({ next }: { next: string }) {
   const oauth = async (provider: 'google' | 'apple') => {
     const supabase = getSupabaseBrowserPro();
     if (!supabase) {
-      setError('Configuration manquante — réessaie plus tard.');
+      setError('Configuration manquante — réessayez plus tard.');
       return;
     }
     setBusy(provider);

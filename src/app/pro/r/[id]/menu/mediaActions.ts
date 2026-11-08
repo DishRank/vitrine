@@ -38,7 +38,7 @@ export async function setItemPhotoAction(
   photoUrl: string | null
 ): Promise<MediaActionState> {
   const ctx = await assertOwner(restaurantId);
-  if (!ctx) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!ctx) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
   const v = validStorageUrl(photoUrl, ctx.user.id);
   if (!v.ok) return { error: 'URL de photo invalide.' };
 
@@ -58,7 +58,7 @@ export async function updateThemeAction(
   theme: MenuThemeConfig
 ): Promise<MediaActionState> {
   const ctx = await assertOwner(restaurantId);
-  if (!ctx) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!ctx) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
 
   // Depuis la mig.124 le thème ne transporte plus le logo (colonne dédiée) : il
   // n'y a plus d'URL à valider ici, et le normalizer jette la clé si elle traîne.

@@ -65,6 +65,8 @@
   },
   "showcase": {
     "label": "DishRank in azione",
+    "prev": "Diapositiva precedente",
+    "next": "Diapositiva successiva",
     "slides": [
       { "title": "Esplora i migliori piatti", "desc": "Sfoglia il feed, filtra per categoria, scopri i piatti piu votati vicino a te." },
       { "title": "Ogni piatto nel dettaglio", "desc": "Foto, voto medio, prezzo, recensioni della community. Tutto cio che serve per scegliere." },
@@ -232,7 +234,21 @@
     "app": "App",
     "social": "Con gli amici",
     "why": "Regole",
-    "new": "Nuovo"
+    "new": "Nuovo",
+    "openMenu": "Apri il menu",
+    "closeMenu": "Chiudi il menu",
+    "mainNav": "Navigazione principale",
+    "home": "DishRank — home",
+    "menuNav": "Menu di navigazione"
+  },
+  "socialProof": {
+    "rated": "ha votato",
+    "anonymous": "Anonimo",
+    "now": "adesso",
+    "minutes": "{n} min",
+    "hours": "{n} h",
+    "days": "{n} g",
+    "weeks": "{n} sett."
   },
   "related": {
     "moreInCity": "Altri piatti a {city}",

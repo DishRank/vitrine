@@ -1,6 +1,23 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { PLAY_STORE_URL } from '@/lib/downloadLinks';
+import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/downloadLinks';
+
+// Les deux stores : la page est statique (sans détection du téléphone côté
+// serveur), et un seul bouton Google Play laissait les iPhone sans lien.
+const storeButton = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  background: '#C2452D',
+  color: '#fff',
+  padding: '14px 28px',
+  borderRadius: 14,
+  fontSize: 16,
+  fontWeight: 600,
+  textDecoration: 'none',
+  minWidth: 260,
+} as const;
 
 export const metadata: Metadata = {
   title: 'DishRank — Voir ce plat',
@@ -34,14 +51,16 @@ export default function DishPage() {
           <Image src="/img/icon-v2.webp" alt="DishRank" width={64} height={64} style={{ borderRadius: 16, marginBottom: 16 }} />
           <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Voir ce plat sur DishRank</h1>
           <p style={{ color: '#A39A92', fontSize: 15, marginBottom: 24, lineHeight: 1.5 }}>
-            Installez DishRank pour decouvrir les avis de la communaute sur ce plat et des milliers d&apos;autres.
+            Installez DishRank pour découvrir les avis de la communauté sur ce plat et des milliers d&apos;autres.
           </p>
-          <a
-            href={PLAY_STORE_URL}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#C2452D', color: '#fff', padding: '14px 28px', borderRadius: 14, fontSize: 16, fontWeight: 600, textDecoration: 'none' }}
-          >
-            Installer l&apos;app
-          </a>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <a href={APP_STORE_URL} style={storeButton}>
+              Télécharger sur l&apos;App Store
+            </a>
+            <a href={PLAY_STORE_URL} style={storeButton}>
+              Télécharger sur Google Play
+            </a>
+          </div>
           <p style={{ color: '#A39A92', fontSize: 13, marginTop: 16 }}>
             Ou visitez <a href="/" style={{ color: '#E8846A', textDecoration: 'none' }}>dishrank.fr</a>
           </p>

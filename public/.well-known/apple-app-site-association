@@ -7,9 +7,14 @@
           { "/": "/dish*", "comment": "Dish detail deep links (incl. /dish?r=&d=)" },
           { "/": "/restaurant*" },
           { "/": "/review*" },
-          { "/": "/join/*" }
+          { "/": "/join/*" },
+          { "/": "/s/*", "comment": "Sortie : lien de vote (app/s/[token])" },
+          { "/": "/g/*", "comment": "Invitation de groupe (app/g/[code])" }
         ]
       }
     ]
+  },
+  "webcredentials": {
+    "apps": ["QMUYZC6YV7.com.dishrank.app"]
   }
 }

@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { safeNextPathOrUndefined } from '@/lib/pro/safeNext';
 import AuthShell from '../_components/AuthShell';
 import SignupForm from './SignupForm';
 
@@ -11,11 +12,7 @@ export default async function SignupPage({
 }) {
   const sp = await searchParams;
   const nonce = (await headers()).get('x-nonce') || undefined;
-  // Même garde anti open-redirect que safeNext / la page de connexion.
-  const next =
-    sp.next && sp.next.startsWith('/') && !sp.next.startsWith('//') && !sp.next.includes('\\')
-      ? sp.next
-      : undefined;
+  const next = safeNextPathOrUndefined(sp.next);
 
   return (
     <AuthShell

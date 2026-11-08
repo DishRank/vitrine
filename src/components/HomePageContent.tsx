@@ -74,6 +74,21 @@ export default async function HomePageContent({
   // Sans ça, ces descriptions restaient hardcodées FR sur toutes les locales
   // → mismatch de langue côté schema.org sur /en/, /es/, etc.
   const tMeta = await getTranslations({ locale, namespace: 'meta' });
+  const [tHero, tProof] = await Promise.all([
+    getTranslations({ locale, namespace: 'hero' }),
+    getTranslations({ locale, namespace: 'socialProof' }),
+  ]);
+  const socialProofLabels = {
+    title: tHero('freshPodium'),
+    rated: tProof('rated'),
+    anonymous: tProof('anonymous'),
+    now: tProof('now'),
+    // Gabarits {n} remplis par le composant (pas d'interpolation next-intl ici).
+    minutes: tProof.raw('minutes') as string,
+    hours: tProof.raw('hours') as string,
+    days: tProof.raw('days') as string,
+    weeks: tProof.raw('weeks') as string,
+  };
   const siteTagline = tMeta('siteTagline');
   const appDescription = tMeta('appDescription');
 
@@ -453,7 +468,7 @@ export default async function HomePageContent({
             interne si reviews.length < 6). Recent reviews ne sont fetchés
             que sur la home pour éviter une N+1 query, donc en pratique le
             marquee n'apparaît qu'à la home pour l'instant. */}
-        <SocialProof reviews={recentReviews} />
+        <SocialProof reviews={recentReviews} labels={socialProofLabels} />
         {(city || category) && (
           <CityGuide
             locale={locale}

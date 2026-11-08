@@ -44,7 +44,7 @@ export async function setListingCoverAction(
   photoUrl: string | null
 ): Promise<ListingMediaState> {
   const ctx = await assertOwner(restaurantId);
-  if (!ctx) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!ctx) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
   const { supabase, user } = ctx;
 
   let value: string | null = null;
@@ -86,7 +86,7 @@ export async function setListingLogoAction(
   logoUrl: string | null
 ): Promise<ListingMediaState> {
   const ctx = await assertOwner(restaurantId);
-  if (!ctx) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!ctx) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
   const { supabase, user } = ctx;
 
   const url = logoUrl?.trim() ?? '';

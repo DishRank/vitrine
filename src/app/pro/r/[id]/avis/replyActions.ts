@@ -14,7 +14,7 @@ function mapReplyError(error: { message?: string } | null): string {
   const m = (error?.message ?? '').toUpperCase();
   if (m.includes('REPLY_LOCKED')) return 'Une réponse ne peut plus être modifiée après 48 h.';
   if (m.includes('PIN_PREMIUM')) return 'Épingler une réponse est réservé au forfait Premium.';
-  return 'Une erreur est survenue. Réessaie.';
+  return 'Une erreur est survenue. Réessayez.';
 }
 
 async function assertOwner(supabase: Awaited<ReturnType<typeof getSupabaseServer>>, restaurantId: string) {
@@ -44,7 +44,7 @@ export async function upsertReplyAction(
 
   const supabase = await getSupabaseServer();
   const user = await assertOwner(supabase, restaurantId);
-  if (!user) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!user) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
 
   const { error } = await supabase.from('review_replies').upsert(
     {
@@ -78,7 +78,7 @@ export async function deleteReplyAction(
 
   const supabase = await getSupabaseServer();
   const user = await assertOwner(supabase, restaurantId);
-  if (!user) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!user) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
 
   const { error } = await supabase.from('review_replies').delete().eq('id', replyId);
   if (error) return { error: mapReplyError(error) };
@@ -101,7 +101,7 @@ export async function togglePinAction(
 
   const supabase = await getSupabaseServer();
   const user = await assertOwner(supabase, restaurantId);
-  if (!user) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!user) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
 
   const { error } = await supabase.from('review_replies').update({ is_pinned: pinned }).eq('id', replyId);
   if (error) return { error: mapReplyError(error) };

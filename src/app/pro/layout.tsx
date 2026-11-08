@@ -55,7 +55,7 @@ export default async function ProLayout({ children }: { children: React.ReactNod
     // suppressHydrationWarning : le script d'init modifie la classe de <html>
     // (thème) avant l'hydratation et le navigateur retire l'attribut nonce du
     // DOM → mismatch attendu server/client, à ne pas signaler.
-    <html lang="fr" className={inter.variable} suppressHydrationWarning>
+    <html lang="fr" className={inter.variable} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>

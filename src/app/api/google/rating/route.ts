@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedContext } from '@/lib/verifyAuth';
 import { getCorsHeaders } from '@/lib/cors';
 import { getSupabaseServiceClientFor } from '@/lib/supabase';
+import { googleGateRefusal, googleQuotaGate } from '@/lib/googleQuota';
+import { isSamePlace } from '@/lib/googleMatch';
 
 /**
  * Note Google d'un restaurant — résolution + lecture en UN aller-retour.
@@ -124,7 +126,7 @@ export async function POST(request: Request) {
   const { data: resto } = await supabase
     .from('restaurants')
     .select(
-      'id, name, address, city, google_place_id, google_rating, google_review_count, google_rating_updated_at'
+      'id, name, address, city, latitude, longitude, google_place_id, google_rating, google_review_count, google_rating_updated_at'
     )
     .eq('id', restaurantId)
     .maybeSingle();
@@ -163,50 +165,61 @@ export async function POST(request: Request) {
     );
   }
 
-  /** Passe le compteur d'appels ; false = plafond mensuel atteint. */
-  async function allowed(endpoint: 'find_place' | 'place_details'): Promise<boolean> {
-    const { data: gate, error } = await supabase.rpc('try_log_google_api_call', {
-      p_endpoint: endpoint,
-      p_user_id: auth!.userId,
-    });
-    if (error) {
-      console.warn(`[google/rating] gate ${endpoint} failed, allowing through:`, error.message);
-      return true;
-    }
-    return !(Array.isArray(gate) && gate[0] && gate[0].allowed === false);
-  }
-
   // ── 1. Place ID : réutilisé s'il est réel, sinon résolu UNE fois ──────────
   let placeId: string | null = isRealPlaceId(resto.google_place_id)
     ? (resto.google_place_id as string)
     : null;
+  // Place ID déjà en base : il a pu être mémorisé avant le contrôle de
+  // correspondance (lib/googleMatch.ts). On le revérifie à la lecture de la note.
+  const placeIdFromDb = placeId !== null;
+  const ours = { name: resto.name, latitude: resto.latitude, longitude: resto.longitude };
+  // Aucune correspondance fiable : tentative horodatée sans note, rien n'est
+  // gardé de Google, pas de nouvel essai avant RETRY_NO_MATCH_AFTER_MS.
+  const noMatch = async () => {
+    await supabase
+      .from('restaurants')
+      .update({
+        google_place_id: null,
+        google_rating: null,
+        google_review_count: null,
+        google_rating_updated_at: new Date().toISOString(),
+      })
+      .eq('id', restaurantId);
+    return NextResponse.json({ rating: null, reason: 'no_match' }, { headers: cors });
+  };
 
   if (!placeId) {
-    if (!(await allowed('find_place'))) {
-      return NextResponse.json({ error: 'monthly_cap_reached' }, { status: 429, headers: cors });
-    }
+    // Plafond atteint → 429 ; compteur en panne → 503 (échec fermé).
+    const findGate = await googleQuotaGate(supabase, 'find_place', auth.userId, 'google/rating');
+    if (!findGate.ok) return googleGateRefusal(findGate, cors);
     const query = [resto.name, resto.address, resto.city].filter(Boolean).join(' ');
+    // name + geometry : champs « Basic » (sans surcoût), pour vérifier que le
+    // candidat est bien ce lieu-là — Find Place renvoie toujours quelque chose.
     const findParams = new URLSearchParams({
       input: query,
       inputtype: 'textquery',
-      fields: 'place_id',
+      fields: 'place_id,name,geometry',
       key: apiKey,
     });
+    if (typeof resto.latitude === 'number' && typeof resto.longitude === 'number') {
+      findParams.set('locationbias', `circle:500@${resto.latitude},${resto.longitude}`);
+    }
     const findRes = await fetch(
       `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?${findParams}`
     );
     const findData = await findRes.json().catch(() => null);
-    const candidate = findData?.candidates?.[0]?.place_id;
+    const first = findData?.candidates?.[0];
+    const candidate = first?.place_id;
+    const loc = first?.geometry?.location;
 
-    if (!isRealPlaceId(candidate)) {
-      // Aucune correspondance Google : ce n'est pas une erreur (beaucoup de
-      // petits établissements OSM n'y sont pas). On horodate la tentative
-      // — sans note — pour ne pas la relancer avant une semaine.
-      await supabase
-        .from('restaurants')
-        .update({ google_rating_updated_at: new Date().toISOString() })
-        .eq('id', restaurantId);
-      return NextResponse.json({ rating: null, reason: 'no_match' }, { headers: cors });
+    // Aucune correspondance Google (beaucoup de petits établissements OSM n'y
+    // sont pas), ou un autre lieu que le nôtre : pas d'erreur, tentative
+    // horodatée sans note, pas de nouvel essai avant une semaine.
+    if (
+      !isRealPlaceId(candidate) ||
+      !isSamePlace(ours, { name: first?.name, latitude: loc?.lat, longitude: loc?.lng })
+    ) {
+      return noMatch();
     }
     placeId = candidate;
 
@@ -231,12 +244,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!(await allowed('place_details'))) {
-    return NextResponse.json({ error: 'monthly_cap_reached' }, { status: 429, headers: cors });
-  }
+  const detailsGate = await googleQuotaGate(supabase, 'place_details', auth.userId, 'google/rating');
+  if (!detailsGate.ok) return googleGateRefusal(detailsGate, cors);
   const detailsParams = new URLSearchParams({
     place_id: placeId,
-    fields: 'rating,user_ratings_total',
+    fields: placeIdFromDb ? 'rating,user_ratings_total,name,geometry' : 'rating,user_ratings_total',
     key: apiKey,
   });
   const detailsRes = await fetch(
@@ -246,6 +258,17 @@ export async function POST(request: Request) {
   const result = details?.result;
   if (!result) {
     return NextResponse.json({ rating: null, reason: 'no_details' }, { headers: cors });
+  }
+  if (
+    placeIdFromDb &&
+    !isSamePlace(ours, {
+      name: result.name,
+      latitude: result.geometry?.location?.lat,
+      longitude: result.geometry?.location?.lng,
+    })
+  ) {
+    // Place ID mémorisé avant le contrôle et qui désigne un autre lieu : oublié.
+    return noMatch();
   }
 
   const rating = typeof result.rating === 'number' ? result.rating : null;

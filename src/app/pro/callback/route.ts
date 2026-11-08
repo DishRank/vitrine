@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/pro/supabaseServer';
+import { safeNextPath } from '@/lib/pro/safeNext';
 
 /**
  * Point d'atterrissage des flows auth web (lot 1 espace-pro-web) :
@@ -24,14 +25,8 @@ export async function GET(request: Request) {
   // error_description — traiter les deux.
   const errorDescription = url.searchParams.get('error_description') || url.searchParams.get('error');
 
-  // Anti open-redirect : chemin relatif interne uniquement, backslash rejeté
-  // (le parseur WHATWG normalise `\` en `/` → `/\evil.com` sortirait du
-  // domaine — audit M1).
-  const rawNext = url.searchParams.get('next') ?? '/pro/espace';
-  const next =
-    rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.includes('\\')
-      ? rawNext
-      : '/pro/espace';
+  // Anti open-redirect : chemin interne uniquement (cf. safeNextPath).
+  const next = safeNextPath(url.searchParams.get('next'));
 
   const fail = (message: string) =>
     NextResponse.redirect(
@@ -45,8 +40,8 @@ export async function GET(request: Request) {
     const expired = /expired|invalid/i.test(errorDescription);
     return fail(
       expired
-        ? 'Le lien a expiré — redemande un email.'
-        : 'Connexion impossible. Réessaie.'
+        ? 'Le lien a expiré — demandez un nouvel email.'
+        : 'Connexion impossible. Réessayez.'
     );
   }
 
@@ -55,7 +50,7 @@ export async function GET(request: Request) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(new URL(next, url.origin));
-    return fail('Connexion impossible — le lien a peut-être expiré. Réessaie.');
+    return fail('Connexion impossible — le lien a peut-être expiré. Réessayez.');
   }
 
   if (tokenHash && type) {
@@ -67,7 +62,7 @@ export async function GET(request: Request) {
     // robuste cross-browser. Ne pas élargir ce chemin à d'autres usages.
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) return NextResponse.redirect(new URL(next, url.origin));
-    return fail('Lien invalide ou expiré — redemande un email.');
+    return fail('Lien invalide ou expiré — demandez un nouvel email.');
   }
 
   return fail('Lien incomplet.');

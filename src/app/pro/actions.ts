@@ -6,6 +6,7 @@ import { getSupabaseServer } from '@/lib/pro/supabaseServer';
 import { mapAuthErrorFr, isPasswordValid } from '@/lib/pro/authErrors';
 import { rateLimit } from '@/lib/pro/rateLimit';
 import { logProEvent } from '@/lib/pro/instrument';
+import { safeNextPath } from '@/lib/pro/safeNext';
 
 /**
  * Server Actions auth de l'espace pro — TOUTES les mutations passent par ici
@@ -54,14 +55,9 @@ async function emailLinkOrigin(): Promise<string> {
   return `${proto}://${host}`;
 }
 
-/**
- * N'autorise que des chemins relatifs INTERNES (anti open-redirect).
- * Rejette aussi les backslashes : le parseur WHATWG normalise `\` en `/`,
- * donc `/\evil.com` redirigerait hors-domaine (audit M1).
- */
+/** N'autorise que des chemins relatifs INTERNES (anti open-redirect, cf. safeNextPath). */
 function safeNext(raw: FormDataEntryValue | null, fallback = '/pro/espace'): string {
-  const v = typeof raw === 'string' ? raw : '';
-  return v.startsWith('/') && !v.startsWith('//') && !v.includes('\\') ? v : fallback;
+  return safeNextPath(raw, fallback);
 }
 
 function captchaToken(formData: FormData): string | undefined {
@@ -69,7 +65,7 @@ function captchaToken(formData: FormData): string | undefined {
   return typeof t === 'string' && t ? t : undefined;
 }
 
-const RETRY_FR = (s: number) => `Trop de tentatives. Réessaie dans ${s} s.`;
+const RETRY_FR = (s: number) => `Trop de tentatives. Réessayez dans ${s} s.`;
 
 // ─── Connexion ────────────────────────────────────────────────────────────────
 export async function signInAction(
@@ -88,15 +84,27 @@ export async function signInAction(
   if (!byIp.ok || !byEmail.ok) return { error: RETRY_FR(Math.max(byIp.retryAfter, byEmail.retryAfter)) };
 
   const supabase = await getSupabaseServer();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
     options: { captchaToken: captchaToken(formData) },
   });
   if (error) return { error: mapAuthErrorFr(error) };
 
+  const next = safeNext(formData.get('next'));
+  // Compte avec un appareil de double authentification : direction la saisie
+  // du code. Sans ce détour, la redirection de l'action vers la destination
+  // était renvoyée sur /pro/mfa par le proxy pendant la requête RSC : la page
+  // du code s'affichait, mais l'adresse restait celle de la destination (vu
+  // par les tests Playwright, e2e/pro.spec.ts).
+  // La connexion n'est journalisée qu'une fois complète : pour un compte 2FA,
+  // par verifyMfaAction après le code (en aal1, la base refuse l'écriture et
+  // l'événement était perdu).
+  if (data.user?.factors?.some((f) => f.status === 'verified')) {
+    redirect(`/pro/mfa?next=${encodeURIComponent(next)}`);
+  }
   await logProEvent(supabase, 'pro_login');
-  redirect(safeNext(formData.get('next')));
+  redirect(next);
 }
 
 // ─── Inscription ──────────────────────────────────────────────────────────────
@@ -147,7 +155,7 @@ export async function signUpAction(
 
   return {
     ok: true,
-    message: 'Compte créé ! Vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.',
+    message: 'Compte créé ! Vérifiez votre boîte mail pour confirmer votre adresse, puis connectez-vous.',
   };
 }
 
@@ -179,7 +187,7 @@ export async function requestPasswordResetAction(
   }
   return {
     ok: true,
-    message: 'Si un compte existe avec cet email, tu recevras un lien de réinitialisation dans quelques instants.',
+    message: 'Si un compte existe avec cet email, vous recevrez un lien de réinitialisation dans quelques instants.',
   };
 }
 
@@ -219,7 +227,7 @@ export async function sendMagicLinkAction(
   }
   return {
     ok: true,
-    message: 'Si un compte existe avec cet email, tu recevras un lien de connexion dans quelques instants.',
+    message: 'Si un compte existe avec cet email, vous recevrez un lien de connexion dans quelques instants.',
   };
 }
 
@@ -237,12 +245,72 @@ export async function updatePasswordAction(
 
   const supabase = await getSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Session expirée — redemande un lien de réinitialisation.' };
+  if (!user) return { error: 'Session expirée — demandez un nouveau lien de réinitialisation.' };
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: mapAuthErrorFr(error) };
 
   redirect('/pro/espace?pwd=updated');
+}
+
+// ─── Double authentification (session ouverte, en attente du code) ───────────
+// Le proxy envoie sur /pro/mfa toute session `aal1` d'un compte qui a inscrit
+// une appli de codes dans l'app mobile (la base refuse ses requêtes, mig. 211).
+// Ici on ne fait que VÉRIFIER : l'inscription et les codes de secours restent
+// dans l'app (Réglages → Double authentification).
+export async function verifyMfaAction(
+  _prev: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const code = String(formData.get('code') ?? '').replace(/\D/g, '');
+  if (code.length !== 6) return { error: 'Le code fait 6 chiffres.' };
+  const next = safeNext(formData.get('next'));
+
+  const supabase = await getSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/pro/login');
+
+  // 6 chiffres = 1 million de combinaisons : on borne les essais par compte
+  // (l'IP seule se contourne). GoTrue a aussi sa propre limite.
+  const ip = await clientIp();
+  const [byIp, byUser] = await Promise.all([
+    rateLimit(`pro:mfa:ip:${ip}`, 10, 60_000),
+    rateLimit(`pro:mfa:user:${user.id}`, 5, 60_000),
+  ]);
+  if (!byIp.ok || !byUser.ok) return { error: RETRY_FR(Math.max(byIp.retryAfter, byUser.retryAfter)) };
+
+  const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+  if (listError) return { error: mapAuthErrorFr(listError) };
+  // Appareil le plus récemment utilisé d'abord (même ordre que l'app).
+  const totp = [...(factors?.totp ?? [])].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  // Plus aucun appareil (retiré depuis l'app entre-temps) : rien à vérifier.
+  // On rafraîchit d'abord la session en cookie : le proxy y lit encore
+  // l'ancien appareil et renverrait ici jusqu'à expiration du jeton.
+  if (!totp.length) {
+    await supabase.auth.refreshSession();
+    redirect(next);
+  }
+
+  for (const factor of totp) {
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: factor.id, code });
+    if (!error) {
+      await logProEvent(supabase, 'pro_login');
+      redirect(next);
+    }
+    // Mauvais code pour CET appareil : on essaie le suivant. Toute autre erreur
+    // (limite atteinte, réseau…) arrête là.
+    if (error.code !== 'mfa_verification_failed') {
+      return {
+        error:
+          error.code === 'mfa_challenge_expired'
+            ? 'Code expiré. Saisissez le code affiché maintenant.'
+            : mapAuthErrorFr(error),
+      };
+    }
+  }
+  return {
+    error: "Code incorrect. Saisissez le code affiché maintenant ; s'il est refusé, vérifiez l'heure du téléphone.",
+  };
 }
 
 // ─── Déconnexion ──────────────────────────────────────────────────────────────

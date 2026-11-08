@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import TurnstileInvisible from '@/components/TurnstileInvisible';
 
 // ─── « ☆ Noter » — notation rapide SANS COMPTE depuis le menu web ───────────
 //
@@ -15,6 +16,11 @@ import { useState } from 'react';
 // La note rapide alimente les 4 sous-notes avec la même valeur (le détail
 // goût/présentation/prix/quantité reste la richesse du parcours in-app).
 // Un lien « Ouvrir dans l'app » reste proposé pour l'expérience complète.
+//
+// Anti-robot : quand Turnstile est configuré (`turnstileSiteKey`, passé par le
+// serveur seulement si la vérification est active), un widget invisible est
+// monté avec la feuille — le défi tourne pendant qu'on choisit ses étoiles, et
+// son jeton (à usage unique) part avec la note.
 
 export interface RateDishLabels {
   action: string;
@@ -24,6 +30,12 @@ export interface RateDishLabels {
   anonHint: string;
   already: string;
   error: string;
+  /** 429 : plafond de notes atteint (par connexion ou en base). */
+  tooMany: string;
+  /** Vérification anti-robot impossible (jeton absent ou refusé). */
+  verify: string;
+  /** 429 sur le commentaire seul : republier sans commentaire passe. */
+  commentTooMany: string;
   openApp: string;
 }
 
@@ -46,6 +58,8 @@ export default function RateDish({
   theme,
   labels,
   appHref,
+  turnstileSiteKey,
+  nonce,
 }: {
   restaurantId: string;
   /** Identifiant du plat. Le NOM canonique est résolu côté serveur à partir de
@@ -56,6 +70,9 @@ export default function RateDish({
   theme: RateDishTheme;
   labels: RateDishLabels;
   appHref: string;
+  /** Absent = Turnstile non configuré : aucun widget, aucun jeton envoyé. */
+  turnstileSiteKey?: string;
+  nonce?: string;
 }) {
   // `mounted` garde la feuille dans le DOM pendant l'animation de sortie ;
   // `visible` pilote la transition (slide-up + fade du backdrop).
@@ -65,8 +82,34 @@ export default function RateDish({
   const [comment, setComment] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Jeton Turnstile courant + envois en attente d'un jeton. `tsReset` redemande
+  // un jeton après chaque envoi (usage unique).
+  const tokenRef = useRef<string | null>(null);
+  const waitersRef = useRef<((token: string) => void)[]>([]);
+  const [tsReset, setTsReset] = useState(0);
 
   const violet = theme.dark ? BRAND_DARK : BRAND;
+
+  const onToken = useCallback((token: string | null) => {
+    tokenRef.current = token;
+    if (token) waitersRef.current.splice(0).forEach((resolve) => resolve(token));
+  }, []);
+
+  /** Le jeton, tout de suite s'il est prêt, sinon dès qu'il arrive — null au
+   *  bout de `ms` (script bloqué, ou interaction demandée et pas encore faite). */
+  const waitToken = (ms: number) =>
+    new Promise<string | null>((resolve) => {
+      if (tokenRef.current) return resolve(tokenRef.current);
+      const done = (token: string) => {
+        clearTimeout(timer);
+        resolve(token);
+      };
+      const timer = setTimeout(() => {
+        waitersRef.current = waitersRef.current.filter((w) => w !== done);
+        resolve(null);
+      }, ms);
+      waitersRef.current.push(done);
+    });
 
   const openSheet = () => {
     setMounted(true);
@@ -83,6 +126,8 @@ export default function RateDish({
       setComment('');
       setState('idle');
       setErrorMsg(null);
+      // Le widget est démonté avec la feuille : son jeton ne vaut plus rien.
+      tokenRef.current = null;
     }, 280);
   };
 
@@ -90,6 +135,19 @@ export default function RateDish({
     if (stars < 1 || state === 'sending') return;
     setState('sending');
     setErrorMsg(null);
+    let turnstileToken: string | undefined;
+    if (turnstileSiteKey) {
+      const token = await waitToken(10_000);
+      if (!token) {
+        // Rien n'est envoyé sans jeton : le serveur le refuserait. Si une case
+        // est apparue, la cocher puis republier suffit (pas de reset ici).
+        setErrorMsg(labels.verify);
+        setState('error');
+        return;
+      }
+      turnstileToken = token;
+      tokenRef.current = null;
+    }
     try {
       // Un POST à NOTRE serveur, et rien d'autre. On n'envoie volontairement
       // PAS le nom du plat : la route le relit en base depuis `menuItemId`, et
@@ -105,18 +163,31 @@ export default function RateDish({
           menuItemId,
           stars,
           comment: comment.trim() || undefined,
+          turnstileToken,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
       if (!res.ok || !json.ok) {
-        setErrorMsg(json.reason === 'already' ? labels.already : labels.error);
+        setErrorMsg(
+          json.reason === 'already'
+            ? labels.already
+            : json.reason === 'limited'
+              ? labels.tooMany
+              : json.reason === 'comment_limited'
+                ? labels.commentTooMany
+                : json.reason === 'verify'
+                  ? labels.verify
+                  : labels.error
+        );
         setState('error');
+        if (turnstileSiteKey) setTsReset((n) => n + 1);
         return;
       }
       setState('done');
     } catch {
       setErrorMsg(labels.error);
       setState('error');
+      if (turnstileSiteKey) setTsReset((n) => n + 1);
     }
   };
 
@@ -246,6 +317,16 @@ export default function RateDish({
                     boxSizing: 'border-box',
                   }}
                 />
+                {turnstileSiteKey ? (
+                  <TurnstileInvisible
+                    siteKey={turnstileSiteKey}
+                    nonce={nonce}
+                    // = MENU_RATE_ACTION (lib/turnstile, côté serveur), revérifiée par siteverify.
+                    action="menu_rate"
+                    onToken={onToken}
+                    resetKey={tsReset}
+                  />
+                ) : null}
                 {state === 'error' && errorMsg ? (
                   <p style={{ margin: '8px 0 0', fontSize: 12.5, color: '#C0604E' }}>{errorMsg}</p>
                 ) : null}

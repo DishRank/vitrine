@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { safeNextPath } from '@/lib/pro/safeNext';
 import AuthShell from '../_components/AuthShell';
 import LoginForm from './LoginForm';
 
@@ -11,11 +12,7 @@ export default async function LoginPage({
 }) {
   const sp = await searchParams;
   const nonce = (await headers()).get('x-nonce') || undefined;
-  // Même garde anti open-redirect que safeNext (backslash inclus — audit M1).
-  const next =
-    sp.next && sp.next.startsWith('/') && !sp.next.startsWith('//') && !sp.next.includes('\\')
-      ? sp.next
-      : '/pro/espace';
+  const next = safeNextPath(sp.next);
 
   return (
     <AuthShell title="Connexion" subtitle="Accédez à votre espace restaurateur.">

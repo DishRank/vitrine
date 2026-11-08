@@ -164,18 +164,26 @@ export default function DishReviewsBoard({
     />
   );
 
-  const title =
+  // Le plat ouvert est relu dans les données courantes : une réponse (ou sa
+  // suppression) revalide la page et renvoie de nouveaux `dishGroups`, mais
+  // l'instantané pris au clic restait affiché dans la modale (réponse
+  // supprimée encore visible, formulaire encore ouvert après l'envoi — vu par
+  // les tests Playwright, e2e/pro.spec.ts).
+  const openGroup =
     open?.kind === "dish"
-      ? open.group.name
-      : open?.kind === "orphan"
-        ? "Plats non reconnus"
-        : "";
-  const subtitle =
-    open?.kind === "dish"
-      ? `${open.group.reviews.length} avis${open.group.avg != null ? ` · ★ ${open.group.avg.toFixed(1)}` : ""}`
-      : open?.kind === "orphan"
-        ? `${orphanReviews.length} avis à rattacher`
-        : undefined;
+      ? (dishGroups.find((g) => g.name === open.group.name) ?? open.group)
+      : null;
+
+  const title = openGroup
+    ? openGroup.name
+    : open?.kind === "orphan"
+      ? "Plats non reconnus"
+      : "";
+  const subtitle = openGroup
+    ? `${openGroup.reviews.length} avis${openGroup.avg != null ? ` · ★ ${openGroup.avg.toFixed(1)}` : ""}`
+    : open?.kind === "orphan"
+      ? `${orphanReviews.length} avis à rattacher`
+      : undefined;
 
   const goPending = () => {
     setView("list");
@@ -437,8 +445,8 @@ export default function DishReviewsBoard({
               ) : null}
               {orphanReviews.map(card)}
             </>
-          ) : open?.kind === "dish" ? (
-            open.group.reviews.map(card)
+          ) : openGroup ? (
+            openGroup.reviews.map(card)
           ) : null}
         </div>
       </Modal>

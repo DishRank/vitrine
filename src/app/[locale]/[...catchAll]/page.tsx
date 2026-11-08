@@ -1,4 +1,9 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+
+// Sans ces métadonnées, la page 404 héritait du « index, follow » du layout, à
+// côté du « noindex » ajouté par Next : deux consignes contradictoires.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 /**
  * Catch-all route at the locale level. Matches any URL under /{locale}/...

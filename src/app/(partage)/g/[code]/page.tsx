@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { cache } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/downloadLinks';
+import { clientIp, ipBucket } from '@/lib/clientIp';
+import { peekLimit, rateLimit } from '@/lib/pro/rateLimit';
 import styles from '../../partage.module.css';
 import AppFooter from '../../AppFooter';
 import OpenAppButton from './OpenAppButton';
@@ -18,11 +21,21 @@ import OpenAppButton from './OpenAppButton';
  * n'expose que le nom du groupe, son émoji, le nombre de membres et le prénom
  * de la personne qui invite. Jamais de 500 : base injoignable → page générique
  * qui garde le code utilisable.
+ *
+ * Anti-énumération : un code valide révèle un groupe et le prénom de qui
+ * invite. Au-delà de MISS_MAX codes inconnus par IP et par heure (Upstash,
+ * partagé entre instances), la page refuse TOUTE recherche — y compris d'un
+ * code valide, sinon on ne masquerait que les ratés — et affiche « trop
+ * d'essais ». Une page ne peut pas renvoyer de 429 en App Router : c'est un
+ * état de la page. Les codes mal formés ne comptent pas : ils ne touchent pas
+ * la base et ne révèlent rien.
  */
 
 const CODE_RE = /^DR-[A-Z0-9]{6}$/;
+const MISS_MAX = 20;
+const MISS_WINDOW_MS = 60 * 60 * 1000;
 
-type InviteState = 'ok' | 'expired' | 'exhausted' | 'missing' | 'unknown';
+type InviteState = 'ok' | 'expired' | 'exhausted' | 'missing' | 'unknown' | 'limited';
 type Invite = {
   state: InviteState;
   group: { name: string; emoji: string | null } | null;
@@ -31,7 +44,16 @@ type Invite = {
   expiresAt: string | null;
 };
 
-const normalize = (raw: string) => decodeURIComponent(raw).toUpperCase().replace(/\s+/g, '');
+// Séquence `%` invalide (`/g/%E0`) : decodeURIComponent lève → 500. On garde
+// alors la chaîne brute, que le contrôle de format rejettera.
+const safeDecode = (raw: string) => {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+};
+const normalize = (raw: string) => safeDecode(raw).toUpperCase().replace(/\s+/g, '');
 const firstName = (s: string | null | undefined) => (s ?? '').trim().split(/\s+/)[0] || null;
 
 function demoInvite(code: string): Invite | null {
@@ -55,6 +77,11 @@ const getInvite = cache(async (code: string): Promise<Invite> => {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return empty;
 
+  // Une seule fois par requête (getInvite est mis en cache pour la page ET
+  // generateMetadata), donc un raté = un seul incrément.
+  const missKey = `g:miss:ip:${ipBucket(clientIp(await headers()))}`;
+  if (!(await peekLimit(missKey, MISS_MAX)).ok) return { ...empty, state: 'limited' };
+
   try {
     const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: inv, error } = await sb
@@ -65,7 +92,10 @@ const getInvite = cache(async (code: string): Promise<Invite> => {
       .limit(1)
       .maybeSingle();
     if (error) return empty;
-    if (!inv) return { ...empty, state: 'missing' };
+    if (!inv) {
+      await rateLimit(missKey, MISS_MAX, MISS_WINDOW_MS);
+      return { ...empty, state: 'missing' };
+    }
 
     const [{ data: group }, { count }, { data: profile }] = await Promise.all([
       sb.from('groups').select('name, emoji').eq('id', inv.group_id).maybeSingle(),
@@ -139,7 +169,12 @@ export default async function GroupInvitePage({ params }: PageProps) {
             </div>
           )}
           <h1 className={`${styles.display} ${styles.inviteTitle}`}>
-            {name ?? (inv.state === 'missing' ? 'Invitation introuvable' : 'Rejoins le groupe')}
+            {name ??
+              (inv.state === 'missing'
+                ? 'Invitation introuvable'
+                : inv.state === 'limited'
+                  ? 'Trop d’essais'
+                  : 'Rejoins le groupe')}
           </h1>
 
           {usable && (
@@ -165,6 +200,12 @@ export default async function GroupInvitePage({ params }: PageProps) {
             <p className={styles.inviteMeta}>
               Ce lien d’invitation n’existe pas ou a été désactivé. Demande un nouveau lien à la personne qui te l’a
               envoyé.
+            </p>
+          )}
+          {inv.state === 'limited' && (
+            <p className={styles.inviteMeta}>
+              Beaucoup de codes d’invitation ont été essayés depuis ta connexion. Patiente une heure au plus puis
+              réessaie, ou demande le lien exact à la personne qui t’invite.
             </p>
           )}
 

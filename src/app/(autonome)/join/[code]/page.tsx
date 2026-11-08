@@ -21,8 +21,11 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/downloadLinks';
+import { clientIp, ipBucket } from '@/lib/clientIp';
+import { peekLimit, rateLimit } from '@/lib/pro/rateLimit';
 
 interface InviterProfile {
   display_name: string | null;
@@ -30,10 +33,25 @@ interface InviterProfile {
   referral_code: string;
 }
 
+/**
+ * Anti-énumération (même règle que /g/<code>) : un code valide révèle le nom
+ * et l'avatar d'un membre. Au-delà de MISS_MAX codes inconnus par IP et par
+ * heure (Upstash, partagé entre instances), on ne cherche PLUS aucun code,
+ * valide ou non, et la page retombe sur sa version générique « Rejoins
+ * DishRank ». Pas d'écran « trop d'essais » ici : la version générique garde
+ * les boutons d'installation et le lien profond porte toujours le code, donc
+ * une vraie invitation reste utilisable dans l'app — la page ne dit juste plus
+ * de qui elle vient. Les codes mal formés ne comptent pas (aucune requête).
+ */
+const MISS_MAX = 20;
+const MISS_WINDOW_MS = 60 * 60 * 1000;
+
 // Server-side fetch with anon key — referral_code is public-safe and the
 // only column we need beyond display_name + avatar_url, all of which are
 // readable under the standard "Profiles visibles selon privacy" policy.
-async function fetchInviter(code: string): Promise<InviterProfile | null> {
+// `cache` : page et generateMetadata partagent UNE recherche par requête,
+// donc un code inconnu ne compte qu'une fois.
+const fetchInviter = cache(async (code: string): Promise<InviterProfile | null> => {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
@@ -42,18 +60,23 @@ async function fetchInviter(code: string): Promise<InviterProfile | null> {
   // anything else so a hostile path can't bend the query.
   if (!/^[A-Za-z0-9_-]{3,32}$/.test(code)) return null;
 
+  const missKey = `join:miss:ip:${ipBucket(clientIp(await headers()))}`;
+  if (!(await peekLimit(missKey, MISS_MAX)).ok) return null;
+
   try {
     const supabase = createClient(url, key);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('display_name, avatar_url, referral_code')
       .eq('referral_code', code)
       .maybeSingle();
+    if (error) return null;
+    if (!data) await rateLimit(missKey, MISS_MAX, MISS_WINDOW_MS);
     return (data as InviterProfile | null) ?? null;
   } catch {
     return null;
   }
-}
+});
 
 interface PageProps {
   params: Promise<{ code: string }>;

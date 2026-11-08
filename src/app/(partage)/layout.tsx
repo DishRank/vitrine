@@ -46,7 +46,7 @@ export const viewport: Viewport = {
 
 export default function PartageLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${outfit.variable} ${display.variable}`}>
+    <html lang="fr" className={`${outfit.variable} ${display.variable}`} data-scroll-behavior="smooth">
       <body>{children}</body>
     </html>
   );

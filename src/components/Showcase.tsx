@@ -149,10 +149,10 @@ export default function Showcase() {
           {/* Arrows — translate-only on hover (skill: stable hover states,
               avoid scale that shifts layout). */}
           <div className="hidden md:flex gap-2 mt-1">
-            <button onClick={goPrev} aria-label="Previous slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors duration-200">
+            <button onClick={goPrev} aria-label={t('prev')} className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
-            <button onClick={goNextManual} aria-label="Next slide" className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors duration-200">
+            <button onClick={goNextManual} aria-label={t('next')} className="cursor-pointer w-10 h-10 rounded-full border border-[var(--border2)] bg-[var(--surface)] text-[var(--text2)] flex items-center justify-center hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors duration-200">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
             </button>
           </div>

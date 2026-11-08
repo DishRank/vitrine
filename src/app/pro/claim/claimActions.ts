@@ -120,12 +120,12 @@ export async function submitManualClaimAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Session expirée — reconnecte-toi.' };
+  if (!user) return { ok: false, error: 'Session expirée — reconnectez-vous.' };
 
   // Plafond par user : max 8 demandes manuelles / heure (anti-flood de la file
   // de modération + du verrou pending global-par-resto).
   const rl = await rateLimit(`pro:claim:manual:${user.id}`, 8, 3_600_000);
-  if (!rl.ok) return { ok: false, error: 'Trop de demandes. Réessaie dans un moment.' };
+  if (!rl.ok) return { ok: false, error: 'Trop de demandes. Réessayez dans un moment.' };
 
   const { error } = await supabase.from('restaurant_claims').insert({
     restaurant_id: restaurantId,
@@ -148,7 +148,7 @@ export async function submitManualClaimAction(
       if (mine) return { ok: true }; // ma demande est déjà en attente → écran pending
       return { ok: false, error: 'Cet établissement fait déjà l’objet d’une demande en cours.' };
     }
-    return { ok: false, error: 'Impossible d’enregistrer la demande. Réessaie.' };
+    return { ok: false, error: 'Impossible d’enregistrer la demande. Réessayez.' };
   }
   return { ok: true };
 }

@@ -556,6 +556,12 @@ export const MENU_UI: Record<
     rateAnonHint: string;
     rateAlready: string;
     rateError: string;
+    /** 429 de /api/menu/rate : plafond par connexion ou plafond journalier en base. */
+    rateTooMany: string;
+    /** Vérification anti-robot (Turnstile) impossible. */
+    rateVerify: string;
+    /** 429 sur le commentaire seul : la note sans commentaire reste possible. */
+    rateCommentTooMany: string;
     lunchOnly: string;
     dinnerOnly: string;
     choiceOf: string;
@@ -605,7 +611,7 @@ export const MENU_UI: Record<
     ratePhotoHint: 'Plat issu d’une carte photographiée par un membre.',
     from: 'dès',
     soldOut: 'Épuisé',
-    signature: 'Choix du chef', rateAction: 'Noter', ratePublish: 'Publier', rateCommentPh: 'Un mot sur ce plat ? (optionnel)', rateThanks: 'Merci pour votre note !', rateAnonHint: 'Sans compte — votre note est anonyme.', rateAlready: 'Vous avez déjà noté ce plat ce mois-ci.', rateError: 'Impossible d’envoyer la note — réessayez.',
+    signature: 'Choix du chef', rateAction: 'Noter', ratePublish: 'Publier', rateCommentPh: 'Un mot sur ce plat ? (optionnel)', rateThanks: 'Merci pour votre note !', rateAnonHint: 'Sans compte — votre note est anonyme.', rateAlready: 'Vous avez déjà noté ce plat ce mois-ci.', rateError: 'Impossible d’envoyer la note — réessayez.', rateTooMany: 'Trop de notes envoyées pour le moment — réessayez plus tard.', rateVerify: 'Vérification anti-robot impossible — rechargez la page puis réessayez.', rateCommentTooMany: 'Trop de commentaires envoyés pour le moment — retirez le vôtre pour publier la note seule.',
     lunchOnly: 'Le midi',
     dinnerOnly: 'Le soir',
     choiceOf: 'Au choix',
@@ -662,7 +668,7 @@ export const MENU_UI: Record<
     ratePhotoHint: 'Dish taken from a menu photographed by a member.',
     from: 'from',
     soldOut: 'Sold out',
-    signature: "Chef's choice", rateAction: 'Rate', ratePublish: 'Publish', rateCommentPh: 'A word about this dish? (optional)', rateThanks: 'Thanks for rating!', rateAnonHint: 'No account needed — your rating is anonymous.', rateAlready: 'You already rated this dish this month.', rateError: 'Could not send your rating — try again.',
+    signature: "Chef's choice", rateAction: 'Rate', ratePublish: 'Publish', rateCommentPh: 'A word about this dish? (optional)', rateThanks: 'Thanks for rating!', rateAnonHint: 'No account needed — your rating is anonymous.', rateAlready: 'You already rated this dish this month.', rateError: 'Could not send your rating — try again.', rateTooMany: 'Too many ratings for now — please try again later.', rateVerify: 'Bot check failed — reload the page and try again.', rateCommentTooMany: 'Too many comments for now — remove yours to publish the rating alone.',
     lunchOnly: 'Lunch only',
     dinnerOnly: 'Dinner only',
     choiceOf: 'Choice of',
@@ -719,7 +725,7 @@ export const MENU_UI: Record<
     ratePhotoHint: 'Plato tomado de una carta fotografiada por un miembro.',
     from: 'desde',
     soldOut: 'Agotado',
-    signature: 'Elección del chef', rateAction: 'Valorar', ratePublish: 'Publicar', rateCommentPh: '¿Unas palabras sobre el plato? (opcional)', rateThanks: '¡Gracias por tu valoración!', rateAnonHint: 'Sin cuenta — tu valoración es anónima.', rateAlready: 'Ya valoraste este plato este mes.', rateError: 'No se pudo enviar la valoración — inténtalo de nuevo.',
+    signature: 'Elección del chef', rateAction: 'Valorar', ratePublish: 'Publicar', rateCommentPh: '¿Unas palabras sobre el plato? (opcional)', rateThanks: '¡Gracias por tu valoración!', rateAnonHint: 'Sin cuenta — tu valoración es anónima.', rateAlready: 'Ya valoraste este plato este mes.', rateError: 'No se pudo enviar la valoración — inténtalo de nuevo.', rateTooMany: 'Demasiadas valoraciones por ahora — inténtalo más tarde.', rateVerify: 'No se pudo comprobar que no eres un robot — recarga la página e inténtalo de nuevo.', rateCommentTooMany: 'Demasiados comentarios por ahora — quita el tuyo para publicar solo la valoración.',
     lunchOnly: 'Solo mediodía',
     dinnerOnly: 'Solo noche',
     choiceOf: 'A elegir',
@@ -776,7 +782,7 @@ export const MENU_UI: Record<
     ratePhotoHint: 'Gericht aus einer von einem Mitglied fotografierten Karte.',
     from: 'ab',
     soldOut: 'Ausverkauft',
-    signature: 'Empfehlung des Chefs', rateAction: 'Bewerten', ratePublish: 'Senden', rateCommentPh: 'Ein Wort zum Gericht? (optional)', rateThanks: 'Danke für deine Bewertung!', rateAnonHint: 'Ohne Konto — deine Bewertung ist anonym.', rateAlready: 'Du hast dieses Gericht diesen Monat schon bewertet.', rateError: 'Bewertung konnte nicht gesendet werden — bitte erneut versuchen.',
+    signature: 'Empfehlung des Chefs', rateAction: 'Bewerten', ratePublish: 'Senden', rateCommentPh: 'Ein Wort zum Gericht? (optional)', rateThanks: 'Danke für deine Bewertung!', rateAnonHint: 'Ohne Konto — deine Bewertung ist anonym.', rateAlready: 'Du hast dieses Gericht diesen Monat schon bewertet.', rateError: 'Bewertung konnte nicht gesendet werden — bitte erneut versuchen.', rateTooMany: 'Gerade zu viele Bewertungen — bitte später erneut versuchen.', rateVerify: 'Sicherheitsprüfung fehlgeschlagen — Seite neu laden und erneut versuchen.', rateCommentTooMany: 'Gerade zu viele Kommentare — entferne deinen, um nur die Bewertung zu senden.',
     lunchOnly: 'Nur mittags',
     dinnerOnly: 'Nur abends',
     choiceOf: 'Zur Wahl',
@@ -833,7 +839,7 @@ export const MENU_UI: Record<
     ratePhotoHint: 'Piatto tratto da un menù fotografato da un membro.',
     from: 'da',
     soldOut: 'Esaurito',
-    signature: 'Scelta dello chef', rateAction: 'Valuta', ratePublish: 'Pubblica', rateCommentPh: 'Due parole sul piatto? (facoltativo)', rateThanks: 'Grazie per la valutazione!', rateAnonHint: 'Senza account — la tua valutazione è anonima.', rateAlready: 'Hai già valutato questo piatto questo mese.', rateError: 'Invio non riuscito — riprova.',
+    signature: 'Scelta dello chef', rateAction: 'Valuta', ratePublish: 'Pubblica', rateCommentPh: 'Due parole sul piatto? (facoltativo)', rateThanks: 'Grazie per la valutazione!', rateAnonHint: 'Senza account — la tua valutazione è anonima.', rateAlready: 'Hai già valutato questo piatto questo mese.', rateError: 'Invio non riuscito — riprova.', rateTooMany: 'Troppe valutazioni per ora — riprova più tardi.', rateVerify: 'Verifica anti-robot non riuscita — ricarica la pagina e riprova.', rateCommentTooMany: 'Troppi commenti per ora — togli il tuo per pubblicare solo la valutazione.',
     lunchOnly: 'Solo pranzo',
     dinnerOnly: 'Solo cena',
     choiceOf: 'A scelta',

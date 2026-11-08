@@ -57,7 +57,7 @@ export default function DownloadButtons({
       href={APP_STORE_URL}
       target="_blank"
       rel="noopener"
-      aria-label="Telecharger sur l'App Store"
+      aria-label="Télécharger sur l'App Store"
       className={`${BASE_CLASSES} ${sizeClass}`}
     >
       <AppleIcon size={iconSize} />
@@ -70,7 +70,7 @@ export default function DownloadButtons({
       href={PLAY_STORE_URL}
       target="_blank"
       rel="noopener"
-      aria-label="Telecharger sur Google Play"
+      aria-label="Télécharger sur Google Play"
       className={`${BASE_CLASSES} ${sizeClass}`}
     >
       <PlayIcon size={iconSize} />
@@ -80,7 +80,7 @@ export default function DownloadButtons({
     <a
       href="#"
       onClick={openBetaModal}
-      aria-label="Telecharger sur Google Play (beta)"
+      aria-label="Télécharger sur Google Play (bêta)"
       className={`${BASE_CLASSES} ${sizeClass}`}
     >
       <PlayIcon size={iconSize} />

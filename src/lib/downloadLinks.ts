@@ -23,14 +23,14 @@ export const PLAY_STORE_BETA_OPT_IN = 'https://play.google.com/apps/testing/com.
 
 /**
  * URL utilisée par les boutons cliquables (Nav, Footer, CtaBanner,
- * DownloadButtons, /join, /dish). Pointe vers l'opt-in beta tant qu'on
- * est en Open Testing. Switcher sur PLAY_STORE_URL_CANONICAL une fois
- * la prod publiée.
+ * DownloadButtons, /join, /dish). L'app est en production sur Google Play
+ * (fiche publique vérifiée le 08/11/2026) : la fiche du store, et non plus
+ * la page d'inscription des testeurs, qui demandait de « devenir testeur »
+ * avant d'installer.
  */
-export const PLAY_STORE_URL = PLAY_STORE_BETA_OPT_IN;
+export const PLAY_STORE_URL = PLAY_STORE_URL_CANONICAL;
 
-// L'app Android est en beta ouverte : le bouton Play Store pointe vers
-// le lien d'opt-in (cf. PLAY_STORE_URL ci-dessus).
+// L'app Android est publiée : le bouton Play Store ouvre la fiche du store.
 export const ANDROID_LIVE = true;
 
 export type Platform = 'ios' | 'android' | 'desktop';

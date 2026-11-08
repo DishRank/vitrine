@@ -26,3 +26,7 @@ npm-debug.log*
 
 .env
 .env.*
+
+# Playwright
+test-results/
+playwright-report/

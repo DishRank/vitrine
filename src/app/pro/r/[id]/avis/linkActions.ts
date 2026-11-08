@@ -30,14 +30,14 @@ export interface LinkActionState {
   itemId?: string;
 }
 
-const FAIL_OWNER: LinkActionState = { error: "Tu n'es pas le propriétaire de cet établissement." };
+const FAIL_OWNER: LinkActionState = { error: "Vous n'êtes pas le propriétaire de cet établissement." };
 
 function mapLinkError(error: { message?: string } | null): string {
   const m = (error?.message ?? '').toUpperCase();
   if (m.includes('UNLINK_FORBIDDEN'))
     return 'Un avis ne peut pas être détaché d’un plat — rattachez-le au bon plat.';
   if (m.includes('REVIEW_NOT_ORPHAN')) return 'Cet avis correspond déjà à un plat de la carte.';
-  if (m.includes('ITEM_NOT_FOUND')) return 'Plat introuvable dans ta carte.';
+  if (m.includes('ITEM_NOT_FOUND')) return 'Plat introuvable dans votre carte.';
   if (m.includes('REVIEW_NOT_FOUND')) return 'Avis introuvable.';
   if (m.includes('NOT_OWNER')) return FAIL_OWNER.error!;
   if (m.includes('ALIAS_SHADOWS_DISH'))
@@ -45,7 +45,7 @@ function mapLinkError(error: { message?: string } | null): string {
   if (m.includes('ALIAS_LIMIT')) return 'Trop de noms alternatifs pour cet établissement.';
   if (m.includes('23505') || m.includes('DUPLICATE') || m.includes('UNIQUE'))
     return 'Ce nom alternatif existe déjà.';
-  return 'Une erreur est survenue. Réessaie.';
+  return 'Une erreur est survenue. Réessayez.';
 }
 
 function revalidateReviews(restaurantId: string) {

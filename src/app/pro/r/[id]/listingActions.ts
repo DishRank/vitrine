@@ -39,7 +39,7 @@ export async function updateListingAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: 'Session expirée — reconnecte-toi.' };
+  if (!user) return { error: 'Session expirée — reconnectez-vous.' };
 
   const priceRaw = formData.get('price_level');
   const priceLevel =
@@ -80,7 +80,7 @@ export async function updateListingAction(
     .eq('owner_id', user.id);
 
   if (error) return { error: mapAuthErrorFr(error) };
-  if (!count) return { error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!count) return { error: "Vous n'êtes pas le propriétaire de cet établissement." };
 
   await logProEvent(supabase, 'pro_listing_edit', restaurantId);
   revalidatePath(`/pro/r/${restaurantId}`);

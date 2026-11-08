@@ -198,6 +198,9 @@ export default function ThemeEditor({
     set('show_logo', true);
   };
 
+  // Blocs Premium verrouillés : « inert » les retire aussi du clavier et des
+  // lecteurs d'écran (pointer-events seul laissait activer les boutons au
+  // clavier, et la base refusait alors l'enregistrement).
   const disabled = !premium;
 
   return (
@@ -216,7 +219,7 @@ export default function ThemeEditor({
           </div>
         ) : null}
 
-        <section className={disabled ? 'opacity-60 pointer-events-none' : ''}>
+        <section inert={disabled} className={disabled ? 'opacity-60 pointer-events-none' : ''}>
           <h3 className="mb-2 text-sm font-extrabold">Ambiance</h3>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {MENU_THEME_ORDER.map((p) => (
@@ -261,12 +264,12 @@ export default function ThemeEditor({
           </div>
         </section>
 
-        <section className={disabled ? 'opacity-60 pointer-events-none' : ''}>
+        <section inert={disabled} className={disabled ? 'opacity-60 pointer-events-none' : ''}>
           <h3 className="mb-2 text-sm font-extrabold">Couleur d&apos;accent</h3>
           <ColorField value={theme.accent} onChange={(c) => set('accent', c)} presets={MENU_ACCENTS} />
         </section>
 
-        <section className={disabled ? 'opacity-60 pointer-events-none' : ''}>
+        <section inert={disabled} className={disabled ? 'opacity-60 pointer-events-none' : ''}>
           <h3 className="mb-2 text-sm font-extrabold">Police</h3>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {MENU_FONT_ORDER.map((f) => (

@@ -7,6 +7,9 @@ import {
   issueGuestId,
   readGuestId,
 } from '@/lib/guestIdentity';
+import { clientIp, ipBucket } from '@/lib/clientIp';
+import { rateLimit } from '@/lib/pro/rateLimit';
+import { verifyMenuTurnstile } from '@/lib/turnstile';
 
 /**
  * Notation d'un plat SANS COMPTE depuis le menu QR.
@@ -25,10 +28,16 @@ import {
  *  2. LE PLAT DOIT APPARTENIR AU RESTAURANT SCANNÉ. Vérifié ici ET re-vérifié
  *     par le trigger `check_guest_review` (mig.129) : la base garde le dernier
  *     mot, pour qu'un futur second appelant ne rouvre pas le trou.
- *  3. L'ÉTRANGLEMENT PORTE SUR L'APPAREIL (cookie signé), pas sur l'IP : une
- *     salle partage son wifi donc son IP, et plafonner l'IP capait la soirée
- *     entière. L'IP ne reste qu'un backstop grossier ; la vraie borne anti-abus
- *     vit en base (plafond par restaurant, mig.129 + cooldown 30 j/plat).
+ *  3. UN ROBOT NE NOTE PAS EN BOUCLE. Le frein principal porte sur l'APPAREIL
+ *     (cookie signé), parce qu'une salle partage son wifi donc son IP — et
+ *     qu'on ne voit jamais l'IP locale du téléphone derrière la box (elle
+ *     serait de toute façon falsifiable). Mais le cookie se renouvelle
+ *     gratuitement (il suffit de ne pas le renvoyer) : l'audit sécurité de
+ *     nov. 2026 a montré qu'un script obtenait un nouvel invité à chaque
+ *     requête, sur les 1 314 menus publics. C'est TURNSTILE qui rend ce
+ *     renouvellement coûteux : chaque requête exige un défi résolu. Derrière :
+ *     un plafond PAR IP assez haut pour une salle pleine, et les plafonds en
+ *     base (par appareil, restaurant et plat, mig.129 puis 212 — erreur PT429).
  *
  * L'identité d'appareil est un cookie httpOnly signé (cf. lib/guestIdentity) :
  * zéro ligne dans auth.users, zéro MAU facturé, et le cooldown 30 j/plat tient
@@ -38,55 +47,82 @@ import {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_COMMENT = 500;
 
-/** Réponses volontairement AVARES : on distingue « déjà noté » (l'utilisateur
- *  doit comprendre) du reste (générique — ne pas cartographier les gardes). */
-type Fail = 'already' | 'error';
+/** Réponses volontairement AVARES : on distingue ce que l'utilisateur doit
+ *  comprendre (déjà noté, trop de notes, vérification anti-robot) du reste
+ *  (générique — ne pas cartographier les gardes). */
+type Fail = 'already' | 'limited' | 'comment_limited' | 'verify' | 'error';
 
-function fail(kind: Fail, status: number) {
-  return NextResponse.json({ ok: false, reason: kind }, { status });
+function fail(kind: Fail, status: number, extra?: { message?: string; retryAfter?: number }) {
+  const res = NextResponse.json(
+    { ok: false, reason: kind, ...(extra?.message ? { message: extra.message } : {}) },
+    { status }
+  );
+  if (extra?.retryAfter) res.headers.set('Retry-After', String(extra.retryAfter));
+  return res;
+}
+
+const MSG_TOO_MANY = 'Trop de notes envoyées depuis cette connexion. Réessaie plus tard.';
+const MSG_COMMENT_TOO_MANY =
+  'Trop de commentaires envoyés pour le moment. Tu peux quand même publier ta note sans commentaire.';
+const MSG_VERIFY = 'La vérification anti-robot a échoué. Recharge la page puis réessaie.';
+
+/** Plafonds journaliers posés en base (mig. 212). SQLSTATE `PT429` : PostgREST
+ *  le traduit en vrai HTTP 429 ; `P0429` accepté aussi (première version). */
+const DB_CAP_CODES = new Set(['PT429', 'P0429']);
+
+function dbCapMessage(dbMessage: string | undefined): string {
+  const m = (dbMessage ?? '').toLowerCase();
+  if (m.includes('guest_dish_daily_cap')) {
+    return 'Ce plat a reçu beaucoup de notes sans compte aujourd’hui. Réessaie demain, ou note-le depuis l’app.';
+  }
+  if (m.includes('guest_venue_daily_cap')) {
+    return 'Ce restaurant a reçu beaucoup de notes sans compte aujourd’hui. Réessaie demain, ou note depuis l’app.';
+  }
+  return 'Trop de notes pour le moment. Réessaie plus tard.';
 }
 
 /**
- * Étranglement à fenêtre glissante, en mémoire du process. Deux clés :
+ * Freins anti-abus, tous partagés entre instances (Upstash via
+ * lib/pro/rateLimit ; repli en mémoire par instance si Upstash n'est pas
+ * configuré). Trois étages :
  *
- *  - guest_id (cookie signé) : la limite COURTOISE par appareil. Dans une salle,
- *    tous les convives partagent le wifi donc l'IP — plafonner par IP capait la
- *    soirée ENTIÈRE (le 13ᵉ vote/h de la salle prenait un 429 silencieux). Le
- *    cookie est propre à chaque appareil : un plafond par cookie ne pénalise que
- *    l'appareil qui s'emballe, jamais ses voisins.
- *  - ip : un backstop GROSSIER, volontairement TRÈS haut. Une salle animée ne
- *    l'atteint jamais ; il ne sert qu'à borner une inondation depuis une seule
- *    source avant qu'elle ne touche la base.
+ *  1. IP_FLOOD_MAX, AVANT Turnstile : plafond d'inondation très haut. Il borne
+ *     les appels à Cloudflare et à la base sans jamais gêner une salle pleine.
+ *  2. Le budget de NOTES, consommé JUSTE AVANT l'insertion (jeton accepté, plat
+ *     validé) — sinon des requêtes sans jeton depuis la même IP épuiseraient
+ *     le budget de toute la salle :
+ *       • par APPAREIL (cookie signé) : le frein principal. Il ne pénalise que
+ *         l'appareil qui s'emballe, jamais ses voisins. La base plafonne en
+ *         plus à 10 notes réussies / 24 h par appareil (GUEST_RATE_LIMIT) ;
+ *         ici on compte les tentatives, d'où un peu de marge.
+ *       • par IP : un simple filet, dimensionné pour qu'une salle entière sur
+ *         un seul wifi (ou un NAT d'opérateur : le site est IPv4 seul) ne
+ *         l'atteigne pas.
+ *  3. Le budget de COMMENTAIRES, plus strict (texte libre = spam, insultes),
+ *     consommé au même endroit et AVANT celui des notes : un refus pour
+ *     commentaire ne coûte donc rien au budget de notes.
  *
- * Aucun des deux n'est LA garantie : sur serverless chaque instance a sa propre
- * fenêtre. La vraie borne anti-abus vit en base — plafond par restaurant
- * (mig.129) + cooldown 30 j/plat par guest_id. Le cookie étant « gratuit à
- * renouveler » (il suffit de ne pas le renvoyer), un plafond par cookie n'arrête
- * pas un attaquant déterminé : il rend l'usage HONNÊTE propre, sans punir la
- * salle. C'est écrit ici pour que personne ne le prenne pour plus que ça.
+ * Un appareil sans cookie reçoit un nouvel invité, donc un budget appareil
+ * neuf : c'est Turnstile, puis le filet par IP, qui bornent ce cas.
  */
-const WINDOW_MS = 60 * 60 * 1000;
-const guestHits = new Map<string, { n: number; reset: number }>();
-const ipHits = new Map<string, { n: number; reset: number }>();
-const GUEST_MAX = 12; // votes / heure / appareil
-const IP_MAX = 240; // backstop grossier / heure / IP (≈ salle très animée jamais atteinte)
+const IP_FLOOD_MAX = 240; // / heure / IP, avant Turnstile
+const DEVICE_HOUR_MAX = 10; // notes / heure / appareil
+const DEVICE_DAY_MAX = 20; // tentatives / 24 h / appareil (la base en accepte 10)
+const IP_HOUR_MAX = 60; // notes / heure / IP (filet)
+const IP_DAY_MAX = 200; // notes / 24 h / IP (filet)
+const COMMENT_DEVICE_HOUR_MAX = 3; // commentaires / heure / appareil
+const COMMENT_IP_HOUR_MAX = 10; // commentaires / heure / IP
+const COMMENT_IP_DAY_MAX = 30; // commentaires / 24 h / IP
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
-function throttled(
-  map: Map<string, { n: number; reset: number }>,
-  key: string,
-  max: number
-): boolean {
-  const now = Date.now();
-  const cur = map.get(key);
-  if (!cur || now > cur.reset) {
-    map.set(key, { n: 1, reset: now + WINDOW_MS });
-    if (map.size > 5000) {
-      for (const [k, v] of map) if (now > v.reset) map.delete(k);
-    }
-    return false;
-  }
-  cur.n += 1;
-  return cur.n > max;
+type Budget = { key: string; max: number; windowMs: number };
+
+/** Consomme tous les budgets (en parallèle). 0 si tout passe, sinon l'attente
+ *  en secondes avant que le plus long refus ne se lève. */
+async function consume(budgets: Budget[]): Promise<number> {
+  const results = await Promise.all(budgets.map((b) => rateLimit(b.key, b.max, b.windowMs)));
+  return results.reduce((wait, r) => (r.ok ? wait : Math.max(wait, r.retryAfter || 1)), 0);
 }
 
 export async function POST(req: NextRequest) {
@@ -94,7 +130,13 @@ export async function POST(req: NextRequest) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return fail('error', 500);
 
-  let body: { restaurantId?: unknown; menuItemId?: unknown; stars?: unknown; comment?: unknown };
+  let body: {
+    restaurantId?: unknown;
+    menuItemId?: unknown;
+    stars?: unknown;
+    comment?: unknown;
+    turnstileToken?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -110,29 +152,34 @@ export async function POST(req: NextRequest) {
   if (!UUID_RE.test(restaurantId) || !UUID_RE.test(menuItemId)) return fail('error', 400);
   if (stars < 1 || stars > 5) return fail('error', 400);
 
-  // Identité d'appareil D'ABORD : le throttle porte dessus, pas sur l'IP.
-  // Réutilisée si le cookie est valide, sinon émise.
+  // Identité d'appareil : le budget par appareil porte dessus, et le cooldown
+  // 30 j/plat en base aussi. Réutilisée si le cookie est valide, sinon émise.
   const existing = readGuestId(req.cookies.get(GUEST_COOKIE)?.value);
   const issued = existing ? null : issueGuestId();
   const guestId = existing ?? issued?.id;
   // Pas de secret configuré ⇒ pas de notation invité (échec fermé, cf. lib).
   if (!guestId) return fail('error', 503);
 
-  // Plafond COURTOIS par APPAREIL (cookie), pas par IP : ne cape jamais la salle
-  // (wifi partagé = IP partagée), seulement l'appareil qui s'emballe. Un cookie
-  // fraîchement émis a n=1 → jamais throttlé au premier vote.
-  if (throttled(guestHits, guestId, GUEST_MAX)) {
-    return withCookie(fail('error', 429), issued?.cookie, req);
+  // Plafond d'INONDATION par IP (/64 en IPv6), AVANT Turnstile : une rafale
+  // sans jeton s'arrête ici sans coûter un appel à Cloudflare. Très haut : il
+  // ne doit jamais gêner une salle légitime.
+  const ip = clientIp(req.headers);
+  const bucket = ipBucket(ip);
+  const flood = await rateLimit(`menu:rate:ip:flood:${bucket}`, IP_FLOOD_MAX, HOUR_MS);
+  if (!flood.ok) {
+    return withCookie(
+      fail('limited', 429, { message: MSG_TOO_MANY, retryAfter: flood.retryAfter }),
+      issued?.cookie,
+      req
+    );
   }
 
-  // Backstop grossier par IP (très haut) : anti-inondation depuis une source
-  // unique, jamais atteint par une salle légitime.
-  const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.headers.get('x-real-ip') ||
-    'unknown';
-  if (throttled(ipHits, ip, IP_MAX)) {
-    return withCookie(fail('error', 429), issued?.cookie, req);
+  // Jeton anti-robot. Non configuré ⇒ « skipped » (journalisé une fois) ;
+  // Cloudflare injoignable ⇒ « unavailable », on laisse passer : les budgets
+  // et les plafonds en base tiennent toujours.
+  const verdict = await verifyMenuTurnstile(body.turnstileToken, ip);
+  if (verdict === 'rejected') {
+    return withCookie(fail('verify', 403, { message: MSG_VERIFY }), issued?.cookie, req);
   }
 
   const supabase = createClient(url, key);
@@ -157,6 +204,41 @@ export async function POST(req: NextRequest) {
   }
 
   const dishName = (item as { name: string }).name;
+
+  // Budgets consommés ICI seulement : la requête a passé Turnstile et vise un
+  // plat publié. Un refus de la base à l'insertion (cooldown 409, plafonds) les
+  // consomme quand même — on ne le sait qu'après.
+  //
+  // Commentaire d'abord. Au-delà, on REFUSE la requête plutôt que publier la
+  // note en jetant le commentaire en silence : le texte reste dans la feuille,
+  // la personne voit pourquoi et republie sans commentaire si elle veut.
+  if (comment) {
+    const commentWait = await consume([
+      { key: `menu:comment:dev:h:${guestId}`, max: COMMENT_DEVICE_HOUR_MAX, windowMs: HOUR_MS },
+      { key: `menu:comment:ip:h:${bucket}`, max: COMMENT_IP_HOUR_MAX, windowMs: HOUR_MS },
+      { key: `menu:comment:ip:d:${bucket}`, max: COMMENT_IP_DAY_MAX, windowMs: DAY_MS },
+    ]);
+    if (commentWait) {
+      return withCookie(
+        fail('comment_limited', 429, { message: MSG_COMMENT_TOO_MANY, retryAfter: commentWait }),
+        issued?.cookie,
+        req
+      );
+    }
+  }
+  const rateWait = await consume([
+    { key: `menu:rate:dev:h:${guestId}`, max: DEVICE_HOUR_MAX, windowMs: HOUR_MS },
+    { key: `menu:rate:dev:d:${guestId}`, max: DEVICE_DAY_MAX, windowMs: DAY_MS },
+    { key: `menu:rate:ip:h:${bucket}`, max: IP_HOUR_MAX, windowMs: HOUR_MS },
+    { key: `menu:rate:ip:d:${bucket}`, max: IP_DAY_MAX, windowMs: DAY_MS },
+  ]);
+  if (rateWait) {
+    return withCookie(
+      fail('limited', 429, { message: MSG_TOO_MANY, retryAfter: rateWait }),
+      issued?.cookie,
+      req
+    );
+  }
 
   // La note rapide alimente les 4 sous-notes à l'identique — le détail
   // goût/présentation/prix/quantité reste la richesse du parcours in-app.
@@ -206,9 +288,23 @@ export async function POST(req: NextRequest) {
       return withCookie(fail('error', 503), issued?.cookie, req);
     }
 
-    // Seul cas qu'on nomme au client : il a déjà noté ce plat récemment.
+    // Il a déjà noté ce plat récemment.
     if (msg.includes('GUEST_COOLDOWN')) {
       return withCookie(fail('already', 409), issued?.cookie, req);
+    }
+    // Plafonds journaliers de la base (mig. 212) : un 429 explicite, pas un
+    // échec générique — c'est une limite, pas une panne.
+    if (DB_CAP_CODES.has(error.code ?? '')) {
+      return withCookie(
+        fail('limited', 429, { message: dbCapMessage(error.message) }),
+        issued?.cookie,
+        req
+      );
+    }
+    // Plafonds historiques du trigger (mig. 129) : 10 notes / 24 h par
+    // appareil, 40/h par restaurant. Même nature, même réponse.
+    if (msg.includes('GUEST_RATE_LIMIT') || msg.includes('GUEST_VENUE_FLOOD')) {
+      return withCookie(fail('limited', 429, { message: MSG_TOO_MANY }), issued?.cookie, req);
     }
     return withCookie(fail('error', 400), issued?.cookie, req);
   }

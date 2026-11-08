@@ -53,7 +53,7 @@ function revalidateMenu(restaurantId: string) {
   revalidatePath(`/pro/r/${restaurantId}/menu`);
 }
 
-const FAIL_OWNER: MenuActionState = { error: "Tu n'es pas le propriétaire de cet établissement." };
+const FAIL_OWNER: MenuActionState = { error: "Vous n'êtes pas le propriétaire de cet établissement." };
 
 /** Client Supabase issu de `assertOwner` (vitrine non typée). */
 type Supa = NonNullable<Awaited<ReturnType<typeof assertOwner>>>['supabase'];
@@ -709,7 +709,7 @@ export interface TranslateResult {
 
 export async function translateMenuAction(restaurantId: string): Promise<TranslateResult> {
   const ctx = await assertOwner(restaurantId);
-  if (!ctx) return { ok: false, error: "Tu n'es pas le propriétaire de cet établissement." };
+  if (!ctx) return { ok: false, error: "Vous n'êtes pas le propriétaire de cet établissement." };
   const { data, error } = await ctx.supabase.functions.invoke('menu-translate', {
     body: { restaurantId },
   });
