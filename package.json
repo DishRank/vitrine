@@ -45,5 +45,10 @@
   "overrides": {
     "postcss": "$postcss",
     "sharp": "^0.35.5"
+  },
+  "allowScripts": {
+    "@parcel/watcher": false,
+    "@swc/core": false,
+    "unrs-resolver": false
   }
 }
